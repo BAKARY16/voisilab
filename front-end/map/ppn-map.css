@@ -1,0 +1,115 @@
+/* Styles pour les popups Leaflet */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  width: 280px !important;
+}
+
+.leaflet-popup-tip-container {
+  display: none;
+}
+
+.ppn-popup .leaflet-popup-close-button {
+  top: 8px;
+  right: 8px;
+}
+
+/* Animation des markers */
+@keyframes pulse-marker {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.custom-marker:hover {
+  animation: pulse-marker 0.6s ease-in-out;
+}
+
+.custom-pin {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  transition: transform 0.2s;
+}
+
+.custom-pin:hover {
+  transform: scale(1.1);
+}
+
+/* Fix pour le chargement des tuiles */
+.leaflet-container {
+  background: #f0f0f0;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* Container de la carte */
+.leaflet-container {
+  font-family: inherit;
+}
+
+/* Mapbox Popup Styles */
+.mapboxgl-popup-content {
+  padding: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important;
+}
+
+.mapboxgl-popup-tip {
+  display: none;
+}
+
+.mapboxgl-popup-close-button {
+  display: none;
+}
+
+/* Animation des markers */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.ppn-marker:hover {
+  animation: bounce 0.6s ease-in-out;
+}
+
+/* Styles pour le routing */
+.leaflet-routing-container {
+  display: none !important;
+}
+
+.leaflet-routing-alternatives-container {
+  display: none !important;
+}
+
+/* Route line */
+.leaflet-routing-container-hide {
+  display: none;
+}
+
+/* Animation de pulsation pour le point utilisateur */
+@keyframes pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+.user-location-marker {
+  animation: none !important;
+}
