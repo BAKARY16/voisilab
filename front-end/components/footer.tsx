@@ -80,7 +80,9 @@ export function Footer() {
             <h3 className="font-semibold text-white mb-4">Suivez-nous</h3>
             <div className="flex gap-3">
                 <a
-                href="#"
+                href="https://www.facebook.com/share/1C59Vp8K67/"
+                target='_blank'
+                rel="noopener noreferrer"
                 className="hover:scale-105 transition-all duration-300 shadow-sm w-10 h-10 bg-blue-900 rounded-lg flex 
                 items-center justify-center text-white transition-colors font-bold"
                 aria-label="Facebook"
@@ -88,17 +90,19 @@ export function Footer() {
                 <Facebook size={20} fill="currentColor" />
                 </a>
               <a
-                href="#"
+                href="http://linkedin.com/school/universit%C3%A9-virtuelle-de-c%C3%B4te-d-ivoire"
+                target='_blank'
                 className="w-10 h-10 bg-black rounded-lg flex items-center justify-center text-muted-foreground text-white transition-colors hover:scale-105 transition-all duration-300 shadow-lg transition-colors"
                 aria-label="Linkedin"
               >
                 <Linkedin size={20} />
               </a>
               <a
-                href="#"
+                href="https://www.youtube.com/@uvcitv8053"
+                target='_blank'
                 className="w-10 h-10 bg-red-700 rounded-lg flex items-center justify-center text-muted-foreground text-white 
                 hover:text-green-400-foreground transition-colors hover:scale-105 transition-all duration-300 shadow-lg"
-                aria-label="Twitter"
+                aria-label="Youtube"
               >
                 <Youtube size={20} />
               </a>

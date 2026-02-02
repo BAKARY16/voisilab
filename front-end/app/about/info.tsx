@@ -154,39 +154,41 @@ export function AboutContact() {
     { year: "2024", title: "Croissance", description: "500+ membres actifs" },
   ]
 
+  
   const contactMethods = [
-    {
-      icon: Mail,
-      title: "Email",
-      description: "Écrivez-nous à",
-      contact: "fablab@uvci.edu.ci",
-      href: "mailto:fablab@uvci.edu.ci",
-      gradient: "from-blue-500/10 to-cyan-500/10",
-      iconBg: "bg-blue-500/10",
-      iconColor: "text-blue-600 dark:text-blue-400",
-    },
-    {
-      icon: Phone,
-      title: "Téléphone",
-      description: "Appelez-nous au",
-      contact: "+225 07 59 13 69 05",
-      href: "tel:+2250759136905",
-      gradient: "from-green-500/10 to-emerald-500/10",
-      iconBg: "bg-green-500/10",
-      iconColor: "text-green-600 dark:text-green-400",
-    },
-    {
-      icon: MapPin,
-      title: "Adresse",
-      description: "Visitez-nous à",
-      contact: "Abidjan Cocody Deux-Plateaux, rue K4",
-      href: null,
-      gradient: "from-purple-500/10 to-pink-500/10",
-      iconBg: "bg-purple-500/10",
-      iconColor: "text-purple-600 dark:text-purple-400",
-    },
-  ]
-
+  {
+    icon: Mail,
+    title: "Email",
+    description: "Écrivez-nous à",
+    contact: "fablab@uvci.edu.ci",
+    // CHANGE LE HREF POUR UTILISER GMAIL WEB :
+    href: "https://mail.google.com/mail/?view=cm&fs=1&to=fablab@uvci.edu.ci",
+    gradient: "from-blue-500/10 to-cyan-500/10",
+    iconBg: "bg-blue-500/10",
+    iconColor: "text-blue-600 dark:text-blue-400",
+  },
+  {
+    icon: Phone,
+    title: "Téléphone",
+    description: "Appelez-nous au",
+    contact: "+225 07 59 13 69 05",
+    href: "tel:+2250759136905",
+    gradient: "from-green-500/10 to-emerald-500/10",
+    iconBg: "bg-green-500/10",
+    iconColor: "text-green-600 dark:text-green-400",
+  },
+  {
+    icon: MapPin,
+    title: "Adresse",
+    description: "Visitez-nous à",
+    contact: "Abidjan Cocody Deux-Plateaux, rue K4",
+    // CHANGE NULL PAR UN LIEN GOOGLE MAPS :
+    href: "https://maps.google.com/maps?q=Abidjan+Cocody+Deux-Plateaux+rue+K4",
+    gradient: "from-purple-500/10 to-pink-500/10",
+    iconBg: "bg-purple-500/10",
+    iconColor: "text-purple-600 dark:text-purple-400",
+  },
+]
   const benefits = [
     "Réponse garantie sous 48h",
     "Équipe dédiée à votre écoute",
@@ -475,6 +477,9 @@ export function AboutContact() {
                       {method.href ? (
                         <a
                           href={method.href}
+                          // AJOUTE CES DEUX LIGNES CI-DESSOUS :
+                          target={method.title === "Email" || method.title === "Adresse" ? "_blank" : "_self"}
+                          rel={method.title === "Email" || method.title === "Adresse" ? "noopener noreferrer" : ""}
                           className="text-foreground font-semibold hover:text-primary transition-colors flex items-center gap-2 group/link"
                         >
                           <span className="truncate">{method.contact}</span>
@@ -489,6 +494,7 @@ export function AboutContact() {
               )
             })}
           </div>
+          
 
           {/* Form + Sidebar */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 max-w-7xl mx-auto">

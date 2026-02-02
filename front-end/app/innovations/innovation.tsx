@@ -113,12 +113,12 @@ export function InnovationsSection() {
     },
   ]
 
-  const stats = [
-    { icon: Rocket, value: "150+", label: "Projets réalisés", gradient: "from-blue-500/10 to-cyan-500/10" },
-    { icon: Users, value: "500+", label: "Makers actifs", gradient: "from-purple-500/10 to-pink-500/10" },
-    { icon: Heart, value: "5000+", label: "Likes reçus", gradient: "from-pink-500/10 to-rose-500/10" },
-    { icon: TrendingUp, value: "98%", label: "Projets aboutis", gradient: "from-green-500/10 to-emerald-500/10" },
-  ]
+  // const stats = [
+  //   { icon: Rocket, value: "150+", label: "Projets réalisés", gradient: "from-blue-500/10 to-cyan-500/10" },
+  //   { icon: Users, value: "500+", label: "Makers actifs", gradient: "from-purple-500/10 to-pink-500/10" },
+  //   { icon: Heart, value: "5000+", label: "Likes reçus", gradient: "from-pink-500/10 to-rose-500/10" },
+  //   { icon: TrendingUp, value: "98%", label: "Projets aboutis", gradient: "from-green-500/10 to-emerald-500/10" },
+  // ]
 
   const categories = [
     { name: "Tous", count: 150, active: true },
@@ -241,7 +241,7 @@ export function InnovationsSection() {
       {/* Stats Section */}
       <section className="py-12 lg:py-16 relative">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 max-w-6xl mx-auto">
+          {/* <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 max-w-6xl mx-auto">
             {stats.map((stat, index) => {
               const Icon = stat.icon
               return (
@@ -265,7 +265,7 @@ export function InnovationsSection() {
                 </div>
               )
             })}
-          </div>
+          </div> */}
         </div>
       </section>
 
