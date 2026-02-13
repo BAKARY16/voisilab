@@ -45,10 +45,11 @@ import {
   Briefcase,
   ChevronRight,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
 import dynamic from "next/dynamic"
 import "@/map/ppn-map.css"
+import { getAllPPN } from "@/lib/api/ppn.service"
 
 // Import dynamique SANS SSR
 const PPNMap = dynamic(
@@ -101,85 +102,50 @@ export function PPN() {
     description: "",
   })
   const [selectedPPN, setSelectedPPN] = useState<string | null>(null)
+  const [ppnLocations, setPpnLocations] = useState<PPNLocation[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Données complètes des PPN
-  const ppnLocations: PPNLocation[] = [
-    {
-      id: "ppn-001",
-      name: "PPN Bassam",
-      city: "Abidjan",
-      region: "Sud-Comoé",
-      address: "Hotel hamanas",
-      type: "Urban",
-      coordinates: { lat: 5.3599, lng: -4.0083 },
-      services: ["Formation numérique", "Hub technologique", "Coworking", "Impression 3D"],
-      email: "incubateur@uvci.edu.ci",
-      phone: "+225 07 09 90 14 81",
-      manager: "Dr. ...",
-      openingYear: 2019,
-      status: "active",
-    },
-    {
-      id: "ppn-002",
-      name: "PPN Daloa",
-      city: "Daloa",
-      region: "Haut-Sassandra",
-      address: "Daloa ",
-      type: "Urban",
-      coordinates: { lat: 6.8999581, lng: -6.5277939 },
-      services: ["Formation numérique", "Modélisation 3D", "Robotique"],
-      email: "incubateur@uvci.edu.ci",
-      phone: "+225 07 09 90 14 81",
-      manager: "Mme ...",
-      openingYear: 2020,
-      status: "active",
-    },
-    {
-      id: "ppn-003",
-      name: "PPN Andé",
-      city: "Andé",
-      region: "Moronou",
-      address: "Andé",
-      type: "Urban",
-      coordinates: { lat: 3.9156337, lng: -10.4504422 },
-      services: ["Formation professionnelle", "Hub technologique", "E-commerce"],
-      email: "incubateur@uvci.edu.ci",
-      phone: "+225 07 09 90 14 81",
-      manager: "M. ...",
-      openingYear: 2020,
-      status: "active",
-    },
-    {
-      id: "ppn-004",
-      name: "PPN Dingouin",
-      city: "Dingouin",
-      region: "Tonkpi ",
-      address: "Dingouin",
-      type: "Urban",
-      coordinates: { lat: 7.7442367, lng: -7.6194188},
-      services: ["Formation professionnelle", "Hub technologique", "E-commerce"],
-      email: "incubateur@uvci.edu.ci",
-      phone: "+225 07 09 90 14 81",
-      manager: "M. ...",
-      openingYear: 2020,
-      status: "active",
-    },
-    {
-      id: "ppn-005",
-      name: "PPN Bouaké Centre",
-      city: "Bouaké",
-      region: "Gbêkê",
-      address: "Quartier Commerce, Avenue Houphouët",
-      type: "Urban",
-      coordinates: { lat: 7.7005337, lng: -5.1080258 },
-      services: ["Formation numérique", "Hub technologique", "Agriculture intelligente"],
-      email: "incubateur@uvci.edu.ci",
-      phone: "+225 07 09 90 14 81",
-      manager: "Dr. ...",
-      openingYear: 2019,
-      status: "active",
-    },
-  ]
+  // Charger les données PPN depuis l'API
+  useEffect(() => {
+    const fetchPPNData = async () => {
+      try {
+        setLoading(true)
+        console.log('🔍 Chargement des PPN depuis l\'API...')
+        const data = await getAllPPN()
+        console.log('✅ Données reçues:', data)
+        console.log('📊 Nombre de PPN:', data?.length)
+        
+        // Transformation des données API vers le format attendu
+        const transformedData: PPNLocation[] = data.map((ppn: any) => ({
+          id: ppn.id,
+          name: ppn.name,
+          city: ppn.city,
+          region: ppn.region,
+          address: ppn.address,
+          type: ppn.type,
+          coordinates: {
+            lat: parseFloat(ppn.latitude),
+            lng: parseFloat(ppn.longitude),
+          },
+          services: ppn.services ? ppn.services.split(', ') : [],
+          email: ppn.email || '',
+          phone: ppn.phone || '',
+          manager: ppn.manager || '',
+          openingYear: ppn.opening_year || new Date().getFullYear(),
+          status: ppn.status,
+          image: ppn.image,
+        }))
+        console.log('🔄 Données transformées:', transformedData)
+        setPpnLocations(transformedData)
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des PPN:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPPNData()
+  }, [])
 
   const regions = Array.from(new Set(ppnLocations.map(ppn => ppn.region)))
 
@@ -263,7 +229,7 @@ export function PPN() {
     {
       icon: Rocket,
       title: "Notre Vision",
-      description: "Faire de la Côte d'Ivoire un leader africain en matière d'inclusion numérique en créant un réseau national de centres d'innovation connectés et performants.",
+      description: "Faire de la Côte d'Ivoire un hub africain en matière d'inclusion numérique en créant un réseau national de centres d'innovation connectés et performants.",
     },
   ]
 
@@ -367,10 +333,10 @@ export function PPN() {
         {/* Hero Header */}
         <div className="container mx-auto px-4 lg:px-8 mb-20">
           <div className="max-w-4xl mx-auto text-center fade-in-up">
-            <Badge className="mb-6 px-4 py-2" variant="outline">
+            {/* <Badge className="mb-6 px-4 py-2" variant="outline">
               <Network className="w-4 h-4 mr-2" />
               UVCI - Innovation Territoriale
-            </Badge>
+            </Badge> */}
             <h1 className="text-4xl lg:text-6xl xl:text-7xl font-black text-foreground mb-6 tracking-tight uppercase">
               Points de Présence
               <span className="block mt-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-primary">
@@ -492,206 +458,257 @@ export function PPN() {
         </div>
 
         {/* Carte et Liste des PPN */}
-        <div className="container mx-auto px-4 lg:px-8 mb-20">
-          <SectionHeader
-            title="Nos Implantations"
-            subtitle={`${ppnLocations.length} Points de Présence répartis dans ${regions.length} régions`}
-          />
-
-          {/* Filtres */}
-          <div className="max-w-6xl mx-auto mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
-                <Input
-                  type="text"
-                  placeholder="Rechercher un PPN..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+        <div className="border-t border-border pt-32 pb-32">
+          <div className="container mx-auto px-6 lg:px-12">
+            <div className="max-w-6xl mx-auto">
+              {/* Header */}
+              <div className="mb-16 text-center">
+                <h2 className="text-3xl lg:text-4xl font-bold mb-4">Nos Implantations</h2>
+                <p className="text-muted-foreground">
+                  {ppnLocations.length} Points de Présence dans {regions.length} régions
+                </p>
               </div>
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="px-4 py-2 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="all">Tous les types</option>
-                <option value="Urban">Urbain</option>
-                <option value="Rural">Rural</option>
-                <option value="Mixed">Mixte</option>
-              </select>
-              <select
-                value={selectedRegion}
-                onChange={(e) => setSelectedRegion(e.target.value)}
-                className="px-4 py-2 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="all">Toutes les régions</option>
-                {regions.map(region => (
-                  <option key={region} value={region}>{region}</option>
-                ))}
-              </select>
-            </div>
-          </div>
 
-          {/* Tabs: Carte et Liste */}
-          <div className="max-w-6xl mx-auto">
-            <Tabs defaultValue="list" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8">
-                <TabsTrigger value="list">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Liste
-                </TabsTrigger>
-                <TabsTrigger value="map">
-                  <Map className="w-4 h-4 mr-2" />
-                  Carte
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Liste des PPN */}
-              <TabsContent value="list">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredPPNs.map((ppn) => (
-                    <Card key={ppn.id} className="border-2 border-border hover:border-primary/50 transition-all group overflow-hidden">
-                      <CardContent className="p-0">
-                        {/* En-tête */}
-                        <div className="bg-gradient-to-br from-primary/10 to-accent/10 p-6 border-b border-border">
-                          <div className="flex items-start justify-between mb-3">
-                            <Badge variant={ppn.status === "active" ? "default" : "secondary"}>
-                              {ppn.type === "Urban" ? "Urbain" : ppn.type === "Rural" ? "Rural" : "Mixte"}
-                            </Badge>
-                            <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
-                              {ppn.status === "active" ? "Actif" : "En construction"}
-                            </Badge>
-                          </div>
-                          <h3 className="text-xl font-bold mb-1">{ppn.name}</h3>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <MapPin size={14} />
-                            {ppn.city}, {ppn.region}
-                          </p>
-                        </div>
-
-                        {/* Contenu */}
-                        <div className="p-6 space-y-4">
-                          <div className="flex items-start gap-2">
-                            <MapPin className="text-primary flex-shrink-0 mt-0.5" size={16} />
-                            <span className="text-sm text-muted-foreground">{ppn.address}</span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Mail className="text-primary flex-shrink-0" size={16} />
-                            <a href={`mailto:${ppn.email}`} className="text-sm text-primary hover:underline truncate">
-                              {ppn.email}
-                            </a>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Phone className="text-primary flex-shrink-0" size={16} />
-                            <a href={`tel:${ppn.phone}`} className="text-sm text-primary hover:underline">
-                              {ppn.phone}
-                            </a>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Users className="text-primary flex-shrink-0" size={16} />
-                            <span className="text-sm text-muted-foreground">{ppn.manager}</span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Calendar className="text-primary flex-shrink-0" size={16} />
-                            <span className="text-sm text-muted-foreground">Ouvert depuis {ppn.openingYear}</span>
-                          </div>
-
-                          {/* Services */}
-                          <div className="pt-4 border-t border-border">
-                            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                              <Award className="text-primary" size={16} />
-                              Services disponibles
-                            </h4>
-                            <div className="flex flex-wrap gap-2">
-                              {ppn.services.map((service, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
-                                  {service}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Bouton Contact */}
-                          <Button 
-                            variant="outline" 
-                            className="w-full group/btn cursor-pointer"
-                            onClick={() => {
-                              setSelectedPPN(ppn.id)
-                              const mapTab = document.querySelector('[data-value="map"]') as HTMLElement | null
-                              mapTab?.click() // Switch to map tab
-                            }}
-                          >
-                            <MapPin className="mr-2" size={16} />
-                            Voir sur la carte
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
-                {filteredPPNs.length === 0 && (
-                  <div className="text-center py-16">
-                    <p className="text-muted-foreground text-lg">Aucun PPN trouvé avec ces critères.</p>
+              {/* Filtres minimalistes */}
+              <div className="mb-12">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      type="text"
+                      placeholder="Rechercher..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-11 border-border focus:border-foreground/20 transition-colors h-11"
+                    />
                   </div>
-                )}
-              </TabsContent>
+                  <select
+                    value={selectedType}
+                    onChange={(e) => setSelectedType(e.target.value)}
+                    className="px-4 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:border-foreground/20 transition-colors text-sm h-11"
+                  >
+                    <option value="all">Tous les types</option>
+                    <option value="Urban">Urbain</option>
+                    <option value="Rural">Rural</option>
+                    <option value="Mixed">Mixte</option>
+                  </select>
+                  <select
+                    value={selectedRegion}
+                    onChange={(e) => setSelectedRegion(e.target.value)}
+                    className="px-4 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:border-foreground/20 transition-colors text-sm h-11"
+                  >
+                    <option value="all">Toutes les régions</option>
+                    {regions.map(region => (
+                      <option key={region} value={region}>{region}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-              {/* Carte interactive */}
-              <TabsContent value="map">
-                <Card className="border-2 border-border overflow-hidden">
-                  <CardContent className="p-0">
+              {/* Tabs épurés */}
+              <Tabs defaultValue="list" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 max-w-sm mx-auto mb-12 bg-muted/50 p-1 h-11">
+                  <TabsTrigger value="list" className="data-[state=active]:bg-background text-sm">
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Liste
+                  </TabsTrigger>
+                  <TabsTrigger value="map" className="data-[state=active]:bg-background text-sm">
+                    <Map className="w-4 h-4 mr-2" />
+                    Carte
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Liste des PPN - Design minimaliste */}
+                <TabsContent value="list">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredPPNs.map((ppn) => (
+                      <Card 
+                        key={ppn.id} 
+                        className="border border-border hover:border-foreground/20 transition-all duration-300 overflow-hidden group"
+                      >
+                        <CardContent className="p-0">
+                          {/* Header simplifié */}
+                          <div className="p-6 border-b border-border bg-muted/20">
+                            <div className="flex items-start justify-between mb-3">
+                              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                                {ppn.type === "Urban" ? "Urbain" : ppn.type === "Rural" ? "Rural" : "Mixte"}
+                              </span>
+                              <span className="flex items-center gap-1.5 text-xs text-green-600">
+                                <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
+                                Actif
+                              </span>
+                            </div>
+                            <h3 className="text-xl font-semibold mb-1.5 group-hover:text-primary transition-colors">
+                              {ppn.name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                              <MapPin className="w-3.5 h-3.5" />
+                              {ppn.city}, {ppn.region}
+                            </p>
+                          </div>
+
+                          {/* Contenu épuré */}
+                          <div className="p-6">
+                            <div className="space-y-3.5 text-sm mb-6">
+                              <div className="flex items-start gap-3">
+                                <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                <span className="text-muted-foreground leading-snug">{ppn.address}</span>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <a 
+                                  href={`mailto:${ppn.email}`} 
+                                  className="text-foreground hover:text-primary transition-colors truncate"
+                                >
+                                  {ppn.email}
+                                </a>
+                              </div>
+
+                              {/* <div className="flex items-center gap-3">
+                                <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <a 
+                                  href={`tel:${ppn.phone}`} 
+                                  className="text-foreground hover:text-primary transition-colors"
+                                >
+                                  {ppn.phone}
+                                </a>
+                              </div> */}
+
+                              {/* <div className="flex items-center gap-3">
+                                <Users className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-muted-foreground">{ppn.manager}</span>
+                              </div> */}
+
+                              <div className="flex items-center gap-3">
+                                <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-muted-foreground">Depuis {ppn.openingYear}</span>
+                              </div>
+                            </div>
+
+                            {/* Services - Tags minimalistes */}
+                            <div className="pt-4 border-t border-border mb-4">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Award className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                                  Services
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {ppn.services.slice(0, 3).map((service, idx) => (
+                                  <span 
+                                    key={idx} 
+                                    className="text-xs px-2.5 py-1 bg-muted/50 rounded-md text-muted-foreground"
+                                  >
+                                    {service}
+                                  </span>
+                                ))}
+                                {ppn.services.length > 3 && (
+                                  <span className="text-xs px-2.5 py-1 bg-muted/50 rounded-md text-muted-foreground">
+                                    +{ppn.services.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Bouton minimaliste */}
+                            <Button 
+                              variant="ghost" 
+                              className="w-full cursor-pointer hover:text-green-600 justify-between group/btn border border-border hover:border-foreground/20 hover:bg-transparent h-10"
+                              onClick={() => {
+                                setSelectedPPN(ppn.id)
+                                const mapTab = document.querySelector('[data-value="map"]') as HTMLElement | null
+                                mapTab?.click()
+                              }}
+                            >
+                              <span className="text-sm">Voir sur la carte</span>
+                              <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {filteredPPNs.length === 0 && (
+                    <div className="text-center py-20 border border-dashed border-border rounded-xl">
+                      <Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                      <p className="text-muted-foreground">Aucun PPN trouvé avec ces critères.</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Carte interactive - Design épuré */}
+                <TabsContent value="map">
+                  <div className="border border-border rounded-xl overflow-hidden mb-6">
                     <PPNMap locations={filteredPPNs} selectedPPN={selectedPPN} />
-                  </CardContent>
-                </Card>
+                  </div>
 
-                {/* Statistiques sous la carte */}
-                <div className="grid grid-cols-3 gap-4 mt-6">
-                  <Card className="border-2 hover:border-primary/50 transition-all">
-                    <CardContent className="p-6 text-center">
+                  {/* Stats sous la carte - Grid avec séparateurs */}
+                  <div className="grid grid-cols-3 gap-px bg-border border border-border rounded-xl overflow-hidden">
+                    <div className="bg-background p-6 text-center">
                       <div className="flex items-center justify-center gap-2 mb-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                        <span className="text-sm font-medium">Urbain</span>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                          Urbain
+                        </span>
                       </div>
                       <span className="text-3xl font-bold">
                         {ppnLocations.filter(p => p.type === "Urban").length}
                       </span>
-                    </CardContent>
-                  </Card>
-                  <Card className="border-2 hover:border-primary/50 transition-all">
-                    <CardContent className="p-6 text-center">
+                    </div>
+
+                    <div className="bg-background p-6 text-center">
                       <div className="flex items-center justify-center gap-2 mb-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <span className="text-sm font-medium">Rural</span>
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                          Rural
+                        </span>
                       </div>
                       <span className="text-3xl font-bold">
                         {ppnLocations.filter(p => p.type === "Rural").length}
                       </span>
-                    </CardContent>
-                  </Card>
-                  <Card className="border-2 hover:border-primary/50 transition-all">
-                    <CardContent className="p-6 text-center">
+                    </div>
+
+                    <div className="bg-background p-6 text-center">
                       <div className="flex items-center justify-center gap-2 mb-2">
-                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                        <span className="text-sm font-medium">Mixte</span>
+                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                          Mixte
+                        </span>
                       </div>
                       <span className="text-3xl font-bold">
                         {ppnLocations.filter(p => p.type === "Mixed").length}
                       </span>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-            </Tabs>
+                    </div>
+                  </div>
+
+                  {/* Légende de la carte */}
+                  <div className="mt-6 p-4 bg-muted/30 border border-border rounded-xl">
+                    <div className="flex items-center justify-center gap-6 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-primary rounded-full"></div>
+                        <span className="text-muted-foreground">PPN sélectionné</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <span className="text-muted-foreground">Urbain</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span className="text-muted-foreground">Rural</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                        <span className="text-muted-foreground">Mixte</span>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
         </div>
-
 
         {/* CTA Final */}
         <div className="container mx-auto px-4 lg:px-8">

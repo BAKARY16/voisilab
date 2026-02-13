@@ -27,12 +27,15 @@ import {
   Star,
   TrendingUp,
   Send,
-  MessageSquare
+  MessageSquare,
+  AlertCircle
 } from "lucide-react"
 
 export function AboutContact() {
   useScrollAnimation()
   const [submitted, setSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     lastname: "",
     firstname: "",
@@ -47,23 +50,56 @@ export function AboutContact() {
       ...formData,
       [e.target.name]: e.target.value,
     })
+    setError(null)
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    console.log("Contact message submitted:", formData)
-    setSubmitted(true)
-    setTimeout(() => {
-      setSubmitted(false)
-      setFormData({
-        lastname: "",
-        firstname: "",
-        email: "",
-        phone: "",
-        projectType: "",
-        description: "",
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      const response = await fetch('http://localhost:5000/api/contacts/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lastname: formData.lastname,
+          firstname: formData.firstname,
+          email: formData.email,
+          phone: formData.phone,
+          subject: formData.projectType,
+          message: formData.description
+        })
       })
-    }, 20000)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Erreur lors de l\'envoi du message')
+      }
+
+      const result = await response.json()
+      console.log('Message envoyé:', result)
+      setSubmitted(true)
+
+      setTimeout(() => {
+        setSubmitted(false)
+        setFormData({
+          lastname: "",
+          firstname: "",
+          email: "",
+          phone: "",
+          projectType: "",
+          description: "",
+        })
+      }, 5000)
+    } catch (error) {
+      console.error('Erreur:', error)
+      setError(error instanceof Error ? error.message : 'Erreur lors de l\'envoi du message. Veuillez réessayer.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const stats = [
@@ -93,7 +129,7 @@ export function AboutContact() {
     },
     {
       icon: Award,
-      value: "50+",
+      value: "20+",
       label: "Ateliers organisés",
       gradient: "from-orange-500/10 to-red-500/10",
       iconBg: "bg-orange-500/10",
@@ -292,7 +328,7 @@ export function AboutContact() {
               const Icon = stat.icon
               return (
                 <div key={index} className="fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
-                  <Card className={`relative overflow-hidden border-2 border-border hover:border-primary/50 transition-all duration-500 group h-full bg-gradient-to-br ${stat.gradient}`}>
+                  <Card className={`relative overflow-hidden border-2 border-border hover:border-primary/50 transition-all duration-500 group h-full bg-gradient-to-br`}>
                     <CardContent className="p-6 lg:p-8 text-center">
                       <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-bl-full"></div>
                       <div className={`w-16 h-16 ${stat.iconBg} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
@@ -388,9 +424,9 @@ export function AboutContact() {
               const Icon = value.icon
               return (
                 <div key={index} className="fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
-                  <Card className={`relative overflow-hidden border-2 border-border hover:border-primary/50 transition-all duration-500 group h-full bg-gradient-to-br ${value.gradient}`}>
+                  <Card className={`relative overflow-hidden border-2 border-border hover:border-primary/50 transition-all duration-500 group h-full bg-gray-100`}>
                     <CardContent className="p-8 lg:p-10">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full"></div>
+                      {/* <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full"></div> */}
                       <div className={`w-16 h-16 ${value.iconBg} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
                         <Icon className={`${value.iconColor}`} size={28} />
                       </div>
@@ -466,7 +502,7 @@ export function AboutContact() {
               const Icon = method.icon
               return (
                 <div key={index} className="fade-in-up group" style={{ animationDelay: `${index * 100}ms` }}>
-                  <Card className={`relative overflow-hidden border-2 border-border hover:border-primary/50 transition-all duration-500 h-full bg-gradient-to-br ${method.gradient}`}>
+                  <Card className={`relative overflow-hidden border-2 border-border hover:border-primary/50 transition-all duration-500 h-full bg-gradient-to-br`}>
                     <CardContent className="p-8">
                       <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-bl-full"></div>
                       <div className={`w-16 h-16 ${method.iconBg} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
@@ -500,138 +536,183 @@ export function AboutContact() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 max-w-7xl mx-auto">
             {/* Form */}
             <div className="lg:col-span-3 fade-in-up">
-              <Card className="border-2 border-border shadow-2xl overflow-hidden">
-                <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 p-8 border-b border-border">
+              <Card className="border shadow- overflow-hidden">
+                <div className="border-b border-border p-8 lg:p-10">
                   <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">
                     Envoyez-nous un message
                   </h2>
                   <p className="text-muted-foreground">
-                    Nous vous répondrons dans les 24 heures
+                    Notre équipe vous répondra sous 24h
                   </p>
                 </div>
 
-                <CardContent className="p-8">
+                <CardContent className="p-8 lg:p-10">
                   {submitted ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
-                      <div className="relative">
-                        <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-                          <CheckCircle2 size={48} className="text-primary" />
-                        </div>
-                        <div className="absolute inset-0 w-24 h-24 bg-primary/20 rounded-full animate-ping"></div>
+                      <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                        <CheckCircle2 size={40} className="text-primary" />
                       </div>
-                      <h3 className="text-3xl font-bold text-foreground mb-3">Message envoyé !</h3>
-                      <p className="text-muted-foreground text-lg mb-6 max-w-md">
-                        Merci ! Notre équipe vous contactera sous 24h.
+                      <h3 className="text-3xl font-bold text-foreground mb-3">Message envoyé avec succès !</h3>
+                      <p className="text-muted-foreground text-lg max-w-md">
+                        Merci pour votre message. Notre équipe vous contactera très bientôt.
                       </p>
                     </div>
                   ) : (
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="lastname">
-                            Nom <span className="text-destructive">*</span>
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                      {/* Afficher les erreurs */}
+                      {error && (
+                        <div className="bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500 p-4 rounded">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="text-red-500" size={20} />
+                            <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Section informations personnelles */}
+                      <div className="space-y-6">
+                        <div className="border-l-4 border-primary pl-4">
+                          <h3 className="text-lg font-semibold text-foreground">Vos coordonnées</h3>
+                          <p className="text-sm text-muted-foreground">Comment souhaitez-vous être contacté ?</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <Label htmlFor="lastname" className="text-sm font-medium mb-2 block">
+                              Nom <span className="text-red-500">*</span>
+                            </Label>
+                            <input
+                              id="lastname"
+                              name="lastname"
+                              type="text"
+                              required
+                              value={formData.lastname}
+                              onChange={handleChange}
+                              className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-foreground transition-all"
+                              placeholder="Kouassi"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="firstname" className="text-sm font-medium mb-2 block">
+                              Prénom <span className="text-red-500">*</span>
+                            </Label>
+                            <input
+                              id="firstname"
+                              name="firstname"
+                              type="text"
+                              required
+                              value={formData.firstname}
+                              onChange={handleChange}
+                              className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-foreground transition-all"
+                              placeholder="Jean"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <Label htmlFor="email" className="text-sm font-medium mb-2 block">
+                              Adresse email <span className="text-red-500">*</span>
+                            </Label>
+                            <input
+                              id="email"
+                              name="email"
+                              type="email"
+                              required
+                              value={formData.email}
+                              onChange={handleChange}
+                              className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-foreground transition-all"
+                              placeholder="jean.kouassi@example.com"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="phone" className="text-sm font-medium mb-2 block">
+                              Numéro de téléphone <span className="text-red-500">*</span>
+                            </Label>
+                            <input
+                              id="phone"
+                              name="phone"
+                              type="tel"
+                              required
+                              value={formData.phone}
+                              onChange={handleChange}
+                              className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-foreground transition-all"
+                              placeholder="+225 07 XX XX XX XX"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Séparateur */}
+                      <div className="border-t border-border"></div>
+
+                      {/* Section message */}
+                      <div className="space-y-6">
+                        <div className="border-l-4 border-primary pl-4">
+                          <h3 className="text-lg font-semibold text-foreground">Votre message</h3>
+                          <p className="text-sm text-muted-foreground">En quoi pouvons-nous vous aider ?</p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="projectType" className="text-sm font-medium mb-2 block">
+                            Sujet <span className="text-red-500">*</span>
                           </Label>
                           <input
-                            id="lastname"
-                            name="lastname"
+                            id="projectType"
+                            name="projectType"
                             type="text"
                             required
-                            value={formData.lastname}
+                            value={formData.projectType}
                             onChange={handleChange}
-                            className="w-full px-4 py-3.5 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                            placeholder="Dupont"
+                            className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-foreground transition-all"
+                            placeholder="Ex: Demande d'information, Collaboration, Adhésion..."
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="firstname">
-                            Prénom <span className="text-destructive">*</span>
+
+                        <div>
+                          <Label htmlFor="description" className="text-sm font-medium mb-2 block">
+                            Votre message <span className="text-red-500">*</span>
                           </Label>
-                          <input
-                            id="firstname"
-                            name="firstname"
-                            type="text"
+                          <textarea
+                            id="description"
+                            name="description"
                             required
-                            value={formData.firstname}
+                            value={formData.description}
                             onChange={handleChange}
-                            className="w-full px-4 py-3.5 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                            placeholder="Jean"
+                            rows={6}
+                            className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-foreground resize-none transition-all"
+                            placeholder="Décrivez votre demande en détail..."
                           />
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Plus votre message est détaillé, mieux nous pourrons vous répondre
+                          </p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="email">
-                            Email <span className="text-destructive">*</span>
-                          </Label>
-                          <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            required
-                            value={formData.email}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3.5 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                            placeholder="jean@example.com"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">
-                            Téléphone <span className="text-destructive">*</span>
-                          </Label>
-                          <input
-                            id="phone"
-                            name="phone"
-                            type="tel"
-                            required
-                            value={formData.phone}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3.5 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                            placeholder="+225 00 00 00 00 00"
-                          />
-                        </div>
+                      {/* Bouton de soumission */}
+                      <div className="pt-4">
+                        <Button
+                          type="submit"
+                          size="lg"
+                          disabled={isSubmitting}
+                          className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-4 text-base shadow-lg hover:shadow-xl transition-all"
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <div className="animate-spin mr-2 h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                              Envoi en cours...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="mr-2" size={20} />
+                              Envoyer le message
+                            </>
+                          )}
+                        </Button>
+                        <p className="text-xs text-center text-muted-foreground mt-3">
+                          En soumettant ce formulaire, vous acceptez d&apos;être contacté par notre équipe
+                        </p>
                       </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="projectType">
-                          Sujet <span className="text-destructive">*</span>
-                        </Label>
-                        <input
-                          id="projectType"
-                          name="projectType"
-                          type="text"
-                          required
-                          value={formData.projectType}
-                          onChange={handleChange}
-                          className="w-full px-4 py-3.5 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                          placeholder="Sujet de votre message"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="description">
-                          Message <span className="text-destructive">*</span>
-                        </Label>
-                        <textarea
-                          id="description"
-                          name="description"
-                          required
-                          value={formData.description}
-                          onChange={handleChange}
-                          rows={6}
-                          className="w-full px-4 py-3.5 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-all"
-                          placeholder="Décrivez votre demande..."
-                        />
-                      </div>
-
-                      <Button
-                        type="submit"
-                        size="lg"
-                        className="w-full group bg-gradient-to-r from-primary to-accent hover:shadow-2xl"
-                      >
-                        <Send className="mr-2 group-hover:translate-x-1 transition-transform" size={20} />
-                        Envoyer le message
-                      </Button>
                     </form>
                   )}
                 </CardContent>
@@ -693,7 +774,7 @@ export function AboutContact() {
       <section className="py-20 lg:py-32 relative">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-4xl mx-auto fade-in-up">
-            <Card className="border-2 border-primary/30 shadow-2xl overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10">
+            <Card className="border-2 border-primary/30 shadow-l overflow-hidden ">
               <CardContent className="p-10 lg:p-16 text-center">
                 <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Rocket className="text-primary" size={40} />

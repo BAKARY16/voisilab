@@ -10,6 +10,7 @@ import Image from "next/image"
 import Link from "next/link"
 import {
     ArrowRight,
+    Bot,
     Sparkles,
     ChevronLeft,
     ChevronRight,
@@ -57,7 +58,9 @@ import {
     Newspaper,
     Download,
     Eye,
-    FileText
+    FileText,
+    AlertCircle,
+    X
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
@@ -76,8 +79,13 @@ export function HomePageContent() {
     const [likes, setLikes] = useState<{ [key: number]: number }>({
         0: 45, 1: 67, 2: 32, 3: 89, 4: 54, 5: 71,
     })
+    const [news, setNews] = useState<any[]>([]) // État pour les actualités
+    const [loadingNews, setLoadingNews] = useState(true) // État de chargement
     const [liked, setLiked] = useState<{ [key: number]: boolean }>({})
     const [submitted, setSubmitted] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([])
     const [formData, setFormData] = useState({
         name: "", email: "", phone: "", projectType: "", budget: "", timeline: "", description: "",
     })
@@ -87,6 +95,36 @@ export function HomePageContent() {
             setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
         }, 5000)
         return () => clearInterval(timer)
+    }, [])
+
+    // Charger les actualités depuis le backend
+    useEffect(() => {
+        const fetchNews = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/api/blog/published?limit=3')
+                if (response.ok) {
+                    const result = await response.json()
+                    setNews(result.data || [])
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des actualités:', error)
+            } finally {
+                setLoadingNews(false)
+            }
+        }
+        
+        // Charger au démarrage
+        fetchNews()
+        
+        // Auto-refresh toutes les 30 secondes en arrière-plan (au lieu de 5s)
+        const interval = setInterval(() => {
+            fetch('http://localhost:5000/api/blog/published?limit=3')
+                .then(res => res.ok ? res.json() : null)
+                .then(result => result && setNews(result.data || []))
+                .catch(() => {}) // Silencieux en arrière-plan
+        }, 30000) // 30 secondes au lieu de 5
+        
+        return () => clearInterval(interval)
     }, [])
 
     const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
@@ -104,16 +142,77 @@ export function HomePageContent() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
+        setError(null)
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const files = Array.from(e.target.files)
+            // Limiter à 5 fichiers maximum
+            if (files.length + selectedFiles.length > 5) {
+                setError('Maximum 5 fichiers autorisés')
+                return
+            }
+            // Vérifier la taille (10MB par fichier)
+            const oversized = files.filter(f => f.size > 10 * 1024 * 1024)
+            if (oversized.length > 0) {
+                setError('Certains fichiers dépassent la taille maximale de 10MB')
+                return
+            }
+            setSelectedFiles([...selectedFiles, ...files])
+            setError(null)
+        }
+    }
+
+    const removeFile = (index: number) => {
+        setSelectedFiles(selectedFiles.filter((_, i) => i !== index))
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        console.log("Project request submitted:", formData)
-        setSubmitted(true)
-        setTimeout(() => {
-            setSubmitted(false)
-            setFormData({ name: "", email: "", phone: "", projectType: "", budget: "", timeline: "", description: "" })
-        }, 3000)
+        setIsSubmitting(true)
+        setError(null)
+
+        try {
+            const formDataToSend = new FormData()
+            formDataToSend.append('name', formData.name)
+            formDataToSend.append('email', formData.email)
+            formDataToSend.append('phone', formData.phone)
+            formDataToSend.append('projectType', formData.projectType)
+            formDataToSend.append('budget', formData.budget)
+            formDataToSend.append('timeline', formData.timeline)
+            formDataToSend.append('description', formData.description)
+
+            // Ajouter les fichiers
+            selectedFiles.forEach(file => {
+                formDataToSend.append('files', file)
+            })
+
+            const response = await fetch('http://localhost:5000/api/project-submissions/submit', {
+                method: 'POST',
+                body: formDataToSend
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.message || 'Erreur lors de l\'envoi de la demande')
+            }
+
+            const result = await response.json()
+            console.log('Projet soumis:', result)
+            setSubmitted(true)
+
+            setTimeout(() => {
+                setSubmitted(false)
+                setFormData({ name: "", email: "", phone: "", projectType: "", budget: "", timeline: "", description: "" })
+                setSelectedFiles([])
+            }, 5000)
+        } catch (error) {
+            console.error('Erreur:', error)
+            setError(error instanceof Error ? error.message : 'Erreur lors de l\'envoi. Veuillez réessayer.')
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     const stats = [
@@ -133,7 +232,7 @@ export function HomePageContent() {
     const services = [
         {
             icon: Printer,
-            title: "Impression 3D",
+            title: "Impression 2D/3D",
             description: "Prototypage rapide et production de pièces personnalisées en FDM et résine.",
             items: ["Prototypage", "Petites séries", "Matériaux variés"],
             gradient: "from-blue-500/10 to-cyan-500/10",
@@ -148,12 +247,25 @@ export function HomePageContent() {
             image: "https://media.vertuoz.fr/uploads/Article_Quels_sont_les_avantages_d_un_developpement_informatique_sur_mesure_66c3ed4303.jpeg"
         },
         {
-            icon: Shirt,
-            title: "Usinage CNC",
-            description: "Fraisage de précision pour bois, plastique et aluminium avec notre fraiseuse 3 axes.",
-            items: ["Moules", "Pièces mécaniques", "Prototypes"],
-            gradient: "from-green-500/10 to-emerald-500/10",
-            image: "/cnc-machining-service.jpg"
+            icon: Bot,
+            title: "Robotique",
+            description: "Conception et programmation de robots pour des applications variées.",
+            items: ["Robots éducatifs", "Automatisation", "Projets sur mesure"],
+            gradient: "from-yellow-500/10 to-orange-500/10",
+            image: "https://www.aq-tech.fr/fr/wp-content/uploads/sites/5/2022/12/Diff%C3%A9rents-types-de-prototype-700x700.jpg"
+        },
+        {
+            icon: Palette,
+            title: "Design graphique & Conception visuelle",
+            description: "Création d'identités visuelles uniques, de supports marketing et de designs modernes pour vos projets.",
+            items: [
+                "Logos & Branding",
+                "Supports publicitaires",
+                "Illustrations personnalisées",
+                "Maquettes UX/UI"
+            ],
+            gradient: "from-indigo-500/10 to-purple-500/10",
+            image: "https://www.canadafrancais.com/wp-content/uploads/sites/11/2018/08/CanadaFrancais.com-informe16.jpg"
         },
         {
             icon: Code,
@@ -161,15 +273,7 @@ export function HomePageContent() {
             description: "Développement de solutions connectées avec Arduino, Raspberry Pi et ESP32.",
             items: ["Circuits imprimés", "Objets connectés", "Domotique"],
             gradient: "from-orange-500/10 to-red-500/10",
-            image: "/electronics-iot-service.jpg"
-        },
-        {
-            icon: Palette,
-            title: "Design & CAO",
-            description: "Accompagnement en conception 3D avec Fusion 360, Blender et Inkscape.",
-            items: ["Modélisation 3D", "Design graphique", "Plans techniques"],
-            gradient: "from-pink-500/10 to-rose-500/10",
-            image: "/design-cao-service.jpg"
+            image: "https://www.business-solutions-atlantic-france.com/wp-content/webp-express/webp-images/uploads/2019/04/electronique_professionnelle-1160x652.png.webp"
         },
         {
             icon: Package,
@@ -177,17 +281,17 @@ export function HomePageContent() {
             description: "De l'idée au prototype final, nous vous accompagnons dans tout le processus.",
             items: ["Étude de faisabilité", "Tests & itérations", "Finitions"],
             gradient: "from-cyan-500/10 to-blue-500/10",
-            image: "/prototyping-service.jpg"
+            image: "https://assets.justinmind.com/wp-content/uploads/2021/01/paper-prototyping-cutouts.png"
         },
     ]
 
     const equipment = [
         { icon: Printer, name: "Imprimantes 3D", count: "2 machines", description: "Imprimante 3D FDM haute performance, idéale pour le prototypage rapide. Elle offre une grande précision et un rendu professionnel.", category: "Impression", gradient: "from-blue-500/10 to-cyan-500/10", image: "https://www.makeitmarseille.com/wp-content/uploads/2017/09/Make-it-Marseille-impression-3D-ultimaker-2.jpg", categoryColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
-        { icon: Scissors, name: "Découpeuse Laser", count: "100W CO2", description: "La découpeuse laser est un outil qui permet de découper et graver des matériaux à partir de l’énergie d’un laser focalisé par une lentille.", category: "Découpe", image: "https://lefablab.fr/wp-content/uploads/2019/07/p7121491.jpg", gradient: "from-purple-500/10 to-pink-500/10", categoryColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
+        { icon: Scissors, name: "Découpeuse Laser", count: "100W CO2", description: "La découpeuse laser est un outil qui permet de découper et graver des matériaux à partir de l’énergie d’un laser focalisé par une lentille.", category: "Découpe", image: "https://voisinage.uvci.online/fablab/public/img/materiels/decoupeuse_lazer.jpg", gradient: "from-purple-500/10 to-pink-500/10", categoryColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
         { icon: Shirt, name: "Machine à coudre  SGGEMSY", count: "Conception", description: "Machine industrielle SGGEMSY allie robustesse et haute productivité. Idéale pour des piqûres précises et une finition professionnelle sur tous textiles.", image: "https://lecoindupro.blob.core.windows.net/upload/2436551.Lg.jpg", category: "Confection", gradient: "from-green-500/10 to-emerald-500/10", categoryColor: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" },
         { icon: Shirt, name: "Machine à broder BROTHER", count: "Conception", description: "Brodeuse haute performance avec un large champ de 200x200mm, enfilage automatique et tri intelligent des couleurs. Rapide et précise avec une vitesse de 1000 points/minute.", image: "https://agrilab.unilasalle.fr/projets/attachments/download/1906/machine001.jpg", category: "Confection", gradient: "from-orange-500/10 to-red-500/10", categoryColor: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" },
         { icon: Drill, name: "Perceuse BOSCH", count: "Outillage pro", description: "Perceuse à colonne Bosch PBD 40, une machine de précision numérique et puissance. Intègre un écran d'affichage digital, un laser de pointage et un moteur de 710 W pour des perçages parfaits et sécurisés sur bois et métal.", image: "https://www.travaillerlebois.com/wp-content/uploads/2016/12/perceuse-a-colonne_bosch_pbd-40-23.jpg", category: "Création", gradient: "from-yellow-500/10 to-orange-500/10", categoryColor: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20" },
-        { icon: Gauge, name: "Fraiseuse Numérique SHOPBOT", count: "Contrôle qualité", description: "Fraiseuse numérique ShopBot : solution CNC robuste et polyvalente. Idéale pour la découpe et la gravure de précision sur grands formats (bois, plastiques, métaux tendres). Permet la réalisation rapide de pièces complexes.", image: "https://lacasemate.fr/wp-content/uploads/2022/02/Fraiseuse_num%C3%A9rique.png", category: "Création", gradient: "from-cyan-500/10 to-blue-500/10", categoryColor: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20" },
+        { icon: Gauge, name: "Fraiseuse Numérique SHOPBOT", count: "Contrôle qualité", description: "Fraiseuse numérique ShopBot : solution CNC robuste et polyvalente. Idéale pour la découpe et la gravure de précision sur grands formats (bois, plastiques, métaux tendres). Permet la réalisation rapide de pièces complexes.", image: "https://voisinage.uvci.online/fablab/public/img/materiels/fraiseur_numerique.jpg", category: "Création", gradient: "from-cyan-500/10 to-blue-500/10", categoryColor: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20" },
     ]
 
     const workshops = [
@@ -197,19 +301,19 @@ export function HomePageContent() {
     ]
 
     const projects = [
-        { title: "Prothèse de main imprimée 3D", creator: "Sarah M.", category: "Santé", description: "Prothèse de main fonctionnelle imprimée en 3D pour enfants, accessible et personnalisable.", image: "/prosthetic-hand-3d-printed-innovative.jpg", tags: ["Impression 3D", "Social Impact"], gradient: "from-blue-500/10 to-cyan-500/10", categoryColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
-        { title: "Système hydroponique connecté", creator: "Lucas B.", category: "Agriculture", description: "Système de culture hydroponique automatisé avec monitoring IoT pour une agriculture urbaine efficace.", image: "/smart-hydroponic-system-arduino-sensors.jpg", tags: ["IoT", "Arduino", "Écologie"], gradient: "from-green-500/10 to-emerald-500/10", categoryColor: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" },
-        { title: "Lampe design paramétrique", creator: "Emma L.", category: "Design", description: "Collection de lampes au design unique créées avec modélisation paramétrique et découpe laser.", image: "/parametric-design-laser-cut-lamp-modern.jpg", tags: ["Laser", "Design", "Art"], gradient: "from-purple-500/10 to-pink-500/10", categoryColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
-        { title: "Drone personnalisé FPV", creator: "Alex T.", category: "Robotique", description: "Construction complète d'un drone FPV avec châssis imprimé en 3D et électronique custom.", image: "/custom-fpv-drone-3d-printed-frame.jpg", tags: ["Impression 3D", "Électronique", "FPV"], gradient: "from-orange-500/10 to-red-500/10", categoryColor: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20" },
-        { title: "Mobilier urbain éco-responsable", creator: "Marie D.", category: "Éco-design", description: "Banc public modulaire fabriqué à partir de plastique recyclé et bois local avec découpe CNC.", image: "/eco-urban-furniture-recycled-cnc.jpg", tags: ["CNC", "Écologie", "Design"], gradient: "from-green-500/10 to-teal-500/10", categoryColor: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" },
-        { title: "Instruments de musique MIDI", creator: "Tom R.", category: "Musique", description: "Contrôleur MIDI personnalisé avec capteurs tactiles et LEDs RGB programmables.", image: "/custom-midi-controller-arduino-leds.jpg", tags: ["Arduino", "Audio", "Électronique"], gradient: "from-purple-500/10 to-indigo-500/10", categoryColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
+        { title: "Gant Cardiaque", creator: "Sarah M.", category: "Santé", description: "Permet de suivre à distance la fréquence cardiaque des personnes malades. L’objectif de ce projet est de permettre à un cardiologue de suivre à distance la fréquence cardiaque d'un patient en temps réel et d’aboutir à une prise en charge.", image: "https://voisinage.uvci.online/fablab/public/img/prototypes/gangnum.png", tags: ["Impression 3D", "Social Impact"], gradient: "from-blue-500/10 to-cyan-500/10", categoryColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+        { title: "Dispositif d'accès intelligent", creator: "Lucas B.", category: "Robotique", description: "Système intelligent d’accès qui a pour but général de renforcer la sécurité et contrôler l’accès des personnes dans une entreprise. C’est une solution innovante répondant à la problématique du contrôle et de la sécurisation de l’accès aux édifices.", image: "https://voisinage.uvci.online/fablab/public/img/prototypes/robot.png", tags: ["IoT", "Arduino", "Écologie"], gradient: "from-green-500/10 to-emerald-500/10", categoryColor: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" },
+        { title: "Pupitre", creator: "Emma L.", category: "Design", description: "Un pupitre personnalisé offrant un confort au présentateur et des espaces de rangement. La partie supérieure est formée par un plan incliné sur lequel on peut poser un livre... Celui-ci a été fait par l'ingenieusité des etudiants de l'UVCI.", image: "https://voisinage.uvci.online/fablab/public/img/prototypes/pupitre.png", tags: ["Laser", "Design", "Art"], gradient: "from-purple-500/10 to-pink-500/10", categoryColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
+        // { title: "Drone personnalisé FPV", creator: "Alex T.", category: "Robotique", description: "Construction complète d'un drone FPV avec châssis imprimé en 3D et électronique custom.", image: "/custom-fpv-drone-3d-printed-frame.jpg", tags: ["Impression 3D", "Électronique", "FPV"], gradient: "from-orange-500/10 to-red-500/10", categoryColor: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20" },
+        // { title: "Mobilier urbain éco-responsable", creator: "Marie D.", category: "Éco-design", description: "Banc public modulaire fabriqué à partir de plastique recyclé et bois local avec découpe CNC.", image: "/eco-urban-furniture-recycled-cnc.jpg", tags: ["CNC", "Écologie", "Design"], gradient: "from-green-500/10 to-teal-500/10", categoryColor: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" },
+        // { title: "Instruments de musique MIDI", creator: "Tom R.", category: "Musique", description: "Contrôleur MIDI personnalisé avec capteurs tactiles et LEDs RGB programmables.", image: "/custom-midi-controller-arduino-leds.jpg", tags: ["Arduino", "Audio", "Électronique"], gradient: "from-purple-500/10 to-indigo-500/10", categoryColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
     ]
 
     const testimonials = [
-        { name: "Sophie Martin", role: "Entrepreneur", avatar: "S", content: "Grâce à Voisilab, j'ai pu prototyper et tester mon produit avant de lancer ma startup. L'équipe est incroyablement compétente et toujours prête à aider !", rating: 5 },
+        { name: "Sophie Kadio", role: "Entrepreneur", avatar: "S", content: "Grâce à Voisilab, j'ai pu prototyper et tester mon produit avant de lancer ma startup. L'équipe est incroyablement compétente et toujours prête à aider !", rating: 5 },
         { name: "Alexandre Kouassi", role: "Étudiant en design", avatar: "A", content: "Le fablab m'a permis de donner vie à mes projets les plus fous. Les formations sont top et l'ambiance collaborative est vraiment stimulante.", rating: 5 },
         { name: "Fatou Traoré", role: "Artiste", avatar: "F", content: "J'ai découvert la découpe laser et ça a révolutionné mon travail artistique. Je recommande vivement pour tous les créatifs !", rating: 5 },
-        { name: "Jean-Marc Dupont", role: "Maker passionné", avatar: "J", content: "Après 2 ans de membership, je ne peux plus m'en passer. C'est devenu mon deuxième atelier. Équipements pros, communauté géniale !", rating: 5 },
+        { name: "Jean-Marc Kouassi", role: "Maker passionné", avatar: "J", content: "Après 2 ans de membership, je ne peux plus m'en passer. C'est devenu mon deuxième atelier. Équipements pros, communauté géniale !", rating: 5 },
     ]
 
     const team = [
@@ -223,11 +327,8 @@ export function HomePageContent() {
 
     ]
 
-    const news = [
-        { title: "Renforcement de la formation et de l’innovation : L’UVCI et l’IPNETP scellent un partenariat stratégique", date: "Publié le 24/11/2025", category: "Événement", image: "https://uvci.online/portail/externes/images/actualites/16052016-1C4A0236.jpg", excerpt: "C’est le début d’une belle aventure entre deux références du secteur Education-formation. L’Université Virtuelle de Côte d’Ivoire (UVCI) et l’Institut Pédagogique National de l’Enseignement Technique et Professionnel (IPNETP) ont signé, lundi 26 janvier 2026, une convention de partenariat dans les locaux de l’IPNETP à Cocody.", gradient: "" },
-        { title: "Premier Hackathon réussi pour l’Université Virtuelle de Côte d’Ivoire", date: "28 Février 2024", category: "Événement", image: "/2O0A00263.jpg", excerpt: "L’Université Virtuelle de Côte d’Ivoire (UVCI) a organisé avec brio son tout premier HACKATHON. Cette compétition qui s’est tenue les 15 et 16 octobre 2024 au sein même de l’Université a débuté par l’intervention des responsables de l’Université par la voix du Prof. Kouamé Fernand Vice-Président de l’UVCI qui a adressé des mots de bienvenue et d’encouragements aux différents participants en présence du Prof. Koné Tiémoman, Président de l’UVCI.", gradient: "" },
-        { title: "8ème édition de l’Open Access Week : l’UVCI au cœur de la réflexion sur la Science Ouverte en Côte d’Ivoire", date: "Publié le 07/12/2025", category: "Cérémonie", image: "https://uvci.online/portail/externes/images/actualites/890B8832_(1)_11zon.jpg", excerpt: "L’Université Virtuelle de Côte d’Ivoire (UVCI) abrite du lundi 1er au mardi 2 décembre 2025 la 8ème édition de l’Open Access Week, placé sous le thème : « De la propriété du savoir à, la science ouverte : repenser la production et la diffusion de la recherche en Côte d’Ivoire »...", gradient: "from-purple-500/10 to-pink-500/10" },
-    ]
+    // const news_old = [  // Donn�es charg�es depuis l'API
+    // ]
 
     const process = [
         { num: 1, title: "Venez nous rencontrer", desc: "Visitez le fablab lors de nos portes ouvertes ou prenez rendez-vous", icon: Users },
@@ -244,12 +345,7 @@ export function HomePageContent() {
     ]
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
-            {/* Decorative Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-            </div>
+        <div className="min-h-screen bg-background">
 
             {/* Hero Section */}
             <section id="accueil" className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -275,8 +371,6 @@ export function HomePageContent() {
                         <button key={index} onClick={() => setCurrentSlide(index)} className={`h-2 rounded-full transition-all duration-300 ${index === currentSlide ? "w-8 bg-primary" : "w-2 bg-white/50 hover:bg-white/70"}`} aria-label={`Aller à la diapositive ${index + 1}`} />
                     ))}
                 </div>
-
-                <div className="absolute inset-0 bg-grid-pattern opacity-10 z-10" />
 
                 <div className="container mx-auto px-4 lg:px-8 relative z-20 pt-16">
                     <div className="max-w-5xl mx-auto text-center">
@@ -530,6 +624,19 @@ export function HomePageContent() {
                         })}
                     </div>
 
+                    {/* Boutons voir plus */}
+                    <div className="flex justify-center mt-12 fade-in-up" style={{ animationDelay: '350ms' }}>
+                        <Button size="lg" className="group relative overflow-hidden bg-gradient-to-r from-primary to-accent hover:shadow-2xl transition-all duration-300 text-base shadow-2xl" asChild>
+                            <Link href="/service">
+                                <span className="relative z-10 flex items-center gap-2">
+                                    Voir tous les services
+                                    <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
+                                </span>
+                                <div className="absolute inset-0 bg-gradient-to-r from-accent to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            </Link>
+                        </Button>
+                    </div>
+
                     {/* Section infos complémentaires */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto mt-16 fade-in-up" style={{ animationDelay: '400ms' }}>
 
@@ -594,7 +701,7 @@ export function HomePageContent() {
 
                     {/* Bandeau CTA final */}
                     <div className="max-w-4xl mx-auto mt-16 fade-in-up" style={{ animationDelay: '500ms' }}>
-                        <Card className="border-2 border-primary/50 bg-gradient-to-r from-primary/5 via-background to-accent/5 overflow-hidden">
+                        <Card className=" bg-gradient-to-r from-primary/5 via-background to-accent/5 overflow-hidden">
                             <CardContent className="p-8 lg:p-12">
                                 <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
                                     <div className="text-center lg:text-left flex-1">
@@ -799,11 +906,13 @@ export function HomePageContent() {
                                                 <span className="text-sm text-foreground font-medium">{item.participants}</span>
                                             </div>
                                         </div>
-                                        <Button className="w-full group relative overflow-hidden">
-                                            <span className="relative z-10 flex items-center justify-center gap-2">
-                                                S'inscrire
-                                                <ArrowRight className="group-hover:translate-x-1 transition-transform" size={16} />
-                                            </span>
+                                        <Button className="w-full cursor-pointer group relative overflow-hidden">
+                                            <Link href="inscription-atelier">
+                                                <span className="relative z-10 flex items-center justify-center gap-2">
+                                                    S'inscrire
+                                                    <ArrowRight className="group-hover:translate-x-1 transition-transform" size={16} />
+                                                </span>
+                                            </Link>
                                         </Button>
                                     </CardContent>
                                 </Card>
@@ -926,14 +1035,14 @@ export function HomePageContent() {
                                     <CardContent className="p-6">
                                         {/* Header avec avatar créateur */}
                                         <div className="flex items-center gap-3 mb-4">
-                                            <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
-                                                {project.creator.charAt(0)}
-                                            </div>
+                                            {/* <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
+                                                // {project.creator.charAt(0)}
+                                            </div> */}
                                             <div className="flex-1">
                                                 <h3 className="font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                                                     {project.title}
                                                 </h3>
-                                                <p className="text-xs text-muted-foreground">Par {project.creator}</p>
+                                                {/* <p className="text-xs text-muted-foreground">Par {project.creator}</p> */}
                                             </div>
                                         </div>
 
@@ -943,7 +1052,7 @@ export function HomePageContent() {
                                         </p>
 
                                         {/* Tags compacts */}
-                                        <div className="flex flex-wrap gap-2 mb-4">
+                                        {/* <div className="flex flex-wrap gap-2 mb-4">
                                             {project.tags.slice(0, 3).map((tag, i) => (
                                                 <Badge
                                                     key={i}
@@ -958,7 +1067,7 @@ export function HomePageContent() {
                                                     +{project.tags.length - 3}
                                                 </Badge>
                                             )}
-                                        </div>
+                                        </div> */}
 
                                         {/* Footer stats */}
                                         <div className="flex items-center justify-between pt-4 border-t border-border">
@@ -989,7 +1098,7 @@ export function HomePageContent() {
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
-                                                className="h-auto p-0 text-primary hover:text-primary/80"
+                                                className="h-auto p-2 text-primary hover:text-white"
                                                 asChild
                                             >
                                                 <Link href={`/innovations/${index}`}>
@@ -1095,40 +1204,60 @@ export function HomePageContent() {
                 </div>
             </section>
 
-            {/* News Section */}
-            <section className="py-20 lg:py-32 bg-muted/30 relative">
+            {/* News Section - Design Simplifié et Professionnel */}
+            <section className="py-20 lg:py-32 bg-muted/30">
                 <div className="container mx-auto px-4 lg:px-8">
-                    <SectionHeader title="Actualités" subtitle="Restez informé des dernières nouveautés, événements et partenariats du fablab" />
+                    <SectionHeader title="Actualités" subtitle="Restez informé des dernières nouveautés, événements et partenariats de l'UVCI" />
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto mb-12">
-                        {news.map((article, index) => (
-                            <div key={index} className="fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
-                                <Card className={`relative overflow-hidden border-2 border-border hover:border-primary/50 hover:shadow-2xl transition-all duration-500 group h-full bg-gradient-to-br ${article.gradient}`}>
-                                    <div className="relative h-48 overflow-hidden">
-                                        <Image src={article.image || "/placeholder.svg"} alt={article.title} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
-                                        <div className="absolute top-4 left-4">
-                                            <Badge className="bg-primary/90 text-primary-foreground backdrop-blur-sm border-none font-bold">{article.category}</Badge>
-                                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto mb-8">
+                        {loadingNews ? (
+                            <div className="col-span-3 text-center py-8 text-muted-foreground">
+                                Chargement des actualités...
+                            </div>
+                        ) : news.length === 0 ? (
+                            <div className="col-span-3 text-center py-8 text-muted-foreground">
+                                Aucune actualité disponible
+                            </div>
+                        ) : (
+                            news.map((article:any, index:number) => (
+                            <div key={index} style={{ animationDelay: `${index * 100}ms` }}>
+                                <Card className="overflow-hidden border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full bg-background">
+                                    <div className="relative h-56 overflow-hidden bg-muted">
+                                        <Image 
+                                            src={article.featured_image || "/placeholder.svg"} 
+                                            alt={article.title} 
+                                            fill 
+                                            className="object-cover group-hover:scale-105 transition-transform duration-300" 
+                                        />
                                     </div>
                                     <CardContent className="p-6">
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                                            <Calendar size={16} />
-                                            <span>{article.date}</span>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <Badge variant="outline" className="text-xs font-medium">
+                                                {article.category}
+                                            </Badge>
+                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                <Calendar size={14} />
+                                                <span>{new Date(article.published_at || article.created_at).toLocaleDateString('fr-FR')}</span>
+                                            </div>
                                         </div>
-                                        <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors line-clamp-2">{article.title}</h3>
-                                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{article.excerpt}</p>
+                                        <h3 className="text-lg font-semibold text-foreground mb-2 line-clamp-2 leading-tight">
+                                            {article.title}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                                            {article.excerpt}
+                                        </p>
                                     </CardContent>
                                 </Card>
                             </div>
-                        ))}
+                        ))
+                        )}
                     </div>
 
                     <div className="text-center fade-in-up">
                         <Button size="lg" variant="outline" className="group" asChild>
                             <Link href="/actualites">
                                 Toutes les actualités
-                                <Newspaper className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
+                                <Newspaper className="ml-2 group-hover:translate-x-1 transition-transform" size={18} />
                             </Link>
                         </Button>
                     </div>
@@ -1254,6 +1383,16 @@ export function HomePageContent() {
                                     </div>
                                 ) : (
                                     <form onSubmit={handleSubmit} className="space-y-6">
+                                        {/* Affichage des erreurs */}
+                                        {error && (
+                                            <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 p-4 rounded-lg">
+                                                <div className="flex items-center gap-2">
+                                                    <AlertCircle className="text-red-600" size={20} />
+                                                    <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <div>
                                             <Label htmlFor="name" className="text-foreground mb-2 block">Nom complet *</Label>
                                             <input id="name" name="name" type="text" required value={formData.name} onChange={handleChange} className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground transition-all duration-300 hover:border-primary/50" placeholder="Jean " />
@@ -1307,18 +1446,58 @@ export function HomePageContent() {
                                         </div>
                                         <div>
                                             <Label className="text-foreground mb-2 block">Fichiers (optionnel)</Label>
-                                            <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                                                <Paperclip className="mx-auto mb-2 text-muted-foreground" size={24} />
-                                                <p className="text-sm text-muted-foreground">Glissez vos fichiers ici ou cliquez pour parcourir</p>
-                                                <p className="text-xs text-muted-foreground mt-1">Plans, croquis, photos, fichiers 3D...</p>
+                                            <div className="space-y-3">
+                                                <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
+                                                    <input
+                                                        type="file"
+                                                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.stl,.obj"
+                                                        multiple
+                                                        onChange={handleFileChange}
+                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                    />
+                                                    <Paperclip className="mx-auto mb-2 text-muted-foreground" size={24} />
+                                                    <p className="text-sm text-muted-foreground">Glissez vos fichiers ici ou cliquez pour parcourir</p>
+                                                    <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, Images, fichiers 3D (max 5 fichiers, 10MB chacun)</p>
+                                                </div>
+                                                {selectedFiles.length > 0 && (
+                                                    <div className="space-y-2">
+                                                        {selectedFiles.map((file, index) => (
+                                                            <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                                                <div className="flex items-center gap-2">
+                                                                    <FileText size={16} className="text-primary" />
+                                                                    <span className="text-sm text-foreground">{file.name}</span>
+                                                                    <span className="text-xs text-muted-foreground">({(file.size / 1024).toFixed(0)} KB)</span>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeFile(index)}
+                                                                    className="text-muted-foreground hover:text-destructive transition-colors"
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                        <Button type="submit" size="lg" className="w-full group relative overflow-hidden bg-gradient-to-r from-primary to-accent hover:shadow-2xl transition-all duration-300">
-                                            <span className="relative z-10 flex items-center justify-center gap-2">
-                                                <Send size={20} />
-                                                Envoyer la demande
-                                            </span>
-                                            <div className="absolute inset-0 bg-gradient-to-r from-accent to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                        <Button
+                                            type="submit"
+                                            size="lg"
+                                            disabled={isSubmitting}
+                                            className="w-full bg-primary hover:bg-primary/90"
+                                        >
+                                            {isSubmitting ? (
+                                                <>
+                                                    <div className="animate-spin mr-2 h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                                                    Envoi en cours...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send size={20} />
+                                                    <span className="ml-2">Envoyer la demande</span>
+                                                </>
+                                            )}
                                         </Button>
                                     </form>
                                 )}

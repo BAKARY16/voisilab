@@ -11,9 +11,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
-import { Honeypot } from "@/components/honeypot"
-import { projectSchema } from "@/lib/validations/project.schema"
-import { sendProjectSubmission } from "@/lib/email.service"
+import { Honeypot } from "@/components/honeypot" // Ensure the file exists and the casing matches
+import { projectSchema, type ProjectFormData } from "@/lib/validations/project.schema"
+import { sendProjectSubmission } from "@/lib/supabase/email.service"
 import { checkRateLimit, getRemainingTime } from "@/lib/utils/rate-limit"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
 import {
@@ -38,17 +38,6 @@ import {
     CheckCheck,
     X,
 } from "lucide-react"
-
-export type ProjectFormData = {
-    name: string
-    email: string
-    phone: string
-    projectType: string
-    budget?: string
-    timeline?: string
-    description: string
-    files?: File[] // Add this line to include the files field
-}
 
 export function SendPage() {
     useScrollAnimation()
@@ -123,34 +112,52 @@ export function SendPage() {
         try {
             console.log("📤 Envoi sécurisé de la demande...")
 
-            // Simuler progression
+            // Préparer FormData pour l'envoi avec fichiers
+            const formData = new FormData()
+            formData.append('name', data.name)
+            formData.append('email', data.email)
+            formData.append('phone', data.phone)
+            formData.append('projectType', data.projectType)
+            formData.append('budget', data.budget || '')
+            formData.append('timeline', data.timeline || '')
+            formData.append('description', data.description)
+
+            // Ajouter les fichiers
             if (selectedFiles.length > 0) {
                 setUploadProgress(20)
+                selectedFiles.forEach((file) => {
+                    formData.append('files', file)
+                })
                 await new Promise(resolve => setTimeout(resolve, 300))
             }
 
-            const submissionData = {
-                ...data,
-                files: selectedFiles.length > 0 ? selectedFiles : undefined,
+            setUploadProgress(50)
+
+            const response = await fetch('http://localhost:5000/api/project-submissions/submit', {
+                method: 'POST',
+                body: formData,
+                // Ne pas définir Content-Type, le navigateur le fera automatiquement avec boundary pour multipart
+            })
+
+            setUploadProgress(80)
+
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.message || 'Erreur lors de l\'envoi')
             }
 
-            setUploadProgress(50)
-            const result = await sendProjectSubmission(submissionData)
+            const result = await response.json()
             setUploadProgress(100)
 
-            if (result.success) {
-                console.log("✅ Demande envoyée avec succès")
-                setSubmitted(true)
-                setSelectedFiles([])
+            console.log("✅ Demande envoyée avec succès:", result)
+            setSubmitted(true)
+            setSelectedFiles([])
 
-                setTimeout(() => {
-                    setSubmitted(false)
-                    reset()
-                    setUploadProgress(0)
-                }, 6000)
-            } else {
-                throw new Error(result.error || "Erreur lors de l'envoi")
-            }
+            setTimeout(() => {
+                setSubmitted(false)
+                reset()
+                setUploadProgress(0)
+            }, 6000)
         } catch (error) {
             console.error("❌ Erreur:", error)
             alert(
