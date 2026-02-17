@@ -71,10 +71,12 @@ export const getAllEquipment = asyncHandler(async (req: Request, res: Response) 
 
   const [rows] = await pool.query<Equipment[]>(query, params);
 
-  // Parser les specs JSON
+  // Parser les specs JSON (si c'est une string, sinon garder tel quel)
   const equipment = rows.map(item => ({
     ...item,
-    specs: item.specs ? JSON.parse(item.specs as string) : []
+    specs: item.specs 
+      ? (typeof item.specs === 'string' ? JSON.parse(item.specs) : item.specs)
+      : []
   }));
 
   // Get total count
@@ -136,7 +138,9 @@ export const getAvailableEquipment = asyncHandler(async (req: Request, res: Resp
 
   const equipment = rows.map(item => ({
     ...item,
-    specs: item.specs ? JSON.parse(item.specs as string) : []
+    specs: item.specs 
+      ? (typeof item.specs === 'string' ? JSON.parse(item.specs) : item.specs)
+      : []
   }));
 
   res.json({ success: true, data: equipment });
@@ -159,7 +163,9 @@ export const getEquipmentById = asyncHandler(async (req: Request, res: Response)
 
   const equipment = {
     ...rows[0],
-    specs: rows[0].specs ? JSON.parse(rows[0].specs as string) : []
+    specs: rows[0].specs 
+      ? (typeof rows[0].specs === 'string' ? JSON.parse(rows[0].specs) : rows[0].specs)
+      : []
   };
 
   res.json({ success: true, data: equipment });
@@ -168,15 +174,7 @@ export const getEquipmentById = asyncHandler(async (req: Request, res: Response)
 /**
  * Get equipment categories
  */
-export const getEquipmentCategories = asyncHandler(async (req: Request, res: Response) => {
-  const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT DISTINCT category FROM equipment WHERE active = TRUE ORDER BY category ASC'
-  );
 
-  const categories = rows.map(row => row.category);
-
-  res.json({ success: true, data: categories });
-});
 
 /**
  * Create equipment

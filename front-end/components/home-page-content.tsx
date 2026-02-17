@@ -132,10 +132,22 @@ export function HomePageContent() {
 
     // Charger les équipements depuis le backend
     useEffect(() => {
+        console.log('🔄 Fetching equipment from:', `${API_URL}/api/equipment/available`)
         fetch(`${API_URL}/api/equipment/available`)
-            .then(res => res.ok ? res.json() : null)
-            .then(result => result && setEquipment(result.data || []))
-            .catch(() => { }) // Silencieux
+            .then(res => {
+                console.log('📥 Equipment response status:', res.status)
+                return res.ok ? res.json() : null
+            })
+            .then(result => {
+                console.log('📊 Equipment API result:', result)
+                if (result?.data) {
+                    console.log('✅ Equipment loaded:', result.data.length, result.data)
+                    setEquipment(result.data)
+                }
+            })
+            .catch((err) => {
+                console.error('❌ Equipment fetch error:', err)
+            })
     }, [])
 
     // Charger les ateliers depuis le backend avec rafraîchissement automatique
@@ -462,6 +474,16 @@ export function HomePageContent() {
         "Création": Drill,
         "default": Wrench
     }
+
+    // Données statiques de fallback pour les équipements
+    const defaultEquipment = [
+        { id: 1, name: "Imprimantes 3D FDM", count_info: "3 machines", description: "Imprimante 3D FDM haute performance, idéale pour le prototypage rapide.", category: "Impression", gradient: "from-blue-500/10 to-cyan-500/10", image_url: "https://www.makeitmarseille.com/wp-content/uploads/2017/09/Make-it-Marseille-impression-3D-ultimaker-2.jpg", category_color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20", specs: ["Volume 220x220x250mm", "Précision 0.1mm", "PLA/PETG/TPU"], status: "available" },
+        { id: 2, name: "Découpeuse Laser CO2", count_info: "2 machines", description: "Découpe et gravure laser sur bois, acrylique, cuir avec précision professionnelle.", category: "Découpe", image_url: "https://lefablab.fr/wp-content/uploads/2019/07/p7121491.jpg", gradient: "from-purple-500/10 to-pink-500/10", category_color: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20", specs: ["Surface 600x400mm", "Puissance 60W"], status: "available" },
+        { id: 3, name: "Machine à coudre SGGEMSY", count_info: "4 machines", description: "Machine industrielle pour textiles professionnels, robuste et précise.", image_url: "https://lecoindupro.blob.core.windows.net/upload/2436551.Lg.jpg", category: "Confection", gradient: "from-green-500/10 to-emerald-500/10", category_color: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20", specs: ["Point droit et zigzag"], status: "available" },
+    ]
+
+    // Équipements à afficher (API si disponible, sinon par défaut)
+    const displayEquipment = equipment.length > 0 ? equipment : defaultEquipment
 
     // Equipment et workshops maintenant chargés depuis l'API via useState/useEffect
 
@@ -876,7 +898,7 @@ export function HomePageContent() {
                     />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto mb-12">
-                        {equipment.slice(0, 3).map((item, index) => {
+                        {displayEquipment.slice(0, 3).map((item, index) => {
                             const Icon = categoryIcons[item.category] || categoryIcons.default
                             return (
                                 <div

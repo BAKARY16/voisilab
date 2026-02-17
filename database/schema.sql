@@ -187,23 +187,31 @@ CREATE TABLE IF NOT EXISTS workshop_registrations (
 CREATE TABLE IF NOT EXISTS equipment (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL UNIQUE,
-    description TEXT NOT NULL,
-    specifications JSON DEFAULT NULL,
     category VARCHAR(100) DEFAULT NULL,
-    image VARCHAR(500) DEFAULT NULL,
-    images JSON DEFAULT NULL COMMENT 'Galerie images',
-    status ENUM('available', 'in_use', 'maintenance', 'unavailable') DEFAULT 'available',
-    quantity INT DEFAULT 1,
-    location VARCHAR(255) DEFAULT NULL,
+    description TEXT,
+    image_url VARCHAR(500) DEFAULT NULL,
+    count_info VARCHAR(255) DEFAULT NULL,
+    specs JSON DEFAULT NULL,
+    status ENUM('available', 'maintenance', 'unavailable') DEFAULT 'available',
+    category_color VARCHAR(50) DEFAULT NULL,
+    gradient VARCHAR(100) DEFAULT NULL,
     order_index INT DEFAULT 0,
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_slug (slug),
     INDEX idx_category (category),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_active (active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Données initiales équipements
+INSERT INTO equipment (name, category, description, image_url, count_info, specs, status, category_color, gradient, order_index, active) VALUES
+('Imprimante 3D FDM', 'Impression', 'Imprimantes 3D à dépôt de fil fondu pour prototypage rapide', 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800', '3 machines', '["Volume 220x220x250mm", "Précision 0.1mm", "PLA/PETG/TPU"]', 'available', 'blue', 'from-blue-500/10 to-cyan-500/10', 1, TRUE),
+('Imprimante Résine SLA', 'Impression', 'Impression haute résolution pour détails fins et bijoux', 'https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?w=800', '2 machines', '["Résolution 50 microns", "Volume 192x120x200mm", "Résines standards et flexibles"]', 'available', 'purple', 'from-purple-500/10 to-pink-500/10', 2, TRUE),
+('Découpeuse Laser CO2', 'Découpe', 'Découpe et gravure laser sur bois, acrylique, cuir', 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=800', '2 machines', '["Surface 600x400mm", "Puissance 60W", "Bois/Acrylique/Cuir"]', 'available', 'orange', 'from-orange-500/10 to-red-500/10', 3, TRUE),
+('Machine à Coudre Industrielle', 'Confection', 'Machines à coudre professionnelles pour textiles', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800', '4 machines', '["Point droit et zigzag", "Tissus légers à épais", "Formation incluse"]', 'available', 'pink', 'from-pink-500/10 to-rose-500/10', 4, TRUE),
+('Fraiseuse CNC', 'Création', 'Usinage CNC pour bois, aluminium et plastiques', 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800', '1 machine', '["Surface 300x400mm", "Broche 24000 RPM", "Bois/Alu/Plastique"]', 'available', 'green', 'from-green-500/10 to-emerald-500/10', 5, TRUE),
+('Kit Arduino & Électronique', 'Création', 'Composants électroniques pour projets IoT et robotique', 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800', 'Kits disponibles', '["Arduino/ESP32/Raspberry", "Capteurs variés", "Composants de base"]', 'available', 'cyan', 'from-cyan-500/10 to-blue-500/10', 6, TRUE);
 
 -- ============================================
 -- TABLE: innovations

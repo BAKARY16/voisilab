@@ -65,6 +65,49 @@ export function EquipmentSection() {
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Données de fallback si l'API ne répond pas
+  const defaultEquipment: Equipment[] = [
+    {
+      id: 1,
+      name: "Imprimantes 3D FDM",
+      category: "Impression",
+      description: "Imprimantes 3D à dépôt de fil fondu pour prototypage rapide et pièces fonctionnelles.",
+      image_url: "https://www.makeitmarseille.com/wp-content/uploads/2017/09/Make-it-Marseille-impression-3D-ultimaker-2.jpg",
+      count_info: "3 machines",
+      specs: ["Volume 220x220x250mm", "Précision 0.1mm", "PLA/PETG/TPU"],
+      status: "available",
+      category_color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+      gradient: "from-blue-500/10 to-cyan-500/10",
+      order_index: 1
+    },
+    {
+      id: 2,
+      name: "Découpeuse Laser CO2",
+      category: "Découpe",
+      description: "Découpe et gravure laser sur bois, acrylique, cuir et autres matériaux.",
+      image_url: "https://lefablab.fr/wp-content/uploads/2019/07/p7121491.jpg",
+      count_info: "2 machines",
+      specs: ["Surface 600x400mm", "Puissance 60W", "Bois/Acrylique/Cuir"],
+      status: "available",
+      category_color: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+      gradient: "from-purple-500/10 to-pink-500/10",
+      order_index: 2
+    },
+    {
+      id: 3,
+      name: "Machine à coudre SGGEMSY",
+      category: "Confection",
+      description: "Machine industrielle pour tous types de textiles avec finition professionnelle.",
+      image_url: "https://lecoindupro.blob.core.windows.net/upload/2436551.Lg.jpg",
+      count_info: "4 machines",
+      specs: ["Point droit et zigzag", "Tissus légers à épais", "Formation incluse"],
+      status: "available",
+      category_color: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
+      gradient: "from-green-500/10 to-emerald-500/10",
+      order_index: 3
+    }
+  ]
+
   useEffect(() => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
     
@@ -383,7 +426,7 @@ export function EquipmentSection() {
               <div className="col-span-full text-center py-12">
                 <p className="text-muted-foreground">Chargement des équipements...</p>
               </div>
-            ) : equipment.map((item, index) => {
+            ) : (equipment.length > 0 ? equipment : defaultEquipment).map((item, index) => {
               const Icon = categoryIcons[item.category] || categoryIcons.default
               return (
                 <div
