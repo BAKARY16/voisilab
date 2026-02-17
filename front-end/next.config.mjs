@@ -27,7 +27,7 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: '69.62.106.191',
+        hostname: 'api.fablab.voisilab.online',
       },
     ],
   },
