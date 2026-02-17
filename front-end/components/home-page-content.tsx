@@ -1019,16 +1019,16 @@ export function HomePageContent() {
                                                     <div className="space-y-3 mb-6">
                                                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                                                             <Calendar size={18} className="text-primary flex-shrink-0" />
-                                                            <span className="text-sm text-foreground font-medium">{item.date}</span>
+                                                            <span className="text-sm text-foreground font-medium">{new Date(item.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
                                                         </div>
                                                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                                                             <Clock size={18} className="text-primary flex-shrink-0" />
                                                             <span className="text-sm text-foreground font-medium">{item.time} ({item.duration})</span>
                                                         </div>
-                                                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                                                        {/* <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                                                             <Users size={18} className="text-primary flex-shrink-0" />
                                                             <span className="text-sm text-foreground font-medium">{item.current_participants || 0}/{item.max_participants} inscrits</span>
-                                                        </div>
+                                                        </div> */}
                                                     </div>
                                                     <Button className="w-full cursor-pointer group relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
                                                         <span className="relative z-10 flex items-center justify-center gap-2">
