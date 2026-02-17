@@ -39,7 +39,7 @@ export default function Login() {
           <AuthLogin />
         </Grid>
 
-        <Grid size={12}>
+        {/* <Grid size={12}>
           <Stack direction="row" spacing={1} sx={{ justifyContent: 'center' }}>
             <Typography variant="body2" sx={{ color: '#999' }}>
               Vous n'avez pas de compte ?
@@ -58,7 +58,7 @@ export default function Login() {
               S'inscrire
             </Typography>
           </Stack>
-        </Grid>
+        </Grid> */}
       </Grid>
     </AuthWrapper>
   );
