@@ -23,7 +23,7 @@ export function Navigation() {
     { href: "/materiels", label: "Équipements" },
     { href: "/ateliers", label: "Ateliers & Événements" },
     { href: "/innovations", label: "Innovations" },
-    { href: "/equipe", label: "Équipe" },
+    { href: "/service", label: "Services" },
     { href: "/ppn", label: "PPN" },
     { href: "/about", label: "A propos" },
   ]
