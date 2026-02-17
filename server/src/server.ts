@@ -30,19 +30,28 @@ const app = express();
 // Middleware de sécurité
 app.use(helmet());
 
-// CORS
+// CORS - Configuration pour production et développement
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [
+      process.env.FRONTEND_URL || 'http://localhost:3501',
+      process.env.ADMIN_URL || 'http://localhost:3502',
+      'http://localhost:5001', // Frontend Next.js
+      'http://localhost:5002', // Admin Vite
+      'http://localhost:5173', // Vite dev server (default)
+      'http://localhost:5174', // Vite dev server (alternate)
+      'http://localhost:5175'  // Vite dev server (alternate)
+    ];
+
 const corsOptions = {
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3501',
-    process.env.ADMIN_URL || 'http://localhost:3502',
-    'http://localhost:5001', // Frontend Next.js
-    'http://localhost:5002', // Admin Vite
-    'http://localhost:5173', // Vite dev server (default)
-    'http://localhost:5174', // Vite dev server (alternate)
-    'http://localhost:5175'  // Vite dev server (alternate)
-  ],
-  credentials: true
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 };
+
+logger.info(`CORS configuré pour: ${allowedOrigins.join(', ')}`);
 
 app.use(cors(corsOptions));
 

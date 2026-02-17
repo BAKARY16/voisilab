@@ -1,5 +1,5 @@
 // API Configuration
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.fablab.voisilab.online';
+const API_URL = 'http://localhost:3500';
 
 // Migration from localStorage to sessionStorage (cleanup at startup)
 const migrateStorage = () => {
