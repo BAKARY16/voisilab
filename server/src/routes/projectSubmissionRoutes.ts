@@ -27,7 +27,7 @@ interface ProjectSubmission extends RowDataPacket {
   created_at: Date;
   reviewed_at: Date | null;
   reviewed_by: number | null;
-  review_notes: string | null;
+  admin_notes: string | null;
 }
 
 // ========================================
@@ -323,14 +323,14 @@ router.patch(
   [param('id').isInt(), body('status').isIn(['pending', 'reviewing', 'approved', 'rejected', 'archived'])],
   async (req, res) => {
     try {
-      const { status, review_notes } = req.body;
+      const { status, admin_notes } = req.body;
       const userId = (req as any).user?.id;
 
       const [result] = await pool.query<ResultSetHeader>(
         `UPDATE project_submissions
-        SET status = ?, reviewed_at = NOW(), reviewed_by = ?, review_notes = ?
+        SET status = ?, reviewed_at = NOW(), reviewed_by = ?, admin_notes = ?
         WHERE id = ?`,
-        [status, userId, review_notes || null, req.params.id]
+        [status, userId, admin_notes || null, req.params.id]
       );
 
       if (result.affectedRows === 0) {

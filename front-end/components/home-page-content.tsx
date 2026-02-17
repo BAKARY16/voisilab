@@ -225,21 +225,22 @@ export function HomePageContent() {
         return () => clearInterval(interval)
     }, [])
 
+    // Fonction de transformation des données d'équipe
+    const transformTeamData = (data: any[]) => {
+        return data.map(member => ({
+            name: member.name || member.full_name,
+            role: member.role,
+            bio: member.bio,
+            image: member.avatar_url || member.photo_url,
+            image_url: member.avatar_url || member.photo_url,
+            email: member.email,
+            linkedin: member.linkedin_url,
+            twitter: member.twitter_url
+        }))
+    }
+
     // Charger les membres d'équipe depuis le backend
     useEffect(() => {
-        const transformTeamData = (data: any[]) => {
-            return data.map(member => ({
-                name: member.name,
-                role: member.role,
-                bio: member.bio,
-                image: member.avatar_url,
-                image_url: member.avatar_url,
-                email: member.email,
-                linkedin: member.linkedin_url,
-                twitter: member.twitter_url
-            }))
-        }
-
         const fetchTeam = () => {
             console.log('🔄 Fetching team from:', `${API_URL}/api/team/active`)
             fetch(`${API_URL}/api/team/active`)
@@ -268,7 +269,11 @@ export function HomePageContent() {
         const interval = setInterval(() => {
             fetch(`${API_URL}/api/team/active`)
                 .then(res => res.ok ? res.json() : null)
-                .then(result => result && setTeamMembers(transformTeamData(result.data || [])))
+                .then(result => {
+                    if (result?.data) {
+                        setTeamMembers(transformTeamData(result.data))
+                    }
+                })
                 .catch(() => { })
         }, 60000)
 
@@ -454,6 +459,8 @@ export function HomePageContent() {
         }
         return {
             ...service,
+            title: service.title || service.name || 'Service',
+            description: service.description || '',
             icon: serviceIconMap[service.icon] || Wrench,
             features: features || [],
             gradient: "from-primary/10 to-accent/10",
@@ -728,7 +735,7 @@ export function HomePageContent() {
                                             {service.image_url ? (
                                                 <Image
                                                     src={service.image_url}
-                                                    alt={service.title}
+                                                    alt={service.title || 'Service'}
                                                     fill
                                                     className="object-cover group-hover:scale-110 transition-transform duration-700"
                                                 />
@@ -748,11 +755,11 @@ export function HomePageContent() {
 
                                         <CardContent className="p-6">
                                             <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">
-                                                {service.title}
+                                                {service.title || 'Service'}
                                             </h3>
 
                                             <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                                                {service.description}
+                                                {service.description || ''}
                                             </p>
 
                                             {/* Liste des prestations */}
@@ -767,7 +774,7 @@ export function HomePageContent() {
 
                                             {/* Bouton */}
                                             <Button variant="outline" size="sm" className="w-full group/btn" asChild>
-                                                <Link href={`/service#${service.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                                                <Link href={`/service#${(service.title || 'service').toLowerCase().replace(/\s+/g, '-')}`}>
                                                     En savoir plus
                                                     <ArrowRight className="ml-2 group-hover/btn:translate-x-1 transition-transform" size={16} />
                                                 </Link>

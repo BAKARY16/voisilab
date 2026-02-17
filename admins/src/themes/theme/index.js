@@ -1,7 +1,7 @@
 // ==============================|| PRESET THEME - DEFAULT ||============================== //
 
 export default function Default(colors) {
-  const { blue, red, gold, cyan, green, grey } = colors;
+  const { voisilab, voislabGreen, red, gold, cyan, green, grey } = colors;
   const greyColors = {
     0: grey[0],
     50: grey[1],
@@ -25,16 +25,16 @@ export default function Default(colors) {
 
   return {
     primary: {
-      lighter: blue[0],
-      100: blue[1],
-      200: blue[2],
-      light: blue[3],
-      400: blue[4],
-      main: blue[5],
-      dark: blue[6],
-      700: blue[7],
-      darker: blue[8],
-      900: blue[9],
+      lighter: voisilab[0],
+      100: voisilab[1],
+      200: voisilab[2],
+      light: voisilab[3],
+      400: voisilab[4],
+      main: voisilab[5],
+      dark: voisilab[6],
+      700: voisilab[7],
+      darker: voisilab[8],
+      900: voisilab[9],
       contrastText
     },
     secondary: {
@@ -78,11 +78,11 @@ export default function Default(colors) {
       contrastText
     },
     success: {
-      lighter: green[0],
-      light: green[3],
-      main: green[5],
-      dark: green[7],
-      darker: green[9],
+      lighter: voislabGreen[0],
+      light: voislabGreen[3],
+      main: voislabGreen[5],
+      dark: voislabGreen[7],
+      darker: voislabGreen[9],
       contrastText
     },
     grey: greyColors

@@ -47,9 +47,9 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
       pool.query<RowDataPacket[]>(`
         SELECT
           COUNT(*) as total,
-          SUM(CASE WHEN is_active = TRUE THEN 1 ELSE 0 END) as active,
-          SUM(CASE WHEN is_active = FALSE THEN 1 ELSE 0 END) as inactive
-        FROM team
+          SUM(CASE WHEN active = TRUE THEN 1 ELSE 0 END) as active,
+          SUM(CASE WHEN active = FALSE THEN 1 ELSE 0 END) as inactive
+        FROM team_members
       `),
 
       // Stats ateliers (si la table existe)

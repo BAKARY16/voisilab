@@ -14,19 +14,21 @@ SET CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
     email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    role ENUM('admin', 'editor', 'viewer') DEFAULT 'admin',
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'editor', 'viewer', 'user') DEFAULT 'admin',
     avatar_url VARCHAR(500) DEFAULT NULL,
     phone VARCHAR(20) DEFAULT NULL,
     bio TEXT DEFAULT NULL,
     organization VARCHAR(255) DEFAULT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
+    active BOOLEAN DEFAULT TRUE,
+    email_verified BOOLEAN DEFAULT FALSE,
     last_login TIMESTAMP NULL DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),
-    INDEX idx_role (role)
+    INDEX idx_role (role),
+    INDEX idx_active (active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
@@ -71,9 +73,9 @@ CREATE TABLE IF NOT EXISTS team_members (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- TABLE: contacts (Messages de contact)
+-- TABLE: contact_messages (Messages de contact)
 -- ============================================
-CREATE TABLE IF NOT EXISTS contacts (
+CREATE TABLE IF NOT EXISTS contact_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
     firstname VARCHAR(100) NOT NULL,
     lastname VARCHAR(100) NOT NULL,
@@ -86,6 +88,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     reply_message TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    read_at TIMESTAMP NULL DEFAULT NULL,
     INDEX idx_status (status),
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

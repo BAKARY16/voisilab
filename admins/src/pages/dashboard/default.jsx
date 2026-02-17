@@ -19,7 +19,7 @@ import {
   ReloadOutlined
 } from '@ant-design/icons';
 
-import { statsService, authService } from 'api/voisilab';
+import { statsService, authService, contactsService, projectSubmissionsService, teamService } from 'api/voisilab';
 import { useNavigate } from 'react-router-dom';
 
 // Styled components pour un design épuré
@@ -88,8 +88,56 @@ export default function DashboardDefault() {
   const loadStats = async () => {
     try {
       setLoading(true);
-      const result = await statsService.getDashboard();
-      setStats(result.data);
+      
+      // Récupérer les données directement depuis les APIs qui fonctionnent
+      const [contactsResult, projectsResult] = await Promise.all([
+        contactsService.getAll({ limit: 50 }).catch(() => ({ data: { data: [] } })),
+        projectSubmissionsService.getAll({ limit: 50 }).catch(() => ({ data: { data: [] } }))
+      ]);
+
+      // Team: appel séparé avec gestion d'erreur robuste
+      let team = [];
+      try {
+        const teamResult = await teamService.getAll();
+        team = teamResult.data || [];
+      } catch (err) {
+        // Table team n'existe pas en production, on utilise des valeurs par défaut
+        console.warn('Team API non disponible, utilisation de valeurs par défaut');
+        team = [];
+      }
+
+      const contacts = contactsResult.data?.data || [];
+      const projects = projectsResult.data?.data || [];
+
+      // Calculer les stats manuellement
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const overview = {
+        contacts: {
+          total: contacts.length,
+          unread: contacts.filter(c => c.status === 'unread').length,
+          thisWeek: contacts.filter(c => new Date(c.created_at) > weekAgo).length
+        },
+        projects: {
+          total: projects.length,
+          pending: projects.filter(p => p.status === 'pending').length,
+          reviewing: projects.filter(p => p.status === 'reviewing').length,
+          approved: projects.filter(p => p.status === 'approved').length,
+          thisWeek: projects.filter(p => new Date(p.created_at) > weekAgo).length
+        },
+        team: {
+          total: team.length,
+          active: team.filter(t => t.active || t.is_active).length
+        }
+      };
+
+      const recent = {
+        contacts: contacts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5),
+        projects: projects.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)
+      };
+
+      setStats({ overview, recent });
     } catch (error) {
       if (!error.message.includes('Session expirée')) {
         console.error('Erreur chargement:', error.message);

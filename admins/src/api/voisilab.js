@@ -1,5 +1,5 @@
 // API Configuration
-const API_URL = 'http://localhost:3500';
+const API_URL = 'https://api.fablab.voisilab.online';
 
 // Migration from localStorage to sessionStorage (cleanup at startup)
 const migrateStorage = () => {

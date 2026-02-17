@@ -1,10 +1,37 @@
+"use client"
+
 import { SectionHeader } from "./section-header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Linkedin, Mail } from "lucide-react"
+import { useEffect, useState } from "react"
+import { teamService } from "@/lib/api"
 
 export function TeamSection() {
-  const coreTeam = [
+  const [teamMembers, setTeamMembers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadTeam = async () => {
+      try {
+        const members = await teamService.getActiveMembers()
+        if (members && members.length > 0) {
+          setTeamMembers(members)
+        } else {
+          // Données par défaut si l'API ne retourne rien
+          setTeamMembers(defaultTeam)
+        }
+      } catch (error) {
+        console.error('Erreur chargement équipe:', error)
+        setTeamMembers(defaultTeam)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadTeam()
+  }, [])
+
+  const defaultTeam = [
     {
       name: "Pierre Dubois",
       role: "Directeur & Fondateur",
@@ -71,47 +98,66 @@ export function TeamSection() {
           subtitle="Des passionnés dédiés à votre accompagnement dans vos projets de fabrication numérique."
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-20 max-w-6xl mx-auto">
-          {coreTeam.map((member, index) => (
-            <Card
-              key={index}
-              className="border-border hover:border-primary/50 hover:shadow-xl transition-all duration-300 overflow-hidden group"
-            >
-              <div className="relative h-64 lg:h-72 overflow-hidden">
-                <img
-                  src={member.image || "/placeholder.svg"}
-                  alt={member.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold text-foreground mb-1">{member.name}</h3>
-                <Badge variant="secondary" className="mb-4">
-                  {member.role}
-                </Badge>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-4">{member.bio}</p>
-
-                <div className="flex gap-3">
-                  <a
-                    href={`mailto:${member.email}`}
-                    className="flex items-center justify-center w-10 h-10 bg-muted rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
-                    aria-label={`Email ${member.name}`}
-                  >
-                    <Mail size={18} />
-                  </a>
-                  <a
-                    href={member.linkedin}
-                    className="flex items-center justify-center w-10 h-10 bg-muted rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
-                    aria-label={`LinkedIn ${member.name}`}
-                  >
-                    <Linkedin size={18} />
-                  </a>
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Chargement de l'équipe...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-20 max-w-6xl mx-auto">
+            {teamMembers.map((member, index) => (
+              <Card
+                key={member.id || index}
+                className="border-border hover:border-primary/50 hover:shadow-xl transition-all duration-300 overflow-hidden group"
+              >
+                <div className="relative h-64 lg:h-72 overflow-hidden">
+                  <img
+                    src={member.photo_url || member.image || "/placeholder.svg"}
+                    alt={member.full_name || member.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-semibold text-foreground mb-1">
+                    {member.full_name || member.name}
+                  </h3>
+                  <Badge variant="secondary" className="mb-4">
+                    {member.position || member.role}
+                  </Badge>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                    {member.bio || member.description}
+                  </p>
+
+                  {(member.email || member.linkedin_url) && (
+                    <div className="flex gap-3">
+                      {member.email && (
+                        <a
+                          href={`mailto:${member.email}`}
+                          className="flex items-center justify-center w-10 h-10 bg-muted rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
+                          aria-label={`Email ${member.full_name || member.name}`}
+                        >
+                          <Mail size={18} />
+                        </a>
+                      )}
+                      {member.linkedin_url && (
+                        <a
+                          href={member.linkedin_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center w-10 h-10 bg-muted rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
+                          aria-label={`LinkedIn ${member.full_name || member.name}`}
+                        >
+                          <Linkedin size={18} />
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
         </div>
 
         {/* Young Talents */}
