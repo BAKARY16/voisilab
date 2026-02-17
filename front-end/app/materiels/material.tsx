@@ -20,6 +20,7 @@ import {
   Shield,
   TrendingUp,
   Award,
+  Shirt,
   Wrench
 } from "lucide-react"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
@@ -28,73 +29,19 @@ export function EquipmentSection() {
   useScrollAnimation()
 
   const equipment = [
-    {
-      icon: Printer,
-      name: "Imprimantes 3D",
-      description: "Plusieurs imprimantes 3D FDM et résine pour donner vie à vos créations en trois dimensions.",
-      specs: ["FDM & Résine", "Grand volume", "Haute précision"],
-      category: "Impression",
-      image: "/equipment-3d-printer-fdm-resin.jpg",
-      gradient: "from-blue-500/10 to-cyan-500/10",
-      categoryColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-    },
-    {
-      icon: Scissors,
-      name: "Découpeuse Laser",
-      description: "Découpe et gravure précise sur bois, acrylique, tissu et bien d'autres matériaux.",
-      specs: ["CO2 100W", "Zone 1000x600mm", "Gravure & découpe"],
-      category: "Découpe",
-      image: "/equipment-laser-cutter-engraver.jpg",
-      gradient: "from-purple-500/10 to-pink-500/10",
-      categoryColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-    },
-    {
-      icon: Hammer,
-      name: "Fraiseuse CNC",
-      description: "Usinage de précision pour le bois, le plastique et l'aluminium.",
-      specs: ["3 axes", "Précision 0.1mm", "Multi-matériaux"],
-      category: "Usinage",
-      image: "/equipment-cnc-mill-precision.jpg",
-      gradient: "from-green-500/10 to-emerald-500/10",
-      categoryColor: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
-    },
-    {
-      icon: Cpu,
-      name: "Station électronique",
-      description: "Tout l'équipement pour vos projets d'électronique : Arduino, Raspberry Pi, composants.",
-      specs: ["Microcontrôleurs", "Composants", "Outils de soudure"],
-      category: "Électronique",
-      image: "/equipment-electronics-station-arduino.jpg",
-      gradient: "from-orange-500/10 to-red-500/10",
-      categoryColor: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20",
-    },
-    {
-      icon: Drill,
-      name: "Atelier bois",
-      description: "Outils traditionnels et machines pour le travail du bois.",
-      specs: ["Scie circulaire", "Perceuse", "Ponceuse"],
-      category: "Bois",
-      image: "/equipment-woodworking-workshop-tools.jpg",
-      gradient: "from-yellow-500/10 to-orange-500/10",
-      categoryColor: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
-    },
-    {
-      icon: Gauge,
-      name: "Outils de mesure",
-      description: "Équipements de mesure et de contrôle qualité pour vos prototypes.",
-      specs: ["Pied à coulisse", "Micromètre", "Scanner 3D"],
-      category: "Métrologie",
-      image: "/equipment-measurement-tools-3d-scanner.jpg",
-      gradient: "from-cyan-500/10 to-blue-500/10",
-      categoryColor: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
-    },
-  ]
+    { icon: Printer, name: "Imprimantes 3D", count: "2 machines", description: "Imprimante 3D FDM haute performance, idéale pour le prototypage rapide. Elle offre une grande précision et un rendu professionnel.", category: "Impression", gradient: "from-blue-500/10 to-cyan-500/10", image: "https://www.makeitmarseille.com/wp-content/uploads/2017/09/Make-it-Marseille-impression-3D-ultimaker-2.jpg", categoryColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+    { icon: Scissors, name: "Découpeuse Laser", count: "100W CO2", description: "La découpeuse laser est un outil qui permet de découper et graver des matériaux à partir de l’énergie d’un laser focalisé par une lentille.", category: "Découpe", image: "https://lefablab.fr/wp-content/uploads/2019/07/p7121491.jpg", gradient: "from-purple-500/10 to-pink-500/10", categoryColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
+    { icon: Shirt, name: "Machine à coudre  SGGEMSY", count: "Conception", description: "Machine industrielle SGGEMSY allie robustesse et haute productivité. Idéale pour des piqûres précises et une finition professionnelle sur tous textiles.", image: "https://lecoindupro.blob.core.windows.net/upload/2436551.Lg.jpg", category: "Confection", gradient: "from-green-500/10 to-emerald-500/10", categoryColor: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" },
+    { icon: Shirt, name: "Machine à broder BROTHER", count: "Conception", description: "Brodeuse haute performance avec un large champ de 200x200mm, enfilage automatique et tri intelligent des couleurs. Rapide et précise avec une vitesse de 1000 points/minute.", image: "https://agrilab.unilasalle.fr/projets/attachments/download/1906/machine001.jpg", category: "Confection", gradient: "from-orange-500/10 to-red-500/10", categoryColor: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" },
+    { icon: Drill, name: "Perceuse BOSCH", count: "Outillage pro", description: "Perceuse à colonne Bosch PBD 40, une machine de précision numérique et puissance. Intègre un écran d'affichage digital, un laser de pointage et un moteur de 710 W pour des perçages parfaits et sécurisés sur bois et métal.", image: "https://www.travaillerlebois.com/wp-content/uploads/2016/12/perceuse-a-colonne_bosch_pbd-40-23.jpg", category: "Création", gradient: "from-yellow-500/10 to-orange-500/10", categoryColor: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20" },
+    { icon: Gauge, name: "Fraiseuse Numérique SHOPBOT", count: "Contrôle qualité", description: "Fraiseuse numérique ShopBot : solution CNC robuste et polyvalente. Idéale pour la découpe et la gravure de précision sur grands formats (bois, plastiques, métaux tendres). Permet la réalisation rapide de pièces complexes.", image: "https://lacasemate.fr/wp-content/uploads/2022/02/Fraiseuse_num%C3%A9rique.png", category: "Création", gradient: "from-cyan-500/10 to-blue-500/10", categoryColor: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20" },
+]
 
   const stats = [
-    { icon: Wrench, value: "15+", label: "Équipements disponibles", gradient: "from-blue-500/10 to-cyan-500/10" },
-    { icon: Award, value: "500+", label: "Heures d'utilisation/mois", gradient: "from-purple-500/10 to-pink-500/10" },
-    { icon: Shield, value: "100%", label: "Formations sécurité", gradient: "from-green-500/10 to-emerald-500/10" },
-    { icon: TrendingUp, value: "24/7", label: "Support technique", gradient: "from-orange-500/10 to-red-500/10" },
+    { icon: Wrench, value: "15+", label: "Équipements disponibles", gradient: "" },
+    { icon: Award, value: "500+", label: "Heures d'utilisation/mois", gradient: "" },
+    { icon: Shield, value: "100%", label: "Formations sécurité", gradient: "" },
+    { icon: TrendingUp, value: "24/7", label: "Support technique", gradient: "" },
   ]
 
   const benefits = [
@@ -233,7 +180,7 @@ export function EquipmentSection() {
         </div>
       </section>
 
-      {/* Equipment Grid */}
+      {/* Equipment Section - NOUVEAU DESIGN AVEC IMAGES */}
       <section id="equipements" className="py-20 lg:py-32 relative">
         <div className="container mx-auto px-4 lg:px-8">
           <SectionHeader
@@ -241,81 +188,89 @@ export function EquipmentSection() {
             subtitle="Accédez à un parc machine complet et moderne pour concrétiser tous vos projets de fabrication numérique"
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto mb-12">
             {equipment.map((item, index) => {
               const Icon = item.icon
               return (
-                <div key={index} className="fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
-                  <Card className={`relative overflow-hidden border-2 border-border hover:border-primary/50 hover:shadow-2xl transition-all duration-500 group h-full bg-gradient-to-br ${item.gradient}`}>
-                    {/* Image Section */}
-                    <div className="relative h-48 overflow-hidden">
+                <div
+                  key={index}
+                  className="fade-in-up"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <Card className="relative overflow-hidden border-2 border-border hover:border-primary/50 hover:shadow-2xl transition-all duration-500 group" style={{ minHeight: '400px' }}>
+                    {/* Image de fond toujours visible */}
+                    <div className="absolute inset-0 z-0">
                       <Image
-                        src={item.image || "/placeholder.svg"}
+                        src={item.image || "/logolab.png"}
                         alt={item.name}
                         fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        className="object-cover group-hover:scale-105 transition-transform duration-700"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
 
-                      {/* Top Bar */}
-                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-accent" />
+                    {/* Overlay qui apparaît au hover avec le contenu texte */}
+                    <div className="absolute inset-0 backdrop-blur-sm bg-gradient-to-br from-background/95 via-background/95 to-background/90 opacity-0 group-hover:opacity-100 transition-all duration-500 z-10 flex flex-col">
+                      <CardContent className="p-8 flex-1 flex flex-col">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full"></div>
 
-                      {/* Category Badge */}
-                      <div className="absolute top-4 right-4">
-                        <Badge className={`${item.categoryColor} backdrop-blur-sm border-2 font-semibold`}>
+                        {/* Icône */}
+                        <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-4 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 delay-100">
+                          <Icon size={28} className="text-primary" />
+                        </div>
+
+                        {/* Titre */}
+                        <h3 className="text-xl font-bold text-foreground mb-2 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 delay-150">
+                          {item.name}
+                        </h3>
+
+                        {/* Badge catégorie */}
+                        <Badge
+                          className={`${item.categoryColor} backdrop-blur-sm mb-6 border-2 font-semibold mb-4 w-fit transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 delay-200`}
+                        >
                           {item.category}
                         </Badge>
-                      </div>
 
-                      {/* Icon Overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div className="w-20 h-20 bg-primary/90 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                          <Icon className="text-primary-foreground" size={40} />
+                        {/* Description */}
+                        <p className="text-sm text-muted-foreground leading-relaxed flex-1 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 delay-300">
+                          {item.description}
+                        </p>
+
+                        {/* Bouton */}
+                        <div className="mt-6 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 delay-350 cursor-pointer">
+                          <Link href="/materiels" passHref>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full group/btn border-primary/50 hover:bg-primary hover:text-white"
+                            >
+                              <span className="flex items-center justify-center gap-2">
+                                En savoir plus
+                                <ArrowRight className="group-hover/btn:translate-x-1 transition-transform" size={16} />
+                              </span>
+                            </Button>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </div>
+
+                    {/* Badge visible même sans hover (nom + icône) */}
+                    <div className="absolute bottom-6 left-6 right-6 z-20 group-hover:opacity-0 transition-opacity duration-300">
+                      <div className="flex items-center gap-3 bg-background backdrop-blur-md border-2 border-primary/30 rounded-xl p-4 shadow-lg">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Icon className="text-primary" size={20} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-foreground truncate">{item.name}</h4>
+                          <p className="text-xs text-muted-foreground">{item.category}</p>
                         </div>
                       </div>
                     </div>
-
-                    {/* Content Section */}
-                    <CardContent className="p-6 lg:p-8">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full"></div>
-
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary group-hover:scale-110 transition-all duration-300">
-                          <Icon size={28} className="text-primary group-hover:text-primary-foreground transition-colors" />
-                        </div>
-                      </div>
-
-                      <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">
-                        {item.name}
-                      </h3>
-
-                      <p className="text-sm text-muted-foreground leading-relaxed mb-6 line-clamp-3">
-                        {item.description}
-                      </p>
-
-                      {/* Specs */}
-                      <div className="space-y-2 mb-6">
-                        {item.specs.map((spec, i) => (
-                          <div key={i} className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
-                            <div className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
-                            <span className="text-sm text-foreground font-medium">{spec}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* CTA Button */}
-                      <Button variant="outline" className="w-full cursor-pointer group/btn">
-                        <span className="flex items-center justify-center gap-2">
-                          Réserver
-                          <ArrowRight className="group-hover/btn:translate-x-1 transition-transform" size={16} />
-                        </span>
-                      </Button>
-                    </CardContent>
                   </Card>
                 </div>
               )
             })}
           </div>
+
         </div>
       </section>
 

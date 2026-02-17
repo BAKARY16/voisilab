@@ -23,7 +23,7 @@ export function Navigation() {
     { href: "/materiels", label: "Équipements" },
     { href: "/ateliers", label: "Ateliers & Événements" },
     { href: "/innovations", label: "Innovations" },
-    { href: "/equipe", label: "Équipe" },
+    { href: "/service", label: "Services" },
     { href: "/ppn", label: "PPN" },
     { href: "/about", label: "A propos" },
   ]
@@ -72,7 +72,7 @@ export function Navigation() {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center backdrop-blur-lg bg-white/60 gap-2 lg:gap-3 border-transparent border border-border rounded-lg px-4 py-2 shadow-sm">
+          <nav className="hidden md:flex items-center backdrop-blur-lg bg-white gap-2 lg:gap-3 border-transparent border border-border rounded-lg px-4 py-2 shadow-sm">
             {navLinks.map((link) => (
               <Link
                 key={link.href}

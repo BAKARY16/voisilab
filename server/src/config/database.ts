@@ -1,21 +1,38 @@
-import { createConnection } from 'mysql2/promise';
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+import logger from './logger';
 
-const databaseConfig = {
-  host: 'localhost',
-  user: 'your_username',
-  password: 'your_password',
-  database: 'voisilab_db',
-};
+dotenv.config();
 
-const connectToDatabase = async () => {
+// Configuration du pool de connexions MySQL
+const pool = mysql.createPool({
+  host: process.env.DATABASE_HOST || 'localhost',
+  port: parseInt(process.env.DATABASE_PORT || '3306'),
+  user: process.env.DATABASE_USER || 'voisilab_user',
+  password: process.env.DATABASE_PASSWORD || 'voisilab',
+  database: process.env.DATABASE_NAME || 'voisilab_db',
+  waitForConnections: true,
+  connectionLimit: 20,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+});
+
+// Test initial de connexion
+(async () => {
   try {
-    const connection = await createConnection(databaseConfig);
-    console.log('Database connected successfully');
-    return connection;
+    const connection = await pool.getConnection();
+    logger.info('✅ Connexion MySQL établie avec succès');
+    connection.release();
   } catch (error) {
-    console.error('Database connection failed:', error);
-    throw error;
+    logger.error('❌ Impossible de se connecter à MySQL:', error);
   }
-};
+})();
 
-export { connectToDatabase };
+// Gestion des erreurs du pool
+pool.on('connection', (connection) => {
+  logger.info('✅ Nouvelle connexion à la base de données MySQL');
+});
+
+export { pool };
+export default pool;

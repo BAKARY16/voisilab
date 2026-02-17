@@ -1,23 +1,33 @@
 /* Styles pour les popups Leaflet */
 .leaflet-popup-content-wrapper {
-  border-radius: 12px;
   padding: 0;
+  border-radius: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
 .leaflet-popup-content {
   margin: 0;
-  width: 280px !important;
+  width: auto !important;
 }
 
 .leaflet-popup-tip-container {
   display: none;
 }
 
+.leaflet-popup-tip {
+  border: 1px solid hsl(var(--border));
+}
+
 .ppn-popup .leaflet-popup-close-button {
   top: 8px;
   right: 8px;
+}
+
+/* Suppression de la croix par défaut */
+.custom-popup-minimal .leaflet-popup-close-button {
+  display: none;
 }
 
 /* Animation des markers */
@@ -101,15 +111,25 @@
 /* Animation de pulsation pour le point utilisateur */
 @keyframes pulse {
   0%, 100% {
+    opacity: 1;
     transform: translate(-50%, -50%) scale(1);
-    opacity: 0.5;
   }
   50% {
-    transform: translate(-50%, -50%) scale(1.5);
-    opacity: 0;
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1.1);
   }
 }
 
 .user-location-marker {
   animation: none !important;
+}
+
+/* Ligne d'itinéraire animée */
+.leaflet-interactive {
+  transition: all 0.3s ease;
+}
+
+.leaflet-interactive:hover {
+  stroke-width: 6;
+  opacity: 1;
 }

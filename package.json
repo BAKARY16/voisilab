@@ -4,6 +4,7 @@
     "leaflet": "^1.9.4",
     "leaflet-routing-machine": "^3.2.12",
     "mapbox-gl": "^3.18.1",
+    "mysql2": "^3.16.2",
     "react-leaflet": "^5.0.0",
     "react-map-gl": "^8.1.0",
     "react-router-dom": "^7.12.0",
