@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   IconButton, Chip, Paper, Select, MenuItem, Button, Dialog, DialogTitle, DialogContent,
@@ -161,6 +162,8 @@ function ProjectSubmissionDialog({ submission, open, onClose }) {
 }
 
 export default function ContactsPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [currentTab, setCurrentTab] = useState(0);
   const [contacts, setContacts] = useState([]);
   const [submissions, setSubmissions] = useState([]);
@@ -173,6 +176,13 @@ export default function ContactsPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Ouvrir automatiquement le contact si ID passé dans l'URL
+  useEffect(() => {
+    if (id && !loading) {
+      viewContactDetails(parseInt(id, 10));
+    }
+  }, [id, loading]);
 
   const loadData = async () => {
     try {

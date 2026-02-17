@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorizeAdmin } from '../middlewares/auth';
+import { authenticate, requireAdmin } from '../middlewares/auth';
 import {
   getAllInnovations,
   getPublishedInnovations,
@@ -33,22 +33,22 @@ router.post('/:id/like', likeInnovation);
 // ===============================
 
 // Get all innovations with pagination (admin) - MUST be before /:id
-router.get('/', authenticate, authorizeAdmin, getAllInnovations);
+router.get('/', authenticate, requireAdmin, getAllInnovations);
 
 // Create new innovation
-router.post('/', authenticate, authorizeAdmin, createInnovation);
+router.post('/', authenticate, requireAdmin, createInnovation);
 
 // Update innovation
-router.put('/:id', authenticate, authorizeAdmin, updateInnovation);
+router.put('/:id', authenticate, requireAdmin, updateInnovation);
 
 // Delete innovation
-router.delete('/:id', authenticate, authorizeAdmin, deleteInnovation);
+router.delete('/:id', authenticate, requireAdmin, deleteInnovation);
 
 // Toggle publish status
-router.patch('/:id/publish', authenticate, authorizeAdmin, togglePublish);
+router.patch('/:id/publish', authenticate, requireAdmin, togglePublish);
 
 // Toggle featured status
-router.patch('/:id/featured', authenticate, authorizeAdmin, toggleFeatured);
+router.patch('/:id/featured', authenticate, requireAdmin, toggleFeatured);
 
 // ===============================
 // PUBLIC ROUTE (catch-all for ID - MUST be last)

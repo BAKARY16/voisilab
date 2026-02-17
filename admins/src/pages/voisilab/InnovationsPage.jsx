@@ -152,9 +152,19 @@ export default function InnovationsPage() {
       setSaving(true);
 
       const dataToSend = {
-        ...formData,
-        tags: formData.tags || []
+        title: formData.title,
+        description: formData.description,
+        category: formData.category || null,
+        creator_name: formData.creator_name || null,
+        creator_email: formData.creator_email || null,
+        image_url: formData.image_url || null,
+        tags: formData.tags || [],
+        status: formData.status || 'pending',
+        is_published: formData.is_published,
+        is_featured: formData.is_featured
       };
+
+      console.log('Sending data:', dataToSend);
 
       if (editingId) {
         await innovationsService.update(editingId, dataToSend);
@@ -168,8 +178,9 @@ export default function InnovationsPage() {
       resetForm();
       setActiveTab(0);
     } catch (error) {
-      console.error('Erreur:', error);
-      showConfirmDialog('Erreur', 'Erreur lors de l\'enregistrement: ' + (error.message || 'Erreur inconnue'), 'error');
+      console.error('Erreur complète:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Erreur inconnue';
+      showConfirmDialog('Erreur', `Erreur lors de l'enregistrement: ${errorMessage}`, 'error');
     } finally {
       setSaving(false);
     }
@@ -250,20 +261,27 @@ export default function InnovationsPage() {
       }
     }
     
+    // Construire l'URL de l'image correctement
+    let imageUrl = innovation.image_url || '';
+    let previewUrl = null;
+    if (imageUrl) {
+      previewUrl = imageUrl.startsWith('http') ? imageUrl : `${API_URL}${imageUrl}`;
+    }
+    
     setFormData({
       title: innovation.title || '',
       description: innovation.description || '',
       category: innovation.category || '',
       creator_name: innovation.creator_name || '',
       creator_email: innovation.creator_email || '',
-      image_url: innovation.image_url || '',
+      image_url: imageUrl,
       tags: tags,
-      status: innovation.status || 'draft',
+      status: innovation.status || 'pending',
       is_published: Boolean(innovation.is_published),
       is_featured: Boolean(innovation.is_featured)
     });
     setEditingId(innovation.id);
-    setPreviewImage(innovation.image_url || null);
+    setPreviewImage(previewUrl);
     setActiveTab(1);
   };
 
@@ -784,8 +802,16 @@ export default function InnovationsPage() {
                 placeholder="https://exemple.com/image.jpg"
                 value={formData.image_url}
                 onChange={(e) => {
-                  setFormData({ ...formData, image_url: e.target.value });
-                  setPreviewImage(e.target.value || null);
+                  const url = e.target.value;
+                  setFormData({ ...formData, image_url: url });
+                  // Définir la prévisualisation seulement si l'URL est valide
+                  if (url && url.startsWith('http')) {
+                    setPreviewImage(url);
+                  } else if (url) {
+                    setPreviewImage(`${API_URL}${url}`);
+                  } else {
+                    setPreviewImage(null);
+                  }
                 }}
               />
             </Card>

@@ -62,7 +62,7 @@ export function ActualitesContent() {
         // Charger au démarrage
         fetchNews()
         
-        // Auto-refresh toutes les 30 secondes en arrière-plan (au lieu de 5s)
+        // Auto-refresh toutes les 15 secondes en arrière-plan (silencieux)
         const interval = setInterval(() => {
             fetch(`${API_URL}/api/blog/published`)
                 .then(res => res.ok ? res.json() : null)
@@ -73,7 +73,7 @@ export function ActualitesContent() {
                     }
                 })
                 .catch(() => {}) // Silencieux en arrière-plan
-        }, 30000) // 30 secondes au lieu de 5
+        }, 15000) // 15 secondes
         
         return () => clearInterval(interval)
     }, [])

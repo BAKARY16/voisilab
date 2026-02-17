@@ -47,3 +47,35 @@ next-env.d.ts
 # Cache
 .turbo
 .cache
+
+# Temporary files
+tmpclaude-*
+NUL
+*.log
+server/*.log
+
+# Development notes (keep only essential docs)
+SESSION-*.md
+ADMIN-FINAL.md
+ADMIN-STATUS.md
+BACKEND-COMPLETE.md
+ETAT-MIGRATION.md
+FINAL-SESSION-SUMMARY.md
+MIGRATION-*.md
+PPN-IMPLEMENTATION.md
+PROGRESS.md
+PROJET-FINAL.md
+SUPABASE-*.md
+TEST-*.md
+
+# Build outputs
+server/dist/
+admins/dist/
+
+# Uploads (handled by Docker volumes)
+server/uploads/
+!server/uploads/.gitkeep
+
+# Logs
+server/logs/
+!server/logs/.gitkeep

@@ -111,7 +111,7 @@ export const createPpn = asyncHandler(async (req: Request, res: Response) => {
         'ppn',
         'Nouveau PPN créé',
         `Un nouveau point PPN "${name}" a été créé à ${city}`,
-        '/ppn'
+        '/voisilab/ppn'
       );
     }
   } catch (error) {
@@ -188,7 +188,7 @@ export const updatePpn = asyncHandler(async (req: Request, res: Response) => {
         'ppn',
         'PPN modifié',
         `Le point PPN "${name || existing[0].name}" a été mis à jour`,
-        '/ppn'
+        '/voisilab/ppn'
       );
     }
   } catch (error) {
@@ -232,7 +232,7 @@ export const deletePpn = asyncHandler(async (req: Request, res: Response) => {
         'ppn',
         'PPN supprimé',
         `Le point PPN "${ppnName}" a été supprimé`,
-        '/ppn'
+        '/voisilab/ppn'
       );
     }
   } catch (error) {

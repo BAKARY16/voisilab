@@ -23,7 +23,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
-const AUTO_REFRESH_INTERVAL = 30000 // 30 secondes
+const AUTO_REFRESH_INTERVAL = 15000 // 15 secondes - rafraîchissement silencieux
 
 interface Innovation {
   id: number

@@ -103,6 +103,10 @@ const MainRoutes = {
       element: <ContactsPage />
     },
     {
+      path: 'contacts/:id',
+      element: <ContactsPage />
+    },
+    {
       path: 'users',
       element: <UsersPage />
     },

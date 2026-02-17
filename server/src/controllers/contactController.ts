@@ -106,7 +106,7 @@ export const createContact = asyncHandler(async (req: Request, res: Response) =>
       'contact',
       'Nouveau message de contact',
       `${name} (${email}) : ${subject}`,
-      '/contacts'
+      `/contacts/${result.insertId}`
     );
   }
 
@@ -151,12 +151,12 @@ export const updateContactStatus = asyncHandler(async (req: Request, res: Respon
 export const deleteContact = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const [result] = await pool.query(
+  const [result] = await pool.query<ResultSetHeader>(
     'DELETE FROM contact_messages WHERE id = ?',
     [id]
   );
 
-  if (updateResult.affectedRows === 0) {
+  if (result.affectedRows === 0) {
     throw new NotFoundError('Message non trouvé');
   }
 
@@ -169,7 +169,7 @@ export const deleteContact = asyncHandler(async (req: Request, res: Response) =>
  * Get contact statistics
  */
 export const getContactStats = asyncHandler(async (req: Request, res: Response) => {
-  let result = await pool.query(`
+  const [rows] = await pool.query<RowDataPacket[]>(`
     SELECT
       COUNT(*) as total,
       SUM(CASE WHEN status = 'unread' THEN 1 ELSE 0 END) as unread,

@@ -116,6 +116,21 @@ export default function ServicePage() {
       }
     }
     fetchServices()
+
+    // Rafraîchissement silencieux toutes les 15 secondes
+    const silentRefresh = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/services/active`)
+        if (response.ok) {
+          const result = await response.json()
+          setServices(result.data || [])
+        }
+      } catch {
+        // Erreur silencieuse
+      }
+    }
+    const interval = setInterval(silentRefresh, 15000)
+    return () => clearInterval(interval)
   }, [])
 
   const parseFeatures = (features: string[] | string): string[] => {

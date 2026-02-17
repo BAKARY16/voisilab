@@ -144,7 +144,41 @@ export function PPN() {
       }
     }
 
+    // Rafraîchissement silencieux (sans loading)
+    const silentRefresh = async () => {
+      try {
+        const data = await getAllPPN()
+        const transformedData: PPNLocation[] = data.map((ppn: any) => ({
+          id: ppn.id,
+          name: ppn.name,
+          city: ppn.city,
+          region: ppn.region,
+          address: ppn.address,
+          type: ppn.type,
+          coordinates: {
+            lat: parseFloat(ppn.latitude),
+            lng: parseFloat(ppn.longitude),
+          },
+          services: ppn.services ? ppn.services.split(', ') : [],
+          email: ppn.email || '',
+          phone: ppn.phone || '',
+          manager: ppn.manager || '',
+          openingYear: ppn.opening_year || new Date().getFullYear(),
+          status: ppn.status,
+          image: ppn.image,
+        }))
+        setPpnLocations(transformedData)
+      } catch {
+        // Silencieux
+      }
+    }
+
     fetchPPNData()
+    
+    // Rafraîchissement silencieux toutes les 15 secondes
+    const interval = setInterval(silentRefresh, 15000)
+    
+    return () => clearInterval(interval)
   }, [])
 
   const regions = Array.from(new Set(ppnLocations.map(ppn => ppn.region)))

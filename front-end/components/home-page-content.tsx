@@ -42,7 +42,15 @@ import {
     FileText,
     AlertCircle,
     Star,
-    X
+    X,
+    Zap,
+    FlaskConical,
+    Monitor,
+    Smartphone,
+    Cloud,
+    Database,
+    Shield,
+    Headphones
 } from "lucide-react"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
 
@@ -69,6 +77,8 @@ export function HomePageContent() {
     const [loadingWorkshops, setLoadingWorkshops] = useState(true) // État de chargement ateliers
     const [innovations, setInnovations] = useState<any[]>([]) // État pour les innovations
     const [loadingInnovations, setLoadingInnovations] = useState(true) // État de chargement innovations
+    const [services, setServices] = useState<any[]>([]) // État pour les services
+    const [loadingServices, setLoadingServices] = useState(true) // État de chargement services
     const [selectedCategory, setSelectedCategory] = useState('Tous')
     const [liked, setLiked] = useState<{ [key: number]: boolean }>({})
     const [submitted, setSubmitted] = useState(false)
@@ -109,13 +119,13 @@ export function HomePageContent() {
         // Charger au démarrage
         fetchNews()
 
-        // Auto-refresh toutes les 30 secondes en arrière-plan (au lieu de 5s)
+        // Auto-refresh toutes les 15 secondes en arrière-plan (silencieux)
         const interval = setInterval(() => {
             fetch(`${API_URL}/api/blog/published?limit=3`)
                 .then(res => res.ok ? res.json() : null)
                 .then(result => result && setNews(result.data || []))
                 .catch(() => { }) // Silencieux en arrière-plan
-        }, 30000) // 30 secondes au lieu de 5
+        }, 15000) // 15 secondes
 
         return () => clearInterval(interval)
     }, [])
@@ -142,13 +152,13 @@ export function HomePageContent() {
 
         fetchWorkshops()
 
-        // Rafraîchissement silencieux toutes les 30 secondes
+        // Rafraîchissement silencieux toutes les 15 secondes
         const interval = setInterval(() => {
             fetch(`${API_URL}/api/workshops/published`)
                 .then(res => res.ok ? res.json() : null)
                 .then(result => result && setWorkshops(result.data || []))
                 .catch(() => { })
-        }, 30000)
+        }, 15000)
 
         return () => clearInterval(interval)
     }, [])
@@ -167,13 +177,38 @@ export function HomePageContent() {
 
         fetchInnovations()
 
-        // Rafraîchissement silencieux toutes les 30 secondes
+        // Rafraîchissement silencieux toutes les 15 secondes
         const interval = setInterval(() => {
             fetch(`${API_URL}/api/innovations/published?limit=3`)
                 .then(res => res.ok ? res.json() : null)
                 .then(result => result && setInnovations(result.data || []))
                 .catch(() => { })
-        }, 30000)
+        }, 15000)
+
+        return () => clearInterval(interval)
+    }, [])
+
+    // Charger les services depuis le backend avec rafraîchissement automatique
+    useEffect(() => {
+        const fetchServices = () => {
+            fetch(`${API_URL}/api/services/active`)
+                .then(res => res.ok ? res.json() : null)
+                .then(result => {
+                    setServices(result?.data || [])
+                    setLoadingServices(false)
+                })
+                .catch(() => { setLoadingServices(false) })
+        }
+
+        fetchServices()
+
+        // Rafraîchissement silencieux toutes les 15 secondes
+        const interval = setInterval(() => {
+            fetch(`${API_URL}/api/services/active`)
+                .then(res => res.ok ? res.json() : null)
+                .then(result => result && setServices(result.data || []))
+                .catch(() => { })
+        }, 15000)
 
         return () => clearInterval(interval)
     }, [])
@@ -344,40 +379,80 @@ export function HomePageContent() {
         { icon: Heart, title: "Communauté", description: "Créer un écosystème bienveillant où chacun peut apprendre, créer et grandir ensemble.", gradient: "" },
     ]
 
-    const services = [
+    // Icon mapping pour les services (icônes du backend vers Lucide)
+    const serviceIconMap: Record<string, any> = {
+        "PrinterOutlined": Printer,
+        "CodeOutlined": Code,
+        "RobotOutlined": Bot,
+        "ThunderboltOutlined": Zap,
+        "ToolOutlined": Wrench,
+        "ExperimentOutlined": FlaskConical,
+        "BulbOutlined": Lightbulb,
+        "RocketOutlined": Rocket,
+        "DesktopOutlined": Monitor,
+        "MobileOutlined": Smartphone,
+        "CloudOutlined": Cloud,
+        "DatabaseOutlined": Database,
+        "SafetyCertificateOutlined": Shield,
+        "TeamOutlined": Users,
+        "CustomerServiceOutlined": Headphones
+    }
+
+    // Services par défaut si l'API ne retourne rien
+    const defaultServices = [
         {
             icon: Printer,
             title: "Impression 2D/3D",
             description: "Prototypage rapide et production de pièces personnalisées en FDM et résine.",
-            items: ["Prototypage", "Petites séries", "Matériaux variés"],
+            features: ["Prototypage", "Petites séries", "Matériaux variés"],
             gradient: "from-blue-500/10 to-cyan-500/10",
-            image: "https://mecaluxfr.cdnwm.com/blog/img/fabrication-additive-production.1.1.jpg?imwidth=320&imdensity=1"
+            image_url: "https://mecaluxfr.cdnwm.com/blog/img/fabrication-additive-production.1.1.jpg?imwidth=320&imdensity=1"
         },
         {
             icon: CodeXml,
             title: "Architecture & Dev Digital",
             description: "Conception et déploiement de solutions logicielles performantes, optimisées pour vos besoins métiers.",
-            items: ["Conception d'applications Web & Mobile", "Audit & Architecture", "Cloud & API"],
+            features: ["Conception d'applications Web & Mobile", "Audit & Architecture", "Cloud & API"],
             gradient: "from-purple-500/10 to-pink-500/10",
-            image: "https://media.vertuoz.fr/uploads/Article_Quels_sont_les_avantages_d_un_developpement_informatique_sur_mesure_66c3ed4303.jpeg"
+            image_url: "https://media.vertuoz.fr/uploads/Article_Quels_sont_les_avantages_d_un_developpement_informatique_sur_mesure_66c3ed4303.jpeg"
         },
         {
             icon: Bot,
             title: "Robotique",
             description: "Conception et programmation de robots pour des applications variées.",
-            items: ["Robots éducatifs", "Automatisation", "Projets sur mesure"],
+            features: ["Robots éducatifs", "Automatisation", "Projets sur mesure"],
             gradient: "from-yellow-500/10 to-orange-500/10",
-            image: "https://www.aq-tech.fr/fr/wp-content/uploads/sites/5/2022/12/Diff%C3%A9rents-types-de-prototype-700x700.jpg"
+            image_url: "https://www.aq-tech.fr/fr/wp-content/uploads/sites/5/2022/12/Diff%C3%A9rents-types-de-prototype-700x700.jpg"
         },
         {
             icon: Code,
             title: "Électronique & IoT",
             description: "Développement de solutions connectées avec Arduino, Raspberry Pi et ESP32.",
-            items: ["Circuits imprimés", "Objets connectés", "Domotique"],
+            features: ["Circuits imprimés", "Objets connectés", "Domotique"],
             gradient: "from-orange-500/10 to-red-500/10",
-            image: "https://www.business-solutions-atlantic-france.com/wp-content/webp-express/webp-images/uploads/2019/04/electronique_professionnelle-1160x652.png.webp"
+            image_url: "https://www.business-solutions-atlantic-france.com/wp-content/webp-express/webp-images/uploads/2019/04/electronique_professionnelle-1160x652.png.webp"
         },
     ]
+
+    // Fonction pour transformer les services de l'API
+    const transformService = (service: any) => {
+        let features = service.features
+        if (typeof features === 'string') {
+            try { features = JSON.parse(features) } catch { features = [] }
+        }
+        return {
+            ...service,
+            icon: serviceIconMap[service.icon] || Wrench,
+            features: features || [],
+            gradient: "from-primary/10 to-accent/10",
+            image_url: service.image_url ? (service.image_url.startsWith('http') ? service.image_url : `${API_URL}${service.image_url}`) : null
+        }
+    }
+
+    // Services à afficher (API si disponible, sinon par défaut)
+    const displayServices = services.length > 0 
+        ? services.map(transformService) 
+        : defaultServices
 
     // Icon mapping pour les catégories d'équipement
     const categoryIcons: Record<string, any> = {
@@ -617,24 +692,29 @@ export function HomePageContent() {
 
                     {/* Liste des services - Design 3 colonnes */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
-                        {services.slice(0, 3).map((service, index) => {
+                        {displayServices.slice(0, 3).map((service, index) => {
                             const Icon = service.icon
                             return (
                                 <div
-                                    key={index}
-                                    className="fade-in-up"
+                                    key={service.id || index}
+                                    className=""
                                     style={{ animationDelay: `${index * 100}ms` }}
                                 >
                                     <Card className="border-2 border-border hover:border-primary/50 transition-all duration-500 group overflow-hidden h-full">
                                         {/* Image de fond */}
-                                        <div className="relative h-48 overflow-hidden">
-                                            <Image
-                                                src={service.image}
-                                                alt={service.title}
-                                                fill
-                                                className="object-cover group-hover:scale-110 transition-transform duration-700"
-                                            />
-                                            {/* <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" /> */}
+                                        <div className="relative h-48 overflow-hidden bg-muted">
+                                            {service.image_url ? (
+                                                <Image
+                                                    src={service.image_url}
+                                                    alt={service.title}
+                                                    fill
+                                                    className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
+                                                    <Icon size={48} className="text-primary/50" />
+                                                </div>
+                                            )}
 
                                             {/* Icône flottante */}
                                             <div className="absolute bottom-4 left-4">
@@ -655,7 +735,7 @@ export function HomePageContent() {
 
                                             {/* Liste des prestations */}
                                             <div className="space-y-2 mb-6">
-                                                {service.items.map((item, i) => (
+                                                {(service.features || []).slice(0, 3).map((item: string, i: number) => (
                                                     <div key={i} className="flex items-center gap-2">
                                                         <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
                                                         <span className="text-sm text-foreground">{item}</span>
@@ -1431,25 +1511,26 @@ export function HomePageContent() {
                                         </div>
                                         <div>
                                             <Label htmlFor="projectType" className="text-foreground mb-2 block">Type de projet *</Label>
-                                            <select id="projectType" name="projectType" required value={formData.projectType} onChange={handleChange} className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground transition-all duration-300 hover:border-primary/50">
-                                                <option value="">Sélectionnez un type</option>
-                                                <option value="impression-3d">Impression 3D</option>
-                                                <option value="laser">Découpe / Gravure Laser</option>
-                                                <option value="cnc">Usinage CNC</option>
-                                                <option value="electronique">Électronique / IoT</option>
-                                                <option value="prototype">Prototypage complet</option>
-                                                <option value="autre">Autre</option>
-                                            </select>
+                                            <input 
+                                                id="projectType" 
+                                                name="projectType" 
+                                                type="text" 
+                                                required 
+                                                value={formData.projectType} 
+                                                onChange={handleChange} 
+                                                className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground transition-all duration-300 hover:border-primary/50" 
+                                                placeholder="Ex: Impression 3D, Découpe laser, Électronique..." 
+                                            />
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
                                                 <Label htmlFor="budget" className="text-foreground mb-2 block">Budget estimé</Label>
                                                 <select id="budget" name="budget" value={formData.budget} onChange={handleChange} className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground transition-all duration-300 hover:border-primary/50">
                                                     <option value="">Choisir...</option>
-                                                    <option value="<500">Moins de 500€</option>
-                                                    <option value="500-1000">500€ - 1000€</option>
-                                                    <option value="1000-3000">1000€ - 3000€</option>
-                                                    <option value=">3000">Plus de 3000€</option>
+                                                    <option value="<500000">Moins de 500 000 FCFA</option>
+                                                    <option value="500000-1000000">500 000 - 1 000 000 FCFA</option>
+                                                    <option value="1000000-3000000">1 000 000 - 3 000 000 FCFA</option>
+                                                    <option value=">3000000">Plus de 3 000 000 FCFA</option>
                                                 </select>
                                             </div>
                                             <div>

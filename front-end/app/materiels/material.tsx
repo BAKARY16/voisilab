@@ -66,7 +66,10 @@ export function EquipmentSection() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/equipment/available`)
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
+    
+    // Fetch initial
+    fetch(`${API_URL}/api/equipment/available`)
       .then(res => res.json())
       .then(data => {
         setEquipment(data.data || [])
@@ -76,6 +79,16 @@ export function EquipmentSection() {
         console.error('Error loading equipment:', err)
         setLoading(false)
       })
+    
+    // Rafraîchissement silencieux toutes les 15 secondes
+    const interval = setInterval(() => {
+      fetch(`${API_URL}/api/equipment/available`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => data && setEquipment(data.data || []))
+        .catch(() => {}) // Silencieux
+    }, 15000)
+    
+    return () => clearInterval(interval)
   }, [])
 
   const equipment_old = [

@@ -220,7 +220,7 @@ export const createBlogPost = asyncHandler(async (req: Request, res: Response) =
       'blog',
       status === 'published' ? 'Nouvelle actualité publiée' : 'Nouveau brouillon créé',
       `${title}`,
-      `/blog`
+      `/voisilab/blog`
     );
   }
 
@@ -308,7 +308,7 @@ export const updateBlogPost = asyncHandler(async (req: Request, res: Response) =
       'blog',
       notificationTitle,
       notificationMessage,
-      `/blog`
+      `/voisilab/blog`
     );
   }
 
@@ -347,7 +347,7 @@ export const deleteBlogPost = asyncHandler(async (req: Request, res: Response) =
       'blog',
       'Actualité supprimée',
       `${postTitle} a été supprimée`,
-      `/blog`
+      `/voisilab/blog`
     );
   }
 

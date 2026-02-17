@@ -84,7 +84,10 @@ export function WorkshopsSection() {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/workshops/published`)
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
+    
+    // Fetch initial
+    fetch(`${API_URL}/api/workshops/published`)
       .then(res => res.json())
       .then(data => {
         setWorkshops(data.data || [])
@@ -94,6 +97,16 @@ export function WorkshopsSection() {
         console.error('Error loading workshops:', err)
         setLoading(false)
       })
+    
+    // Rafraîchissement silencieux toutes les 15 secondes
+    const interval = setInterval(() => {
+      fetch(`${API_URL}/api/workshops/published`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => data && setWorkshops(data.data || []))
+        .catch(() => {}) // Silencieux
+    }, 15000)
+    
+    return () => clearInterval(interval)
   }, [])
 
   // Filtrer les workshops selon l'onglet actif

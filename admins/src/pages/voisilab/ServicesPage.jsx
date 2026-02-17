@@ -410,7 +410,7 @@ export default function ServicesPage() {
       </Menu>
 
       {/* Dialog formulaire */}
-      <Dialog open={open} onClose={handleCloseDialog} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
+      <Dialog open={open} onClose={handleCloseDialog} maxWidth="lg" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
         <DialogTitle sx={{ pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <ToolOutlined style={{ fontSize: 20 }} />
@@ -424,10 +424,10 @@ export default function ServicesPage() {
           {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
           
           <Grid container spacing={3}>
-            {/* Section Image */}
+            {/* Section Image - Colonne gauche */}
             <Grid item xs={12} md={4}>
-              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, height: '100%' }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, height: '100%' }}>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                   <PictureOutlined /> Image du service
                 </Typography>
                 
@@ -435,7 +435,7 @@ export default function ServicesPage() {
                 <Box 
                   sx={{ 
                     width: '100%', 
-                    height: 180, 
+                    height: 200, 
                     bgcolor: 'grey.100', 
                     borderRadius: 2, 
                     display: 'flex', 
@@ -531,17 +531,21 @@ export default function ServicesPage() {
               </Paper>
             </Grid>
 
-            {/* Section Informations */}
+            {/* Section Informations - Colonne droite */}
             <Grid item xs={12} md={8}>
-              <Stack spacing={2.5}>
+              <Stack spacing={3}>
                 {/* Informations principales */}
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 2 }}>Informations principales</Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={8}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+                  <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                    Informations principales
+                  </Typography>
+                  <Grid container spacing={2.5}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 500 }}>
+                        Titre du service *
+                      </Typography>
                       <TextField 
                         fullWidth 
-                        label="Titre du service" 
                         value={formData.title} 
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })} 
                         size="small"
@@ -549,13 +553,15 @@ export default function ServicesPage() {
                         placeholder="Ex: Impression 3D"
                       />
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 500 }}>
+                        Icône
+                      </Typography>
                       <FormControl fullWidth size="small">
-                        <InputLabel>Icône</InputLabel>
                         <Select 
                           value={formData.icon} 
-                          label="Icône"
                           onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                          displayEmpty
                         >
                           {ICONS.map(icon => (
                             <MenuItem key={icon} value={icon}>{icon.replace('Outlined', '')}</MenuItem>
@@ -564,40 +570,44 @@ export default function ServicesPage() {
                       </FormControl>
                     </Grid>
                     <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 500 }}>
+                        Description
+                      </Typography>
                       <TextField 
                         fullWidth 
-                        label="Description" 
                         value={formData.description} 
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
                         multiline 
                         rows={3}
                         size="small"
-                        placeholder="Décrivez le service..."
+                        placeholder="Décrivez le service en quelques phrases..."
                       />
                     </Grid>
                   </Grid>
                 </Paper>
 
                 {/* Caractéristiques */}
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+                  <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
                     <AppstoreOutlined /> Caractéristiques
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
+                    Ajouter une caractéristique
                   </Typography>
                   <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
                     <TextField
                       fullWidth
                       size="small"
-                      label="Ajouter une caractéristique"
                       value={newFeature}
                       onChange={(e) => setNewFeature(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddFeature())}
-                      placeholder="Ex: Prototypage rapide"
+                      placeholder="Ex: Prototypage rapide, puis appuyez sur Entrée"
                     />
-                    <Button variant="outlined" onClick={handleAddFeature} disabled={!newFeature.trim()}>
+                    <Button variant="contained" onClick={handleAddFeature} disabled={!newFeature.trim()}>
                       <PlusOutlined />
                     </Button>
                   </Stack>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, p: 1.5, bgcolor: 'grey.50', borderRadius: 1, minHeight: 50 }}>
                     {formData.features.map((feat, idx) => (
                       <Chip
                         key={idx}
@@ -608,33 +618,37 @@ export default function ServicesPage() {
                       />
                     ))}
                     {formData.features.length === 0 && (
-                      <Typography variant="caption" color="text.secondary">
-                        Aucune caractéristique ajoutée
+                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        Aucune caractéristique ajoutée - les caractéristiques apparaîtront ici
                       </Typography>
                     )}
                   </Box>
                 </Paper>
 
                 {/* Tarif & Paramètres */}
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+                  <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
                     <DollarOutlined /> Tarif & Paramètres
                   </Typography>
-                  <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} md={5}>
+                  <Grid container spacing={2.5}>
+                    <Grid item xs={12} sm={6} md={5}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 500 }}>
+                        Information tarifaire
+                      </Typography>
                       <TextField 
                         fullWidth 
-                        label="Information tarifaire" 
                         value={formData.price_info} 
                         onChange={(e) => setFormData({ ...formData, price_info: e.target.value })} 
                         size="small"
                         placeholder="Ex: À partir de 5€"
                       />
                     </Grid>
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={6} sm={3} md={3}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 500 }}>
+                        Ordre d'affichage
+                      </Typography>
                       <TextField 
                         fullWidth 
-                        label="Ordre d'affichage" 
                         type="number"
                         value={formData.order_index} 
                         onChange={(e) => setFormData({ ...formData, order_index: e.target.value })} 
@@ -642,8 +656,12 @@ export default function ServicesPage() {
                         InputProps={{ inputProps: { min: 0 } }}
                       />
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid item xs={6} sm={3} md={4}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 500 }}>
+                        Statut
+                      </Typography>
                       <FormControlLabel
+                        sx={{ mt: 0.5 }}
                         control={
                           <Switch 
                             checked={formData.active} 
@@ -653,7 +671,7 @@ export default function ServicesPage() {
                         }
                         label={
                           <Typography variant="body2">
-                            Actif <Typography component="span" variant="caption" color="text.secondary">(visible)</Typography>
+                            {formData.active ? 'Actif' : 'Inactif'}
                           </Typography>
                         }
                       />
