@@ -1,4 +1,39 @@
 {
+  "name": "voisilab-platform",
+  "version": "2.0.0",
+  "description": "Plateforme VoisiLab - FabLab UVCI",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:admin\"",
+    "dev:backend": "cd server && npm run dev",
+    "dev:frontend": "cd front-end && npm run dev",
+    "dev:admin": "cd admins && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend && npm run build:admin",
+    "build:backend": "cd server && npm run build",
+    "build:frontend": "cd front-end && npm run build",
+    "build:admin": "cd admins && npm run build",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\" \"npm run start:admin\"",
+    "start:backend": "cd server && npm start",
+    "start:frontend": "cd front-end && npm start",
+    "start:admin": "cd admins && npm run preview",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:build": "docker-compose up -d --build",
+    "docker:logs": "docker-compose logs -f",
+    "install:all": "npm install && cd server && npm install && cd ../front-end && npm install && cd ../admins && npm install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BAKARY16/voisilab.git"
+  },
+  "author": "Équipe VoisiLab",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/leaflet": "^1.9.21",
+    "@types/leaflet-routing-machine": "^3.2.9",
+    "@types/mapbox-gl": "^3.4.1",
+    "@types/react-map-gl": "^6.1.7",
+    "concurrently": "^9.2.1"
+  },
   "dependencies": {
     "framer-motion": "^12.26.2",
     "leaflet": "^1.9.4",
@@ -9,11 +44,5 @@
     "react-map-gl": "^8.1.0",
     "react-router-dom": "^7.12.0",
     "resend": "^6.8.0"
-  },
-  "devDependencies": {
-    "@types/leaflet": "^1.9.21",
-    "@types/leaflet-routing-machine": "^3.2.9",
-    "@types/mapbox-gl": "^3.4.1",
-    "@types/react-map-gl": "^6.1.7"
   }
 }

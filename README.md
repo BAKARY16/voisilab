@@ -1,7 +1,7 @@
-# 🏭 VoisiLab - Plateforme Fablab Complète
+# 🏭 VoisiLab - Plateforme FabLab Complète
 
 [![Status](https://img.shields.io/badge/status-production%20ready-success)](https://github.com)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com)
 
 > Plateforme complète de gestion de fablab avec admin CMS et site utilisateur
@@ -10,20 +10,68 @@
 
 ## 🎯 Vue d'Ensemble
 
-VoisiLab est une plateforme complète comprenant :
+VoisiLab est une plateforme full-stack moderne comprenant :
 
-- **🎨 Admin CMS** - Gestion complète du contenu (Vite + React + Material-UI)
-- **🌐 Site Utilisateur** - Interface publique (Next.js + React)
-- **💾 Base de Données** - Supabase (PostgreSQL + Auth + Storage)
+- **🎨 Admin Dashboard** - Panneau d'administration complet (Vite + React + Material-UI) - Port 3502
+- **🌐 Site Client** - Interface publique utilisateur (Next.js 15 + React) - Port 3501
+- **⚡ Backend API** - API REST sécurisée (Express + TypeScript) - Port 3500
+- **💾 Base de Données** - MySQL 8.0 avec Docker
 - **🐳 Docker** - Configuration complète pour déploiement
+
+---
+
+## 📊 Configuration des Ports
+
+| Service | Port | URL | Description |
+|---------|------|-----|-------------|
+| **Backend API** | 3500 | http://localhost:3500 | API REST Express |
+| **Client** | 3501 | http://localhost:3501 | Site utilisateur Next.js |
+| **Admin** | 3502 | http://localhost:3502 | Dashboard admin React |
+| **MySQL** | 3306 | localhost:3306 | Base de données |
+| **phpMyAdmin** | 8080 | http://localhost:8080 | Interface MySQL |
 
 ---
 
 ## ⚡ Démarrage Rapide
 
-### 📖 **COMMENCEZ ICI** → [`START-HERE.md`](START-HERE.md)
+### Option 1 : Démarrage Simple (Recommandé)
 
-Ce guide vous permettra de démarrer en **5 minutes** !
+```bash
+# 1. Installer toutes les dépendances
+npm run install:all
+
+# 2. Démarrer tous les services en développement
+npm run dev
+```
+
+### Option 2 : Démarrage Manuel
+
+```bash
+# Terminal 1 - Backend API
+cd server
+npm install
+npm run dev     # Démarre sur port 3500
+
+# Terminal 2 - Client
+cd front-end
+npm install
+npm run dev     # Démarre sur port 3501
+
+# Terminal 3 - Admin
+cd admins
+npm install
+npm run dev     # Démarre sur port 3502
+```
+
+### Option 3 : Docker (Production)
+
+```bash
+# Démarrer avec Docker
+docker-compose up -d
+
+# Vérifier les services
+docker-compose ps
+```
 
 ---
 
@@ -31,14 +79,13 @@ Ce guide vous permettra de démarrer en **5 minutes** !
 
 | Document | Description | Temps |
 |----------|-------------|-------|
-| **[START-HERE.md](START-HERE.md)** | 🚀 Guide de démarrage rapide | 5 min |
-| **[PROJET-FINAL.md](PROJET-FINAL.md)** | 📊 Récapitulatif complet du projet | 10 min |
-| **[INSTALLATION-GUIDE.md](INSTALLATION-GUIDE.md)** | 🔧 Installation base de données | 15 min |
-| **[DEBUG-CONNEXION.md](DEBUG-CONNEXION.md)** | 🐛 Fix problème de connexion admin | 5 min |
-| **[SUPABASE-INTEGRATION-GUIDE.md](SUPABASE-INTEGRATION-GUIDE.md)** | 🔌 Connecter le front-end | 20 min |
-| **[DOCKER-README.md](DOCKER-README.md)** | 🐳 Déploiement Docker | 30 min |
-| **[PROGRESS.md](PROGRESS.md)** | 📈 Historique de développement | - |
-| **[database/README.md](database/README.md)** | 💾 Documentation base de données | 10 min |
+| **[🚀 DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md)** | Guide complet de déploiement | 15 min |
+| **[START-HERE.md](START-HERE.md)** | Guide de démarrage rapide | 5 min |
+| **[PROJET-FINAL.md](PROJET-FINAL.md)** | Récapitulatif complet du projet | 10 min |
+| **[INSTALLATION-GUIDE.md](INSTALLATION-GUIDE.md)** | Installation base de données | 15 min |
+| **[DEBUG-CONNEXION.md](DEBUG-CONNEXION.md)** | Fix problème de connexion admin | 5 min |
+| **[DOCKER-README.md](DOCKER-README.md)** | Documentation Docker | 20 min |
+| **[database/README.md](database/README.md)** | Documentation base de données | 10 min |
 
 ---
 
@@ -46,8 +93,9 @@ Ce guide vous permettra de démarrer en **5 minutes** !
 
 ### Prérequis
 
-- Node.js 20+
-- npm ou yarn
+- **Node.js 18+** (recommandé: 20.x)
+- **npm** ou **yarn**
+- **Docker** et **Docker Compose** (optionnel mais recommandé)
 - Compte Supabase
 - Docker (optionnel)
 

@@ -1,346 +1,580 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// API Configuration
+const API_URL = 'http://localhost:3500';
 
-// Nettoyer le localStorage au démarrage si corrompu
-try {
-  const userStr = localStorage.getItem('user');
-  if (userStr && (userStr === 'undefined' || userStr === 'null')) {
-    console.warn('🧹 Nettoyage localStorage corrompu');
-    localStorage.removeItem('user');
-  }
-} catch (error) {
-  console.error('Erreur lors du nettoyage localStorage:', error);
-}
-
-// Fonction utilitaire pour gérer les réponses et détecter les erreurs d'authentification
-const handleResponse = async (response) => {
-  if (response.status === 401) {
-    console.warn('🔒 Session expirée - déconnexion automatique');
-    // Déconnecter l'utilisateur
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    // Rediriger vers la page de connexion
-    window.location.href = '/login';
-    throw new Error('Session expirée. Veuillez vous reconnecter.');
-  }
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(error.message || `Erreur ${response.status}`);
-  }
-  
-  // Vérifier si la réponse a du contenu
-  const text = await response.text();
-  if (!text || text.trim() === '') {
-    return {};
-  }
-  
+// Migration from localStorage to sessionStorage (cleanup at startup)
+const migrateStorage = () => {
   try {
-    return JSON.parse(text);
+    // Check if there's data in localStorage to migrate
+    const localToken = localStorage.getItem('token');
+    const localUser = localStorage.getItem('user');
+    
+    if (localToken || localUser) {
+      // Migrate to sessionStorage if not already there
+      if (localToken && !sessionStorage.getItem('token')) {
+        sessionStorage.setItem('token', localToken);
+      }
+      if (localUser && !sessionStorage.getItem('user')) {
+        sessionStorage.setItem('user', localUser);
+      }
+      
+      // Clean localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      console.log('Migration localStorage -> sessionStorage terminee');
+    }
+    
+    // Clean corrupted sessionStorage data
+    const user = sessionStorage.getItem('user');
+    if (user) {
+      try {
+        JSON.parse(user);
+      } catch (e) {
+        console.warn('Donnees utilisateur corrompues, nettoyage...');
+        sessionStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+      }
+    }
   } catch (error) {
-    console.error('Erreur de parsing JSON:', text);
-    throw new Error('Réponse serveur invalide');
+    console.error('Erreur lors de la migration du stockage:', error);
   }
 };
 
-// Auth Service
+// Execute migration at startup
+migrateStorage();
+
+// Utility function to handle API responses
+const handleResponse = async (response) => {
+  // Handle 401 Unauthorized - automatic logout
+  if (response.status === 401) {
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    window.location.href = '/login';
+    throw new Error('Session expiree - Deconnexion automatique');
+  }
+  
+  // Parse JSON response
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || data.message || `Erreur ${response.status}`);
+    }
+    
+    return data;
+  }
+  
+  if (!response.ok) {
+    throw new Error(`Erreur ${response.status}`);
+  }
+  
+  return response;
+};
+
+// Get authorization headers
+const getAuthHeaders = () => {
+  const token = sessionStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+};
+
+// Authentication Service
 export const authService = {
+  // Login - stores token and user in sessionStorage
   async login(email, password) {
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
+    
     const data = await handleResponse(response);
     
-    if (!data || !data.token || !data.user) {
-      throw new Error('Réponse de connexion invalide');
+    if (data.token) {
+      sessionStorage.setItem('token', data.token);
+    }
+    if (data.user) {
+      sessionStorage.setItem('user', JSON.stringify(data.user));
     }
     
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    console.log('✅ Connexion réussie:', data.user.email);
     return data;
   },
-
+  
+  // Verify token validity (uses profile endpoint)
   async verifyToken() {
-    const token = localStorage.getItem('token');
-    if (!token) return false;
-    
-    try {
-      const response = await fetch(`${API_URL}/api/auth/profile`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) {
-        this.logout();
-        return false;
-      }
-      return true;
-    } catch (error) {
-      console.error('Erreur vérification token:', error);
-      this.logout();
-      return false;
-    }
-  },
-
-  async getProfile() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Non authentifié');
-    }
-    
     const response = await fetch(`${API_URL}/api/auth/profile`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      method: 'GET',
+      headers: getAuthHeaders()
     });
-    const data = await handleResponse(response);
-    console.log('📡 getProfile data:', data);
     
-    // Backend retourne { user: {...} }
-    if (data && data.user) {
-      localStorage.setItem('user', JSON.stringify(data.user));
-    }
-    return data;
+    return handleResponse(response);
   },
-
+  
+  // Get user profile
+  async getProfile() {
+    const response = await fetch(`${API_URL}/api/auth/profile`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    
+    return handleResponse(response);
+  },
+  
+  // Update user profile
   async updateProfile(profileData) {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
       throw new Error('Non authentifié');
     }
     
     const response = await fetch(`${API_URL}/api/auth/profile`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(profileData)
     });
-    const data = await handleResponse(response);
-    console.log('📡 updateProfile data:', data);
     
-    // Backend retourne { message: ..., user: {...} }
-    if (data && data.user) {
-      localStorage.setItem('user', JSON.stringify(data.user));
-    }
-    return data;
-  },
-
-  async changePassword(currentPassword, newPassword) {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/auth/change-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ 
-        current_password: currentPassword, 
-        new_password: newPassword 
-      })
-    });
     return handleResponse(response);
   },
-
-  logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-  },
-
-  isAuthenticated() {
-    return !!localStorage.getItem('token');
-  },
-
-  getCurrentUser() {
-    const userStr = localStorage.getItem('user');
-    if (!userStr || userStr === 'undefined' || userStr === 'null') {
-      localStorage.removeItem('user');
-      return null;
-    }
+  
+  // Change password
+  async changePassword(currentPassword, newPassword) {
+    const response = await fetch(`${API_URL}/api/auth/change-password`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+    });
     
-    try {
-      return JSON.parse(userStr);
-    } catch (error) {
-      console.error('Erreur parsing user depuis localStorage:', error);
-      localStorage.removeItem('user');
-      return null;
+    return handleResponse(response);
+  },
+  
+  // Logout - removes token and user from sessionStorage
+  logout() {
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    window.location.href = '/login';
+  },
+  
+  // Check if user is authenticated
+  isAuthenticated() {
+    return !!sessionStorage.getItem('token');
+  },
+  
+  // Get current user from sessionStorage
+  getCurrentUser() {
+    const userStr = sessionStorage.getItem('user');
+    if (userStr) {
+      try {
+        return JSON.parse(userStr);
+      } catch (e) {
+        return null;
+      }
     }
+    return null;
   }
 };
 
-// Generic API Client
+// Generic API Client class
 class ApiClient {
   constructor(endpoint) {
     this.endpoint = endpoint;
+    this.baseUrl = `${API_URL}/api/${endpoint}`;
   }
-
+  
+  // Get all items with optional query parameters
   async getAll(params = {}) {
-    const token = localStorage.getItem('token');
-    const url = new URL(`${API_URL}${this.endpoint}`);
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        url.searchParams.append(key, String(value));
+    const queryString = new URLSearchParams(params).toString();
+    const url = queryString ? `${this.baseUrl}?${queryString}` : this.baseUrl;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    
+    return handleResponse(response);
+  }
+  
+  // Get single item by ID
+  async getById(id) {
+    const response = await fetch(`${this.baseUrl}/${id}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    
+    return handleResponse(response);
+  }
+  
+  // Create new item
+  async create(data) {
+    const response = await fetch(this.baseUrl, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    
+    return handleResponse(response);
+  }
+  
+  // Update existing item
+  async update(id, data) {
+    const response = await fetch(`${this.baseUrl}/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    
+    return handleResponse(response);
+  }
+  
+  // Delete item
+  async delete(id) {
+    const response = await fetch(`${this.baseUrl}/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    
+    return handleResponse(response);
+  }
+  
+  // Update item status
+  async updateStatus(id, status, notes = '') {
+    const response = await fetch(`${this.baseUrl}/${id}/status`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ status, notes })
+    });
+    
+    return handleResponse(response);
+  }
+  
+  // Download file from submission
+  async downloadFile(submissionId, filename) {
+    const response = await fetch(`${this.baseUrl}/${submissionId}/download/${filename}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('token')}`
       }
     });
-
-    const response = await fetch(url.toString(), {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    return handleResponse(response);
-  }
-
-  async getById(id) {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}${this.endpoint}/${id}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    return handleResponse(response);
-  }
-
-  async create(data) {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}${this.endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
-    return handleResponse(response);
-  }
-
-  async update(id, data) {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}${this.endpoint}/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
-    return handleResponse(response);
-  }
-
-  async delete(id) {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}${this.endpoint}/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    return handleResponse(response);
-  }
-
-  async updateStatus(id, status, notes = null) {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}${this.endpoint}/${id}/status`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ status, review_notes: notes })
-    });
-    return handleResponse(response);
-  }
-
-  async downloadFile(submissionId, filename) {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}${this.endpoint}/${submissionId}/files/${filename}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!response.ok) throw new Error('Erreur de téléchargement');
+    
+    if (!response.ok) {
+      throw new Error(`Erreur telechargement: ${response.status}`);
+    }
+    
     return response.blob();
   }
 }
 
-// Services pour chaque entité
-export const blogService = new ApiClient('/api/blog');
-export const projectsService = new ApiClient('/api/projects');
-export const ppnService = new ApiClient('/api/ppn');
-export const workshopsService = new ApiClient('/api/workshops');
-export const equipmentService = new ApiClient('/api/equipment');
-export const mediaService = new ApiClient('/api/media');
-export const teamService = new ApiClient('/api/team');
-export const servicesApiService = new ApiClient('/api/services');
-export const contactsService = new ApiClient('/api/contacts');
-export const projectSubmissionsService = new ApiClient('/api/project-submissions');
-export const usersService = new ApiClient('/api/users');
-export const pagesService = new ApiClient('/api/pages');
-export const settingsService = new ApiClient('/api/settings');
+// Blog Service
+export const blogService = new ApiClient('blog');
 
-// Service spécial pour les statistiques du dashboard
-export const statsService = {
-  async getDashboard() {
-    const token = localStorage.getItem('token');
-    console.log('📡 Appel API stats/dashboard');
-    console.log('📡 URL:', `${API_URL}/api/stats`);
-    console.log('📡 Token:', token ? 'Présent' : 'Absent');
-    
-    const response = await fetch(`${API_URL}/api/stats`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    console.log('📡 Statut réponse:', response.status, response.statusText);
-    return handleResponse(response);
-  },
+// Projects Service
+export const projectsService = new ApiClient('projects');
 
-  async getByPeriod(period) {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/stats/period/${period}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+// PPN (Petit Projet Numerique) Service
+export const ppnService = new ApiClient('ppn');
+
+// Workshops Service with additional methods
+class WorkshopsApiClient extends ApiClient {
+  constructor() {
+    super('workshops');
+  }
+  
+  async getUnreadCount() {
+    const response = await fetch(`${this.baseUrl}/unread/count`, {
+      method: 'GET',
+      headers: getAuthHeaders()
     });
     return handleResponse(response);
   }
-};
+  
+  async markAsRead(id) {
+    const response = await fetch(`${this.baseUrl}/${id}/read`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+  
+  async markAllAsRead() {
+    const response = await fetch(`${this.baseUrl}/mark-all-read`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+}
+export const workshopsService = new WorkshopsApiClient();
 
-// Service pour les notifications
-export const notificationsService = {
-  async getAll(unreadOnly = false) {
-    const token = localStorage.getItem('token');
-    const url = new URL(`${API_URL}/api/notifications`);
-    if (unreadOnly) {
-      url.searchParams.append('unread_only', 'true');
+// Innovations Service with additional methods
+class InnovationsApiClient extends ApiClient {
+  constructor() {
+    super('innovations');
+  }
+  
+  // Get published innovations (public)
+  async getPublished() {
+    const response = await fetch(`${this.baseUrl}/published`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+  
+  // Get categories with counts
+  async getCategories() {
+    const response = await fetch(`${this.baseUrl}/categories`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+  
+  // Toggle publish status
+  async togglePublish(id) {
+    const response = await fetch(`${this.baseUrl}/${id}/publish`, {
+      method: 'PATCH',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+  
+  // Toggle featured status
+  async toggleFeatured(id) {
+    const response = await fetch(`${this.baseUrl}/${id}/featured`, {
+      method: 'PATCH',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+  
+  // Like an innovation
+  async like(id) {
+    const response = await fetch(`${this.baseUrl}/${id}/like`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+}
+export const innovationsService = new InnovationsApiClient();
+
+// Equipment Service
+export const equipmentService = new ApiClient('equipment');
+
+// Equipment Requests Service with additional methods
+class EquipmentRequestsApiClient extends ApiClient {
+  constructor() {
+    super('equipment-requests');
+  }
+  
+  async getUnreadCount() {
+    const response = await fetch(`${this.baseUrl}/unread/count`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+}
+export const equipmentRequestsService = new EquipmentRequestsApiClient();
+
+// Media Service
+export const mediaService = new ApiClient('media');
+
+// Team Service with photo upload capability
+class TeamApiClient extends ApiClient {
+  constructor() {
+    super('team');
+  }
+  
+  // Uses the default /api/team endpoint (requires auth in current Docker build)
+  // No override needed - parent class getAll() works with authentication
+  
+  // Upload team member photo
+  async uploadPhoto(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const token = sessionStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/upload/team`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: formData
+    });
+    
+    return handleResponse(response);
+  }
+  
+  // Create team member (override to handle all data including photo_url separately)
+  async createWithPhoto(memberData, photoFile) {
+    let photoUrl = memberData.photo_url;
+    
+    // If a new photo is provided, upload it first
+    if (photoFile) {
+      const uploadResult = await this.uploadPhoto(photoFile);
+      photoUrl = uploadResult.url;
     }
     
-    const response = await fetch(url.toString(), {
-      headers: { 'Authorization': `Bearer ${token}` }
+    // Create the member with the photo URL
+    return this.create({ ...memberData, photo_url: photoUrl });
+  }
+  
+  // Update team member with optional photo
+  async updateWithPhoto(id, memberData, photoFile) {
+    let photoUrl = memberData.photo_url;
+    
+    // If a new photo is provided, upload it first
+    if (photoFile) {
+      const uploadResult = await this.uploadPhoto(photoFile);
+      photoUrl = uploadResult.url;
+    }
+    
+    // Update the member with the photo URL
+    return this.update(id, { ...memberData, photo_url: photoUrl });
+  }
+}
+export const teamService = new TeamApiClient();
+
+// Services API Service (for managing services offered)
+export const servicesApiService = new ApiClient('services');
+
+// Contacts Service with additional methods
+class ContactsApiClient extends ApiClient {
+  constructor() {
+    super('contacts');
+  }
+  
+  async getUnreadCount() {
+    const response = await fetch(`${this.baseUrl}/unread-count`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+}
+export const contactsService = new ContactsApiClient();
+
+// Project Submissions Service with additional methods
+class ProjectSubmissionsApiClient extends ApiClient {
+  constructor() {
+    super('project-submissions');
+  }
+  
+  async getUnreadCount() {
+    const response = await fetch(`${this.baseUrl}/unread-count`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+  
+  // Override updateStatus to use PATCH (backend uses PATCH for project-submissions)
+  async updateStatus(id, status, review_notes = '') {
+    const response = await fetch(`${this.baseUrl}/${id}/status`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ status, review_notes })
+    });
+    return handleResponse(response);
+  }
+  
+  // Override downloadFile to use correct path (/:id/files/:filename)
+  async downloadFile(submissionId, filename) {
+    const response = await fetch(`${this.baseUrl}/${submissionId}/files/${filename}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Erreur téléchargement: ${response.status}`);
+    }
+    
+    return response.blob();
+  }
+}
+export const projectSubmissionsService = new ProjectSubmissionsApiClient();
+
+// Users Service
+export const usersService = new ApiClient('users');
+
+// Pages Service (for dynamic pages management)
+export const pagesService = new ApiClient('pages');
+
+// Settings Service
+export const settingsService = new ApiClient('settings');
+
+// Stats Service
+export const statsService = {
+  async getDashboard() {
+    const response = await fetch(`${API_URL}/api/stats`, {
+      method: 'GET',
+      headers: getAuthHeaders()
     });
     return handleResponse(response);
   },
-
-  async markAsRead(id) {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/notifications/${id}/read`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    return handleResponse(response);
-  },
-
-  async markAllAsRead() {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/notifications/mark-all-read`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    return handleResponse(response);
-  },
-
-  async delete(id) {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/notifications/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    return handleResponse(response);
-  },
-
-  async deleteReadNotifications() {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/notifications/read`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
+  
+  async getByPeriod(period = '30d') {
+    const response = await fetch(`${API_URL}/api/stats/period?period=${period}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
     });
     return handleResponse(response);
   }
 };
+
+// Notifications Service
+export const notificationsService = {
+  async getAll(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    const url = queryString 
+      ? `${API_URL}/api/notifications?${queryString}` 
+      : `${API_URL}/api/notifications`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+  
+  async markAsRead(id) {
+    const response = await fetch(`${API_URL}/api/notifications/${id}/read`, {
+      method: 'PUT',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+  
+  async markAllAsRead() {
+    const response = await fetch(`${API_URL}/api/notifications/mark-all-read`, {
+      method: 'PUT',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+  
+  async delete(id) {
+    const response = await fetch(`${API_URL}/api/notifications/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+  
+  async deleteReadNotifications() {
+    const response = await fetch(`${API_URL}/api/notifications/read`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+};
+
+// Export API_URL for external use
+export { API_URL };
+
+

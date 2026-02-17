@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { pool } from '../config/database';
+import pool from '../config/database';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { hashPassword } from '../config/auth';
 import { asyncHandler, NotFoundError, ValidationError } from '../middlewares/errors';
@@ -10,66 +10,61 @@ import logger from '../config/logger';
  */
 export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
   const { role, active, page = 1, limit = 10, search } = req.query;
-  const offset = ((page as number) - 1) * (limit as number);
+  const offset = ((Number(page)) - 1) * (Number(limit));
 
   let query = 'SELECT id, email, full_name, role, avatar_url, active, email_verified, last_login, created_at FROM users WHERE 1=1';
   const params: any[] = [];
-  let paramIndex = 1;
 
   if (role) {
-    query += ` AND role = $${paramIndex}`;
+    query += ' AND role = ?';
     params.push(role);
-    paramIndex++;
   }
 
   if (active !== undefined) {
-    query += ` AND active = $${paramIndex}`;
+    query += ' AND active = ?';
     params.push(active === 'true');
-    paramIndex++;
   }
 
   if (search) {
-    query += ` AND (email ILIKE $${paramIndex} OR full_name ILIKE $${paramIndex})`;
-    params.push(`%${search}%`);
-    paramIndex++;
+    query += ' AND (email LIKE ? OR full_name LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`);
   }
 
-  query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-  params.push(limit, offset);
+  query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+  params.push(Number(limit), offset);
 
-  let result = await pool.query(query, params);
+  const [rows] = await pool.query<RowDataPacket[]>(query, params);
 
   // Get total count
   let countQuery = 'SELECT COUNT(*) as count FROM users WHERE 1=1';
   const countParams: any[] = [];
-  let countParamIndex = 1;
 
   if (role) {
-    countQuery += ` AND role = $${countParamIndex}`;
+    countQuery += ' AND role = ?';
     countParams.push(role);
-    countParamIndex++;
   }
 
   if (active !== undefined) {
-    countQuery += ` AND active = $${countParamIndex}`;
+    countQuery += ' AND active = ?';
     countParams.push(active === 'true');
   }
 
   if (search) {
-    countQuery += ` AND (email ILIKE $${countParamIndex} OR full_name ILIKE $${countParamIndex})`;
-    countParams.push(`%${search}%`);
+    countQuery += ' AND (email LIKE ? OR full_name LIKE ?)';
+    countParams.push(`%${search}%`, `%${search}%`);
   }
 
-  const [countRows] = await pool.query<RowDataPacket[]>( pool.query(countQuery, countParams);
-  const total = parseInt(countRows[0].count);
+  const [countRows] = await pool.query<RowDataPacket[]>(countQuery, countParams);
+  const total = (countRows[0] as any).count;
 
   res.json({
+    success: true,
     data: rows,
     pagination: {
       total,
-      page: parseInt(page as string),
-      limit: parseInt(limit as string),
-      totalPages: Math.ceil(total / (limit as number))
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / Number(limit))
     }
   });
 });
@@ -80,15 +75,16 @@ export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
 export const getUserById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const [rows] = await pool.query<RowDataPacket[]>('SELECT id, email, full_name, role, avatar_url, active, email_verified, last_login, created_at FROM users WHERE id = ?',
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, email, full_name, role, avatar_url, active, email_verified, last_login, created_at FROM users WHERE id = ?',
     [id]
   );
 
   if (rows.length === 0) {
-    throw new NotFoundError('Utilisateur non trouvé');
+    throw new NotFoundError('Utilisateur non trouve');
   }
 
-  res.json({ data: rows[0] });
+  res.json({ success: true, data: rows[0] });
 });
 
 /**
@@ -98,30 +94,36 @@ export const createUser = asyncHandler(async (req: Request, res: Response) => {
   const { email, password, full_name, role = 'user', active = true } = req.body;
 
   // Check if user exists
-  const existingUser = await pool.query(
+  const [existingRows] = await pool.query<RowDataPacket[]>(
     'SELECT id FROM users WHERE email = ?',
     [email]
   );
 
-  if (existingUser.rows.length > 0) {
-    throw new ValidationError('Un utilisateur avec cet email existe déjà');
+  if (existingRows.length > 0) {
+    throw new ValidationError('Un utilisateur avec cet email existe deja');
   }
 
   // Hash password
   const passwordHash = await hashPassword(password);
 
   // Create user
-  const [insertResult] = await pool.query<ResultSetHeader>( `INSERT INTO users (email, password_hash, full_name, role, active)
-     VALUES (?, ?, ?, ?, ?)
-    , email, full_name, role, active, created_at`,
-    [email, passwordHash, full_name || `', role, active]
+  const [insertResult] = await pool.query<ResultSetHeader>(
+    'INSERT INTO users (email, password_hash, full_name, role, active) VALUES (?, ?, ?, ?, ?)',
+    [email, passwordHash, full_name || '', role, active]
   );
 
-  logger.info(`Nouvel utilisateur créé par admin: ${email}`);
+  // Get created user
+  const [newRows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, email, full_name, role, active, created_at FROM users WHERE id = ?',
+    [insertResult.insertId]
+  );
+
+  logger.info(`Nouvel utilisateur cree par admin: ${email}`);
 
   res.status(201).json({
-    message: 'Utilisateur créé avec succès',
-    data: rows[0]
+    success: true,
+    message: 'Utilisateur cree avec succes',
+    data: newRows[0]
   });
 });
 
@@ -132,39 +134,52 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { email, full_name, role, active, email_verified, avatar_url } = req.body;
 
+  // Check if user exists
+  const [existingRows] = await pool.query<RowDataPacket[]>(
+    'SELECT id FROM users WHERE id = ?',
+    [id]
+  );
+
+  if (existingRows.length === 0) {
+    throw new NotFoundError('Utilisateur non trouve');
+  }
+
   // If email is being changed, check if it's already taken
   if (email) {
-    const existingUser = await pool.query(
+    const [emailRows] = await pool.query<RowDataPacket[]>(
       'SELECT id FROM users WHERE email = ? AND id != ?',
       [email, id]
     );
 
-    if (existingUser.rows.length > 0) {
-      throw new ValidationError('Un utilisateur avec cet email existe déjà');
+    if (emailRows.length > 0) {
+      throw new ValidationError('Un utilisateur avec cet email existe deja');
     }
   }
 
-  const [updateResult] = await pool.query<ResultSetHeader>( `UPDATE users SET
+  await pool.query<ResultSetHeader>(
+    `UPDATE users SET
       email = COALESCE(?, email),
       full_name = COALESCE(?, full_name),
       role = COALESCE(?, role),
       active = COALESCE(?, active),
       email_verified = COALESCE(?, email_verified),
       avatar_url = COALESCE(?, avatar_url)
-    WHERE id = ?
-   , email, full_name, role, avatar_url, active, email_verified`,
+    WHERE id = ?`,
     [email, full_name, role, active, email_verified, avatar_url, id]
   );
 
-  if (rows.length === 0) {
-    throw new NotFoundError(`Utilisateur non trouvé');
-  }
+  // Get updated user
+  const [updatedRows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, email, full_name, role, avatar_url, active, email_verified FROM users WHERE id = ?',
+    [id]
+  );
 
-  logger.info(`Utilisateur mis à jour par admin: ${id}`);
+  logger.info(`Utilisateur mis a jour par admin: ${id}`);
 
   res.json({
-    message: 'Utilisateur mis à jour avec succès',
-    data: rows[0]
+    success: true,
+    message: 'Utilisateur mis a jour avec succes',
+    data: updatedRows[0]
   });
 });
 
@@ -179,21 +194,28 @@ export const resetUserPassword = asyncHandler(async (req: Request, res: Response
     throw new ValidationError('Nouveau mot de passe requis');
   }
 
+  // Check if user exists
+  const [existingRows] = await pool.query<RowDataPacket[]>(
+    'SELECT id FROM users WHERE id = ?',
+    [id]
+  );
+
+  if (existingRows.length === 0) {
+    throw new NotFoundError('Utilisateur non trouve');
+  }
+
   // Hash new password
   const passwordHash = await hashPassword(new_password);
 
   // Update password
-  const [result] = await pool.query<ResultSetHeader>('UPDATE users SET password_hash = ? WHERE id = ?',
+  await pool.query<ResultSetHeader>(
+    'UPDATE users SET password_hash = ? WHERE id = ?',
     [passwordHash, id]
   );
 
-  if (rows.length === 0) {
-    throw new NotFoundError('Utilisateur non trouvé');
-  }
+  logger.info(`Mot de passe reinitialise par admin pour l'utilisateur: ${id}`);
 
-  logger.info(`Mot de passe réinitialisé par admin pour l'utilisateur: ${id}`);
-
-  res.json({ message: 'Mot de passe réinitialisé avec succès' });
+  res.json({ success: true, message: 'Mot de passe reinitialise avec succes' });
 });
 
 /**
@@ -207,35 +229,41 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ValidationError('Vous ne pouvez pas supprimer votre propre compte');
   }
 
-  const [result] = await pool.query<ResultSetHeader>('DELETE FROM users WHERE id = ?, email',
+  // Get user email before deleting
+  const [userRows] = await pool.query<RowDataPacket[]>(
+    'SELECT email FROM users WHERE id = ?',
     [id]
   );
 
-  if (rows.length === 0) {
-    throw new NotFoundError('Utilisateur non trouvé');
+  if (userRows.length === 0) {
+    throw new NotFoundError('Utilisateur non trouve');
   }
 
-  logger.info(`Utilisateur supprimé par admin: ${rows[0].email}`);
+  const userEmail = userRows[0].email;
 
-  res.json({ message: 'Utilisateur supprimé avec succès' });
+  await pool.query<ResultSetHeader>('DELETE FROM users WHERE id = ?', [id]);
+
+  logger.info(`Utilisateur supprime par admin: ${userEmail}`);
+
+  res.json({ success: true, message: 'Utilisateur supprime avec succes' });
 });
 
 /**
  * Get user statistics (admin only)
  */
 export const getUserStats = asyncHandler(async (req: Request, res: Response) => {
-  let result = await pool.query(`
+  const [rows] = await pool.query<RowDataPacket[]>(`
     SELECT
       COUNT(*) as total,
-      COUNT(*) as count FILTER (WHERE role = 'admin') as admins,
-      COUNT(*) as count FILTER (WHERE role = 'user') as users,
-      COUNT(*) as count FILTER (WHERE active = true) as active_users,
-      COUNT(*) as count FILTER (WHERE email_verified = true) as verified_users,
-      COUNT(*) as count FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as new_last_month
+      SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) as admins,
+      SUM(CASE WHEN role = 'user' THEN 1 ELSE 0 END) as users,
+      SUM(CASE WHEN active = true THEN 1 ELSE 0 END) as active_users,
+      SUM(CASE WHEN email_verified = true THEN 1 ELSE 0 END) as verified_users,
+      SUM(CASE WHEN created_at >= NOW() - INTERVAL 30 DAY THEN 1 ELSE 0 END) as new_last_month
     FROM users
   `);
 
-  res.json({ data: rows[0] });
+  res.json({ success: true, data: rows[0] });
 });
 
 /**
@@ -246,22 +274,38 @@ export const toggleUserStatus = asyncHandler(async (req: Request, res: Response)
 
   // Prevent deactivating yourself
   if (id === req.user?.userId) {
-    throw new ValidationError('Vous ne pouvez pas désactiver votre propre compte');
+    throw new ValidationError('Vous ne pouvez pas desactiver votre propre compte');
   }
 
-  const [result] = await pool.query<ResultSetHeader>('UPDATE users SET active = NOT active WHERE id = ?, email, active',
+  // Check if user exists and get current status
+  const [userRows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, email, active FROM users WHERE id = ?',
     [id]
   );
 
-  if (rows.length === 0) {
-    throw new NotFoundError('Utilisateur non trouvé');
+  if (userRows.length === 0) {
+    throw new NotFoundError('Utilisateur non trouve');
   }
 
-  const user = rows[0];
-  logger.info(`Statut utilisateur modifié par admin: ${user.email} - ${user.active ? 'activé' : 'désactivé'}`);
+  const newStatus = !userRows[0].active;
+
+  await pool.query<ResultSetHeader>(
+    'UPDATE users SET active = ? WHERE id = ?',
+    [newStatus, id]
+  );
+
+  // Get updated user
+  const [updatedRows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, email, active FROM users WHERE id = ?',
+    [id]
+  );
+
+  const user = updatedRows[0];
+  logger.info(`Statut utilisateur modifie par admin: ${user.email} - ${user.active ? 'active' : 'desactive'}`);
 
   res.json({
-    message: user.active ? 'Utilisateur activé' : 'Utilisateur désactivé',
+    success: true,
+    message: user.active ? 'Utilisateur active' : 'Utilisateur desactive',
     data: user
   });
 });

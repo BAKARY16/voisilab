@@ -10,6 +10,7 @@ const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')))
 
 // VoisiLab Pages - Content
 const BlogPage = Loadable(lazy(() => import('pages/voisilab/BlogPage')));
+const InnovationsPage = Loadable(lazy(() => import('pages/voisilab/InnovationsPage')));
 const PagesManagement = Loadable(lazy(() => import('pages/voisilab/PagesManagement')));
 const MediaPage = Loadable(lazy(() => import('pages/voisilab/MediaPage')));
 
@@ -57,6 +58,10 @@ const MainRoutes = {
     {
       path: 'blog',
       element: <BlogPage />
+    },
+    {
+      path: 'innovations',
+      element: <InnovationsPage />
     },
     {
       path: 'pages',

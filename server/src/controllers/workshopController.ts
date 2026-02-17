@@ -5,81 +5,127 @@ import { asyncHandler, NotFoundError } from '../middlewares/errors';
 import logger from '../config/logger';
 
 /**
- * Get all workshops with pagination and filters
+ * Convertir une date ISO 8601 en format MySQL DATETIME
+ * Ex: '2026-03-25T10:30:00.000Z' -> '2026-03-25 10:30:00'
+ */
+const formatDateForMySQL = (isoDate: string | null | undefined): string | null => {
+  if (!isoDate) return null;
+  try {
+    const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return null;
+    // Format: YYYY-MM-DD HH:mm:ss
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Get all workshops (admin) with pagination and filters
  */
 export const getAllWorkshops = asyncHandler(async (req: Request, res: Response) => {
-  const { status, category, page = 1, limit = 10, search } = req.query;
-  const offset = ((page as number) - 1) * (limit as number);
+  const { status, type, category, page = 1, limit = 20, search } = req.query;
+  const offset = (Number(page) - 1) * Number(limit);
 
   let query = 'SELECT * FROM workshops WHERE 1=1';
   const params: any[] = [];
-  let paramIndex = 1;
 
   if (status) {
-    query += ` AND status = $${paramIndex}`;
+    query += ' AND status = ?';
     params.push(status);
-    paramIndex++;
+  }
+
+  if (type) {
+    query += ' AND type = ?';
+    params.push(type);
   }
 
   if (category) {
-    query += ` AND category = $${paramIndex}`;
+    query += ' AND category = ?';
     params.push(category);
-    paramIndex++;
   }
 
   if (search) {
-    query += ` AND (title ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`;
-    params.push(`%${search}%`);
-    paramIndex++;
+    query += ' AND (title LIKE ? OR description LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`);
   }
 
-  query += ` ORDER BY date DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-  params.push(limit, offset);
+  query += ' ORDER BY date DESC LIMIT ? OFFSET ?';
+  params.push(Number(limit), offset);
 
-  let result = await pool.query(query, params);
+  const [rows] = await pool.query<RowDataPacket[]>(query, params);
 
   // Get total count
-  let countQuery = 'SELECT COUNT(*) as count FROM workshops WHERE 1=1';
+  let countQuery = 'SELECT COUNT(*) as total FROM workshops WHERE 1=1';
   const countParams: any[] = [];
-  let countParamIndex = 1;
 
   if (status) {
-    countQuery += ` AND status = $${countParamIndex}`;
+    countQuery += ' AND status = ?';
     countParams.push(status);
-    countParamIndex++;
+  }
+
+  if (type) {
+    countQuery += ' AND type = ?';
+    countParams.push(type);
   }
 
   if (category) {
-    countQuery += ` AND category = $${countParamIndex}`;
+    countQuery += ' AND category = ?';
     countParams.push(category);
-    countParamIndex++;
   }
 
   if (search) {
-    countQuery += ` AND (title ILIKE $${countParamIndex} OR description ILIKE $${countParamIndex})`;
-    countParams.push(`%${search}%`);
+    countQuery += ' AND (title LIKE ? OR description LIKE ?)';
+    countParams.push(`%${search}%`, `%${search}%`);
   }
 
-  const [countRows] = await pool.query<RowDataPacket[]>( pool.query(countQuery, countParams);
-  const total = parseInt(countResult[0][0].count);
+  const [countResult] = await pool.query<RowDataPacket[]>(countQuery, countParams);
+  const total = countResult[0].total;
 
   res.json({
     data: rows,
     pagination: {
       total,
-      page: parseInt(page as string),
-      limit: parseInt(limit as string),
-      totalPages: Math.ceil(total / (limit as number))
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / Number(limit))
     }
   });
 });
 
 /**
- * Get upcoming workshops (public)
+ * Get published workshops (public)
+ */
+export const getPublishedWorkshops = asyncHandler(async (req: Request, res: Response) => {
+  const { type, limit = 20 } = req.query;
+
+  let query = `
+    SELECT * FROM workshops 
+    WHERE is_published = TRUE 
+    AND status IN ('upcoming', 'ongoing')
+  `;
+  const params: any[] = [];
+
+  if (type && type !== 'all') {
+    query += ' AND type = ?';
+    params.push(type);
+  }
+
+  query += ' ORDER BY date ASC LIMIT ?';
+  params.push(Number(limit));
+
+  const [rows] = await pool.query<RowDataPacket[]>(query, params);
+
+  res.json({ data: rows });
+});
+
+/**
+ * Get upcoming workshops (public) - alias for backward compatibility
  */
 export const getUpcomingWorkshops = asyncHandler(async (req: Request, res: Response) => {
-  const [rows] = await pool.query<RowDataPacket[]>( `SELECT * FROM workshops
-     WHERE status = `upcoming' AND date >= NOW()
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT * FROM workshops
+     WHERE status = 'upcoming' AND date >= CURDATE()
      ORDER BY date ASC
      LIMIT 10`
   );
@@ -88,12 +134,31 @@ export const getUpcomingWorkshops = asyncHandler(async (req: Request, res: Respo
 });
 
 /**
- * Get workshop by ID
+ * Get workshop by ID (public)
+ */
+export const getPublicWorkshopById = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM workshops WHERE id = ? AND is_published = TRUE',
+    [id]
+  );
+
+  if (rows.length === 0) {
+    throw new NotFoundError('Atelier non trouvé');
+  }
+
+  res.json({ data: rows[0] });
+});
+
+/**
+ * Get workshop by ID (admin)
  */
 export const getWorkshopById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM workshops WHERE id = ?',
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM workshops WHERE id = ?',
     [id]
   );
 
@@ -111,28 +176,67 @@ export const createWorkshop = asyncHandler(async (req: Request, res: Response) =
   const {
     title,
     description,
+    type = 'formation',
     date,
+    time,
+    duration,
     location,
-    capacity,
+    max_participants = 10,
+    level = 'Débutant',
     image_url,
     category,
-    price,
+    price = 0,
     instructor,
-    status = 'upcoming'
+    prerequisites = [],
+    what_you_learn = [],
+    status = 'upcoming',
+    is_published = false
   } = req.body;
 
-  const [insertResult] = await pool.query<ResultSetHeader>( `INSERT INTO workshops (
-      title, description, date, location, capacity,
-      image_url, category, price, instructor, status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-   `,
-    [title, description, date, location, capacity, image_url, category, price, instructor, status]
+  // Convertir la date ISO en format MySQL
+  const mysqlDate = formatDateForMySQL(date);
+
+  const [result] = await pool.query<ResultSetHeader>(
+    `INSERT INTO workshops (
+      title, description, type, date, time, duration, location, 
+      max_participants, current_participants, level, image_url, 
+      category, price, instructor, prerequisites, what_you_learn, 
+      status, is_published, is_read
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE)`,
+    [
+      title, description, type, mysqlDate, time, duration, location,
+      max_participants, level, image_url, category, price, instructor,
+      JSON.stringify(prerequisites), JSON.stringify(what_you_learn),
+      status, is_published
+    ]
   );
 
-  logger.info(`Nouvel atelier créé: ${title}`);
+  // Create notification for new workshop
+  try {
+    await pool.query(
+      `INSERT INTO notifications (type, title, message, link, is_read, data) 
+       VALUES ('workshop', ?, ?, ?, FALSE, ?)`,
+      [
+        `Nouvel atelier: ${title}`,
+        `Un nouvel atelier "${title}" a été créé`,
+        `/voisilab/workshops/${result.insertId}`,
+        JSON.stringify({ workshop_id: result.insertId, type })
+      ]
+    );
+  } catch (e) {
+    logger.warn('Could not create notification for workshop');
+  }
+
+  // Fetch the created workshop
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM workshops WHERE id = ?',
+    [result.insertId]
+  );
+
+  logger.info(`Nouvel atelier créé: ${title} (ID: ${result.insertId})`);
 
   res.status(201).json({
-    message: `Atelier créé avec succès',
+    message: 'Atelier créé avec succès',
     data: rows[0]
   });
 });
@@ -145,37 +249,73 @@ export const updateWorkshop = asyncHandler(async (req: Request, res: Response) =
   const {
     title,
     description,
+    type,
     date,
+    time,
+    duration,
     location,
-    capacity,
+    max_participants,
+    level,
     image_url,
     category,
     price,
     instructor,
-    status
+    prerequisites,
+    what_you_learn,
+    status,
+    is_published
   } = req.body;
 
-  const [updateResult] = await pool.query<ResultSetHeader>( `UPDATE workshops SET
-      title = COALESCE(?, title),
-      description = COALESCE(?, description),
-      date = COALESCE(?, date),
-      location = COALESCE(?, location),
-      capacity = COALESCE(?, capacity),
-      image_url = COALESCE(?, image_url),
-      category = COALESCE(?, category),
-      price = COALESCE(?, price),
-      instructor = COALESCE(?, instructor),
-      status = COALESCE(?, status)
-    WHERE id = ?
-   `,
-    [title, description, date, location, capacity, image_url, category, price, instructor, status, id]
+  // Check if workshop exists
+  const [existing] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM workshops WHERE id = ?',
+    [id]
   );
 
-  if (rows.length === 0) {
-    throw new NotFoundError(`Atelier non trouvé');
+  if (existing.length === 0) {
+    throw new NotFoundError('Atelier non trouvé');
   }
 
-  logger.info(`Atelier mis à jour: ${id}`);
+  // Build dynamic update query
+  const updates: string[] = [];
+  const params: any[] = [];
+
+  if (title !== undefined) { updates.push('title = ?'); params.push(title); }
+  if (description !== undefined) { updates.push('description = ?'); params.push(description); }
+  if (type !== undefined) { updates.push('type = ?'); params.push(type); }
+  if (date !== undefined) { updates.push('date = ?'); params.push(formatDateForMySQL(date)); }
+  if (time !== undefined) { updates.push('time = ?'); params.push(time); }
+  if (duration !== undefined) { updates.push('duration = ?'); params.push(duration); }
+  if (location !== undefined) { updates.push('location = ?'); params.push(location); }
+  if (max_participants !== undefined) { updates.push('max_participants = ?'); params.push(max_participants); }
+  if (level !== undefined) { updates.push('level = ?'); params.push(level); }
+  if (image_url !== undefined) { updates.push('image_url = ?'); params.push(image_url); }
+  if (category !== undefined) { updates.push('category = ?'); params.push(category); }
+  if (price !== undefined) { updates.push('price = ?'); params.push(price); }
+  if (instructor !== undefined) { updates.push('instructor = ?'); params.push(instructor); }
+  if (prerequisites !== undefined) { updates.push('prerequisites = ?'); params.push(JSON.stringify(prerequisites)); }
+  if (what_you_learn !== undefined) { updates.push('what_you_learn = ?'); params.push(JSON.stringify(what_you_learn)); }
+  if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+  if (is_published !== undefined) { updates.push('is_published = ?'); params.push(is_published); }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'Aucune modification fournie' });
+  }
+
+  params.push(id);
+
+  await pool.query(
+    `UPDATE workshops SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ?`,
+    params
+  );
+
+  // Fetch updated workshop
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM workshops WHERE id = ?',
+    [id]
+  );
+
+  logger.info(`Atelier mis à jour: ${rows[0].title} (ID: ${id})`);
 
   res.json({
     message: 'Atelier mis à jour avec succès',
@@ -189,15 +329,19 @@ export const updateWorkshop = asyncHandler(async (req: Request, res: Response) =
 export const deleteWorkshop = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const [result] = await pool.query<ResultSetHeader>('DELETE FROM workshops WHERE id = ?',
+  // Check if workshop exists
+  const [existing] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM workshops WHERE id = ?',
     [id]
   );
 
-  if (rows.length === 0) {
+  if (existing.length === 0) {
     throw new NotFoundError('Atelier non trouvé');
   }
 
-  logger.info(`Atelier supprimé: ${id}`);
+  await pool.query('DELETE FROM workshops WHERE id = ?', [id]);
+
+  logger.info(`Atelier supprimé: ${existing[0].title} (ID: ${id})`);
 
   res.json({ message: 'Atelier supprimé avec succès' });
 });
@@ -208,8 +352,9 @@ export const deleteWorkshop = asyncHandler(async (req: Request, res: Response) =
 export const getWorkshopRegistrations = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const [rows] = await pool.query<RowDataPacket[]>( `SELECT * FROM workshop_registrations
-     WHERE workshop_id = ?
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT * FROM workshop_registrations 
+     WHERE workshop_id = ? 
      ORDER BY created_at DESC`,
     [id]
   );
@@ -223,42 +368,97 @@ export const getWorkshopRegistrations = asyncHandler(async (req: Request, res: R
 export const registerForWorkshop = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { name, email, phone, message } = req.body;
-  const userId = req.user?.userId || null;
 
   // Check if workshop exists and has capacity
-  const workshop = await pool.query(
-    `SELECT capacity FROM workshops WHERE id = ?',
+  const [workshop] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM workshops WHERE id = ?',
     [id]
   );
 
-  if (workshop[0].length === 0) {
+  if (workshop.length === 0) {
     throw new NotFoundError('Atelier non trouvé');
   }
 
-  // Check available spots
-  const registrations = await pool.query(
-    'SELECT COUNT(*) as count FROM workshop_registrations WHERE workshop_id = ? AND status = ?',
-    [id, 'confirmed']
-  );
-
-  const registeredCount = parseInt(registrations[0][0].count);
-  const capacity = workshop[0][0].capacity;
-
-  if (capacity && registeredCount >= capacity) {
-    throw new Error('Atelier complet');
+  const workshopData = workshop[0];
+  
+  if (workshopData.current_participants >= workshopData.max_participants) {
+    return res.status(400).json({ error: 'Cet atelier est complet' });
   }
 
-  const [insertResult] = await pool.query<ResultSetHeader>( `INSERT INTO workshop_registrations (
-      workshop_id, user_id, name, email, phone, message
-    ) VALUES (?, ?, ?, ?, ?, ?)
-   `,
-    [id, userId, name, email, phone, message]
+  // Check if already registered
+  const [existingReg] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM workshop_registrations WHERE workshop_id = ? AND email = ?',
+    [id, email]
   );
 
-  logger.info(`Nouvelle inscription à l`atelier ${id}: ${email}`);
+  if (existingReg.length > 0) {
+    return res.status(400).json({ error: 'Vous êtes déjà inscrit à cet atelier' });
+  }
+
+  // Create registration
+  const [result] = await pool.query<ResultSetHeader>(
+    `INSERT INTO workshop_registrations (workshop_id, name, email, phone, message, status)
+     VALUES (?, ?, ?, ?, ?, 'pending')`,
+    [id, name, email, phone, message]
+  );
+
+  // Update current participants count
+  await pool.query(
+    'UPDATE workshops SET current_participants = current_participants + 1 WHERE id = ?',
+    [id]
+  );
+
+  // Create notification
+  try {
+    await pool.query(
+      `INSERT INTO notifications (type, title, message, link, is_read, data)
+       VALUES ('workshop_registration', ?, ?, ?, FALSE, ?)`,
+      [
+        `Nouvelle inscription: ${workshopData.title}`,
+        `${name} s'est inscrit à l'atelier "${workshopData.title}"`,
+        `/voisilab/workshops/${id}/registrations`,
+        JSON.stringify({ workshop_id: id, registration_id: result.insertId, name, email })
+      ]
+    );
+  } catch (e) {
+    logger.warn('Could not create notification for registration');
+  }
+
+  logger.info(`Nouvelle inscription à l'atelier ${workshopData.title}: ${name} (${email})`);
 
   res.status(201).json({
     message: 'Inscription enregistrée avec succès',
-    data: rows[0]
+    data: { id: result.insertId }
   });
+});
+
+/**
+ * Get unread workshops count (for admin notifications)
+ */
+export const getUnreadCount = asyncHandler(async (req: Request, res: Response) => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT COUNT(*) as count FROM workshops WHERE is_read = FALSE'
+  );
+
+  res.json({ count: rows[0].count });
+});
+
+/**
+ * Mark workshop as read
+ */
+export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  await pool.query('UPDATE workshops SET is_read = TRUE WHERE id = ?', [id]);
+
+  res.json({ message: 'Marqué comme lu' });
+});
+
+/**
+ * Mark all workshops as read
+ */
+export const markAllAsRead = asyncHandler(async (req: Request, res: Response) => {
+  await pool.query('UPDATE workshops SET is_read = TRUE WHERE is_read = FALSE');
+
+  res.json({ message: 'Tous les ateliers marqués comme lus' });
 });

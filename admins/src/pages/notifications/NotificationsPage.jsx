@@ -95,7 +95,8 @@ export default function NotificationsPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await notificationsService.getAll(filter === 'unread');
+      const params = filter === 'unread' ? { unread_only: 'true' } : {};
+      const response = await notificationsService.getAll(params);
       setNotifications(response.data || []);
       setUnreadCount(response.unread_count || 0);
     } catch (err) {

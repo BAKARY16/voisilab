@@ -16,17 +16,26 @@ const router = Router();
 
 // Validation rules
 const createEquipmentValidation = [
-  body('name').trim().notEmpty().withMessage('Nom requis'),
+  body('name').trim().notEmpty().withMessage('Le nom est requis'),
+  body('category').trim().notEmpty().withMessage('La catégorie est requise'),
   body('description').optional().trim(),
-  body('category').optional().trim(),
-  body('status').optional().isIn(['available', 'in_use', 'maintenance', 'unavailable']).withMessage('Statut invalide'),
-  body('specifications').optional().isObject().withMessage('Specifications doit être un objet')
+  body('image_url').optional().trim(),
+  body('count_info').optional().trim(),
+  body('specs').optional().isArray().withMessage('specs doit être un tableau'),
+  body('status').optional().isIn(['available', 'maintenance', 'unavailable']).withMessage('Statut invalide'),
+  body('category_color').optional().trim(),
+  body('gradient').optional().trim(),
+  body('order_index').optional().toInt(),
+  body('active').optional().toBoolean()
 ];
 
 const updateEquipmentValidation = [
-  body('name').optional().trim().notEmpty().withMessage('Nom ne peut pas être vide'),
-  body('status').optional().isIn(['available', 'in_use', 'maintenance', 'unavailable']).withMessage('Statut invalide'),
-  body('specifications').optional().isObject().withMessage('Specifications doit être un objet')
+  body('name').optional().trim().notEmpty().withMessage('Le nom ne peut pas être vide'),
+  body('category').optional().trim().notEmpty().withMessage('La catégorie ne peut pas être vide'),
+  body('status').optional().isIn(['available', 'maintenance', 'unavailable']).withMessage('Statut invalide'),
+  body('specs').optional().isArray().withMessage('specs doit être un tableau'),
+  body('order_index').optional().toInt(),
+  body('active').optional().toBoolean()
 ];
 
 // Public routes

@@ -1,514 +1,665 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import {
-  Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Button, IconButton, Chip, Paper, Grid, TextField, FormControl, InputLabel, Select,
-  MenuItem, Switch, FormControlLabel, Card, CardContent, Typography, Avatar, Alert
+  MenuItem, Switch, FormControlLabel, Typography, Avatar, Alert,
+  Dialog, DialogTitle, DialogContent, DialogActions, Menu, Tabs, Tab, Stack
 } from '@mui/material';
-import { EditOutlined, DeleteOutlined, PlusOutlined, TeamOutlined, UploadOutlined } from '@ant-design/icons';
+import { 
+  EditOutlined, DeleteOutlined, PlusOutlined, TeamOutlined, UploadOutlined,
+  LinkedinOutlined, TwitterOutlined, MailOutlined, MoreOutlined,
+  CloseOutlined, UserOutlined, LinkOutlined, PictureOutlined
+} from '@ant-design/icons';
 import MainCard from 'components/MainCard';
-import { teamService } from 'api/voisilab';
 
-// Composant Aperçu - Preview de la page publique
-function TeamPreview({ members }) {
-  return (
-    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: 500, borderRadius: 2 }}>
-      <Typography variant="h3" align="center" sx={{ mb: 4 }}>Notre Équipe</Typography>
-      <Grid container spacing={3}>
-        {members.filter(m => m.is_active).map((member) => (
-          <Grid item xs={12} sm={6} md={4} key={member.id}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Avatar
-                  src={member.photo_url}
-                  sx={{ width: 120, height: 120, margin: '0 auto 16px', bgcolor: 'primary.main' }}
-                >
-                  {member.first_name?.[0]}{member.last_name?.[0]}
-                </Avatar>
-                <Typography variant="h5" gutterBottom>
-                  {member.first_name} {member.last_name}
-                </Typography>
-                <Typography variant="subtitle1" color="primary" gutterBottom>
-                  {member.title}
-                </Typography>
-                {member.department && (
-                  <Chip label={member.department} size="small" sx={{ mb: 2 }} />
-                )}
-                {member.bio && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                    {member.bio}
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
-  );
-}
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3500';
 
-// Composant Tableau - Gestion des membres
-function TeamTable({ members, onEdit, onDelete, onAdd }) {
-  return (
-    <Box>
-      <Button
-        variant="contained"
-        startIcon={<PlusOutlined />}
-        onClick={onAdd}
-        sx={{ mb: 2 }}
-      >
-        Nouveau membre
-      </Button>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Photo</TableCell>
-              <TableCell>Nom</TableCell>
-              <TableCell>Titre</TableCell>
-              <TableCell>Département</TableCell>
-              <TableCell>Ordre</TableCell>
-              <TableCell>Statut</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {members.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center">Aucun membre</TableCell>
-              </TableRow>
-            ) : (
-              members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>
-                    <Avatar src={member.photo_url} sx={{ bgcolor: 'primary.main' }}>
-                      {member.first_name?.[0]}{member.last_name?.[0]}
-                    </Avatar>
-                  </TableCell>
-                  <TableCell>
-                    <div style={{ fontWeight: 500 }}>
-                      {member.first_name} {member.last_name}
-                    </div>
-                    {member.email && (
-                      <div style={{ fontSize: '0.875rem', color: '#666' }}>{member.email}</div>
-                    )}
-                  </TableCell>
-                  <TableCell>{member.title}</TableCell>
-                  <TableCell>{member.department || '-'}</TableCell>
-                  <TableCell>{member.display_order}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={member.is_active ? 'Actif' : 'Inactif'}
-                      color={member.is_active ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton onClick={() => onEdit(member)} size="small">
-                      <EditOutlined />
-                    </IconButton>
-                    <IconButton onClick={() => onDelete(member.id)} color="error" size="small">
-                      <DeleteOutlined />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
-  );
-}
+const ROLES = [
+  'Directeur',
+  'Fab Manager',
+  'Formateur',
+  'Chef equipe et Project Manager',
+  'Developpeur Full-stack',
+  'Designer',
+  'Modelisation 3D et Impression',
+  'Modelisateur 3D et VFX Artiste',
+  'Responsable Technique',
+  'Chargé de Communication',
+  'Bénévole',
+  'Stagiaire',
+  'Autre'
+];
 
-// Composant Formulaire - Ajouter/Modifier membre (selon maquette)
-function TeamForm({ editingMember, onCancel, onSave }) {
-  const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    title: '',
-    department: '',
-    bio: '',
-    photo_url: '',
-    email: '',
-    linkedin_url: '',
-    twitter_url: '',
-    display_order: 0,
-    is_active: true
-  });
-  const [photoPreview, setPhotoPreview] = useState('');
-  const [success, setSuccess] = useState('');
+const defaultFormData = {
+  name: '',
+  role: '',
+  bio: '',
+  avatar_url: '',
+  email: '',
+  linkedin_url: '',
+  twitter_url: '',
+  order_index: 0,
+  active: true
+};
 
-  useEffect(() => {
-    if (editingMember) {
-      setFormData(editingMember);
-      setPhotoPreview(editingMember.photo_url || '');
-    }
-  }, [editingMember]);
-
-  const handlePhotoUrlChange = (url) => {
-    setFormData({ ...formData, photo_url: url });
-    setPhotoPreview(url);
-  };
-
-  const handleSubmit = async () => {
-    try {
-      await onSave(formData);
-      setSuccess('Profil enregistré avec succès!');
-      setTimeout(() => {
-        setSuccess('');
-        onCancel();
-      }, 2000);
-    } catch (error) {
-      console.error('Erreur:', error);
-    }
-  };
-
-  return (
-    <Box sx={{ maxWidth: 1200, margin: '0 auto' }}>
-      {/* Titre */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-          Ajouter un Membre de l'Équipe
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Créez un nouveau profil pour le personnel enseignant ou administratif de l'université.
-        </Typography>
-      </Box>
-
-      {success && <Alert severity="success" sx={{ mb: 3 }}>{success}</Alert>}
-
-      {/* Photo de Profil */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <TeamOutlined style={{ fontSize: '1.25rem', marginRight: 8, color: '#1890ff' }} />
-            <Typography variant="h6">Photo de Profil</Typography>
-          </Box>
-          <Box sx={{
-            border: '2px dashed #d9d9d9',
-            borderRadius: 2,
-            p: 4,
-            textAlign: 'center',
-            bgcolor: '#fafafa'
-          }}>
-            {photoPreview ? (
-              <Avatar
-                src={photoPreview}
-                sx={{ width: 120, height: 120, margin: '0 auto 16px' }}
-              />
-            ) : (
-              <UploadOutlined style={{ fontSize: '3rem', color: '#999', marginBottom: 16 }} />
-            )}
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Télécharger la photo (400x400px)
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-              Glissez-déposez une image ou cliquez pour parcourir
-            </Typography>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Ou entrez l'URL de la photo"
-              value={formData.photo_url}
-              onChange={(e) => handlePhotoUrlChange(e.target.value)}
-              sx={{ maxWidth: 400, margin: '0 auto' }}
-            />
-          </Box>
-        </CardContent>
-      </Card>
-
-      <Grid container spacing={3}>
-        {/* Informations Personnelles */}
-        <Grid item xs={12} md={7}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <TeamOutlined style={{ fontSize: '1.25rem', marginRight: 8, color: '#1890ff' }} />
-                <Typography variant="h6">Informations Personnelles</Typography>
-              </Box>
-
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Prénom"
-                    placeholder="Ex: Jean-Luc"
-                    value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Nom"
-                    placeholder="Ex: Kouassi"
-                    value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Titre"
-                    placeholder="Ex: Professeur Titulaire"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Département</InputLabel>
-                    <Select
-                      value={formData.department}
-                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      label="Département"
-                    >
-                      <MenuItem value="">Aucun</MenuItem>
-                      <MenuItem value="Génie Informatique">Génie Informatique</MenuItem>
-                      <MenuItem value="Administration">Administration</MenuItem>
-                      <MenuItem value="Technique">Technique</MenuItem>
-                      <MenuItem value="Recherche">Recherche</MenuItem>
-                      <MenuItem value="Direction">Direction</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Biographie simplifiée"
-                    placeholder="Décrivez brièvement le parcours et les expertises..."
-                    value={formData.bio}
-                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                    multiline
-                    rows={4}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* Contact & Réseaux Sociaux */}
-          <Card sx={{ mt: 3 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <TeamOutlined style={{ fontSize: '1.25rem', marginRight: 8, color: '#1890ff' }} />
-                <Typography variant="h6">Contact & Réseaux Sociaux</Typography>
-              </Box>
-
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Email Académique"
-                    type="email"
-                    placeholder="j.kouassi@univ-ivoire.ci"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="LinkedIn"
-                    placeholder="https://linkedin.com/in/..."
-                    value={formData.linkedin_url}
-                    onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="X / Twitter"
-                    placeholder="https://x.com/..."
-                    value={formData.twitter_url}
-                    onChange={(e) => setFormData({ ...formData, twitter_url: e.target.value })}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Paramètres */}
-        <Grid item xs={12} md={5}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <TeamOutlined style={{ fontSize: '1.25rem', marginRight: 8, color: '#1890ff' }} />
-                <Typography variant="h6">Paramètres</Typography>
-              </Box>
-
-              <TextField
-                fullWidth
-                type="number"
-                label="Ordre d'affichage"
-                value={formData.display_order}
-                onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
-                helperText="Définit la position dans la liste (0 en premier)."
-                sx={{ mb: 3 }}
-              />
-
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.is_active}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    color="primary"
-                  />
-                }
-                label={
-                  <Box>
-                    <Typography variant="body1">Statut Actif</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Visible sur le site public
-                    </Typography>
-                  </Box>
-                }
-                sx={{ mb: 3 }}
-              />
-
-              <Button
-                fullWidth
-                variant="contained"
-                size="large"
-                onClick={handleSubmit}
-                sx={{ mb: 2 }}
-              >
-                Enregistrer le Profil
-              </Button>
-
-              <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                onClick={onCancel}
-              >
-                Annuler
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Conseil Admin */}
-          <Card sx={{ mt: 3, bgcolor: '#e6f7ff', border: '1px solid #91d5ff' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                <TeamOutlined style={{ fontSize: '1.25rem', marginRight: 8, color: '#1890ff' }} />
-                <Box>
-                  <Typography variant="subtitle2" color="primary" gutterBottom>
-                    Conseil Admin
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Assurez-vous que l'adresse email académique est correcte car elle servira à la connexion au portail enseignant.
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
-  );
-}
-
-// Page principale avec Tabs
 export default function TeamPage() {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentTab, setCurrentTab] = useState(0);
-  const [editingMember, setEditingMember] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState(defaultFormData);
+  const [editingId, setEditingId] = useState(null);
+  const [error, setError] = useState('');
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [imageTab, setImageTab] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState('');
+  const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    loadMembers();
-  }, []);
+  useEffect(() => { loadMembers(); }, []);
 
   const loadMembers = async () => {
     try {
       setLoading(true);
-      const result = await teamService.getAll();
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/team/all`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
       setMembers(result.data || []);
-    } catch (error) {
-      console.error('Erreur:', error);
+    } catch (err) {
+      console.error('Erreur chargement:', err);
+      setError('Erreur lors du chargement de l\'équipe');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = async (formData) => {
-    try {
-      if (editingMember?.id) {
-        await teamService.update(editingMember.id, formData);
-      } else {
-        await teamService.create(formData);
-      }
-      await loadMembers();
-      setEditingMember(null);
-    } catch (error) {
-      console.error('Erreur:', error);
-      throw error;
-    }
+  const getImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${API_URL}${url}`;
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer ce membre?')) return;
+  const handleOpenMenu = (event, member) => {
+    setMenuAnchor(event.currentTarget);
+    setSelectedMember(member);
+  };
+
+  const handleCloseMenu = () => {
+    setMenuAnchor(null);
+    setSelectedMember(null);
+  };
+
+  const handleEdit = () => {
+    if (selectedMember) {
+      setEditingId(selectedMember.id);
+      setFormData({
+        name: selectedMember.name || '',
+        role: selectedMember.role || '',
+        bio: selectedMember.bio || '',
+        avatar_url: selectedMember.avatar_url || '',
+        email: selectedMember.email || '',
+        linkedin_url: selectedMember.linkedin_url || '',
+        twitter_url: selectedMember.twitter_url || '',
+        order_index: selectedMember.order_index || 0,
+        active: selectedMember.active !== false
+      });
+      setPreviewImage(selectedMember.avatar_url ? getImageUrl(selectedMember.avatar_url) : '');
+      setImageTab(selectedMember.avatar_url?.startsWith('http') ? 1 : 0);
+      setOpen(true);
+    }
+    handleCloseMenu();
+  };
+
+  const handleDelete = async () => {
+    if (!selectedMember || !window.confirm(`Supprimer "${selectedMember.name}" de l'équipe ?`)) {
+      handleCloseMenu();
+      return;
+    }
     try {
-      await teamService.delete(id);
+      const token = sessionStorage.getItem('token');
+      await fetch(`${API_URL}/api/team/${selectedMember.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       loadMembers();
-    } catch (error) {
-      console.error('Erreur:', error);
+    } catch (err) {
+      console.error('Erreur suppression:', err);
+      setError('Erreur lors de la suppression');
+    }
+    handleCloseMenu();
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Veuillez sélectionner une image');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('L\'image ne doit pas dépasser 5 Mo');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/upload/team`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: uploadFormData
+      });
+
+      if (!response.ok) throw new Error('Erreur upload');
+
+      const result = await response.json();
+      setFormData(prev => ({ ...prev, avatar_url: result.url }));
+      setPreviewImage(getImageUrl(result.url));
+    } catch (err) {
+      console.error('Erreur upload:', err);
+      setError('Erreur lors de l\'upload de l\'image');
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleEdit = (member) => {
-    setEditingMember(member);
-    setCurrentTab(2); // Aller au tab "Ajouter un membre"
+  const handleUrlChange = (url) => {
+    setFormData(prev => ({ ...prev, avatar_url: url }));
+    setPreviewImage(url);
   };
 
-  const handleAdd = () => {
-    setEditingMember(null);
-    setCurrentTab(2);
+  const handleRemoveImage = () => {
+    setFormData(prev => ({ ...prev, avatar_url: '' }));
+    setPreviewImage('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleCancelForm = () => {
-    setEditingMember(null);
-    setCurrentTab(1); // Retour au tableau
+  const handleSave = async () => {
+    setError('');
+    
+    if (!formData.name.trim()) {
+      setError('Le nom est requis');
+      return;
+    }
+    if (!formData.role.trim()) {
+      setError('Le rôle est requis');
+      return;
+    }
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const dataToSend = {
+        name: formData.name.trim(),
+        role: formData.role.trim(),
+        bio: formData.bio?.trim() || '',
+        avatar_url: formData.avatar_url?.trim() || '',
+        email: formData.email?.trim() || '',
+        linkedin_url: formData.linkedin_url?.trim() || '',
+        twitter_url: formData.twitter_url?.trim() || '',
+        order_index: parseInt(formData.order_index) || 0,
+        active: formData.active !== false
+      };
+
+      const url = editingId 
+        ? `${API_URL}/api/team/${editingId}`
+        : `${API_URL}/api/team`;
+      
+      const response = await fetch(url, {
+        method: editingId ? 'PUT' : 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(dataToSend)
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || 'Erreur serveur');
+      }
+      
+      handleCloseDialog();
+      loadMembers();
+    } catch (err) {
+      console.error('Erreur sauvegarde:', err);
+      setError(err.message || 'Erreur lors de l\'enregistrement');
+    }
+  };
+
+  const handleToggleActive = async (member) => {
+    try {
+      const token = sessionStorage.getItem('token');
+      await fetch(`${API_URL}/api/team/${member.id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ active: !member.active })
+      });
+      loadMembers();
+    } catch (err) {
+      console.error('Erreur:', err);
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setOpen(false);
+    setFormData(defaultFormData);
+    setEditingId(null);
+    setPreviewImage('');
+    setError('');
+    setImageTab(0);
+  };
+
+  const handleOpenCreate = () => {
+    setEditingId(null);
+    setFormData(defaultFormData);
+    setPreviewImage('');
+    setError('');
+    setImageTab(0);
+    setOpen(true);
   };
 
   return (
     <MainCard title="Gestion de l'Équipe">
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={currentTab} onChange={(e, newValue) => setCurrentTab(newValue)}>
-          <Tab label="Aperçu" />
-          <Tab label="Gérer l'équipe" />
-          <Tab label={editingMember ? "Modifier le membre" : "Ajouter un membre"} />
-        </Tabs>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Button 
+          variant="contained" 
+          startIcon={<PlusOutlined />} 
+          onClick={handleOpenCreate}
+          size="large"
+        >
+          Nouveau membre
+        </Button>
+        <Chip label={`${members.length} membre(s)`} variant="outlined" />
       </Box>
 
-      {loading ? (
-        <Box sx={{ textAlign: 'center', p: 4 }}>Chargement...</Box>
-      ) : (
-        <>
-          {currentTab === 0 && <TeamPreview members={members} />}
-          {currentTab === 1 && (
-            <TeamTable
-              members={members}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onAdd={handleAdd}
-            />
-          )}
-          {currentTab === 2 && (
-            <TeamForm
-              editingMember={editingMember}
-              onCancel={handleCancelForm}
-              onSave={handleSave}
-            />
-          )}
-        </>
-      )}
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'grey.50' }}>
+              <TableCell width={80}>Photo</TableCell>
+              <TableCell>Membre</TableCell>
+              <TableCell>Rôle</TableCell>
+              <TableCell>Contact</TableCell>
+              <TableCell align="center">Ordre</TableCell>
+              <TableCell align="center">Statut</TableCell>
+              <TableCell align="right" width={60}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>Chargement...</TableCell>
+              </TableRow>
+            ) : members.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                  <TeamOutlined style={{ fontSize: 40, color: '#ccc' }} />
+                  <Typography color="text.secondary" sx={{ mt: 1 }}>Aucun membre</Typography>
+                </TableCell>
+              </TableRow>
+            ) : members.map((member) => (
+              <TableRow key={member.id} hover>
+                <TableCell>
+                  <Avatar
+                    src={member.avatar_url ? getImageUrl(member.avatar_url) : undefined}
+                    sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}
+                  >
+                    {member.name?.charAt(0)}
+                  </Avatar>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="subtitle2" fontWeight={600}>{member.name}</Typography>
+                  {member.bio && (
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary" 
+                      sx={{ 
+                        display: 'block', 
+                        maxWidth: 250, 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap' 
+                      }}
+                    >
+                      {member.bio}
+                    </Typography>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Chip label={member.role} size="small" variant="outlined" />
+                </TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={0.5}>
+                    {member.email && (
+                      <IconButton size="small" href={`mailto:${member.email}`}>
+                        <MailOutlined style={{ fontSize: 16 }} />
+                      </IconButton>
+                    )}
+                    {member.linkedin_url && (
+                      <IconButton size="small" href={member.linkedin_url} target="_blank">
+                        <LinkedinOutlined style={{ fontSize: 16 }} />
+                      </IconButton>
+                    )}
+                    {member.twitter_url && (
+                      <IconButton size="small" href={member.twitter_url} target="_blank">
+                        <TwitterOutlined style={{ fontSize: 16 }} />
+                      </IconButton>
+                    )}
+                    {!member.email && !member.linkedin_url && !member.twitter_url && (
+                      <Typography variant="caption" color="text.secondary">-</Typography>
+                    )}
+                  </Stack>
+                </TableCell>
+                <TableCell align="center">
+                  <Chip label={member.order_index} size="small" />
+                </TableCell>
+                <TableCell align="center">
+                  <Chip
+                    label={member.active ? 'Actif' : 'Inactif'}
+                    color={member.active ? 'success' : 'default'}
+                    size="small"
+                    onClick={() => handleToggleActive(member)}
+                    sx={{ cursor: 'pointer' }}
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <IconButton size="small" onClick={(e) => handleOpenMenu(e, member)}>
+                    <MoreOutlined />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Menu contextuel */}
+      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={handleCloseMenu}>
+        <MenuItem onClick={handleEdit}>
+          <EditOutlined style={{ marginRight: 8 }} /> Modifier
+        </MenuItem>
+        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
+          <DeleteOutlined style={{ marginRight: 8 }} /> Supprimer
+        </MenuItem>
+      </Menu>
+
+      {/* Dialog formulaire redesigné */}
+      <Dialog open={open} onClose={handleCloseDialog} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
+        <DialogTitle sx={{ pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <UserOutlined style={{ fontSize: 20 }} />
+            <Typography variant="h6">
+              {editingId ? 'Modifier le membre' : 'Nouveau membre'}
+            </Typography>
+          </Stack>
+        </DialogTitle>
+        
+        <DialogContent sx={{ pt: 3 }}>
+          {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+          
+          <Grid container spacing={3}>
+            {/* Section Photo */}
+            <Grid item xs={12} md={4}>
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, height: '100%' }}>
+                <Typography variant="subtitle2" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <PictureOutlined /> Photo de profil
+                </Typography>
+                
+                {/* Preview */}
+                <Box 
+                  sx={{ 
+                    width: '100%', 
+                    height: 200, 
+                    bgcolor: 'grey.100', 
+                    borderRadius: 2, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    mb: 2,
+                    overflow: 'hidden',
+                    position: 'relative'
+                  }}
+                >
+                  {previewImage ? (
+                    <>
+                      <Avatar 
+                        src={previewImage} 
+                        sx={{ width: 150, height: 150 }}
+                        onError={() => setPreviewImage('')}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={handleRemoveImage}
+                        sx={{ 
+                          position: 'absolute', 
+                          top: 4, 
+                          right: 4, 
+                          bgcolor: 'rgba(0,0,0,0.5)',
+                          color: 'white',
+                          '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
+                        }}
+                      >
+                        <CloseOutlined />
+                      </IconButton>
+                    </>
+                  ) : (
+                    <Stack alignItems="center" spacing={1}>
+                      <UserOutlined style={{ fontSize: 50, color: '#bbb' }} />
+                      <Typography variant="caption" color="text.secondary">Aucune photo</Typography>
+                    </Stack>
+                  )}
+                </Box>
+
+                {/* Tabs Upload / URL */}
+                <Tabs 
+                  value={imageTab} 
+                  onChange={(e, v) => setImageTab(v)} 
+                  variant="fullWidth" 
+                  sx={{ mb: 2, minHeight: 36 }}
+                >
+                  <Tab 
+                    icon={<UploadOutlined />} 
+                    label="Upload" 
+                    sx={{ minHeight: 36, py: 0.5, fontSize: '0.75rem' }} 
+                  />
+                  <Tab 
+                    icon={<LinkOutlined />} 
+                    label="URL" 
+                    sx={{ minHeight: 36, py: 0.5, fontSize: '0.75rem' }} 
+                  />
+                </Tabs>
+
+                {imageTab === 0 ? (
+                  <Box>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      style={{ display: 'none' }}
+                    />
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      startIcon={<UploadOutlined />}
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      {uploading ? 'Upload...' : 'Choisir une photo'}
+                    </Button>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
+                      Max 5 Mo (JPG, PNG, GIF, WebP)
+                    </Typography>
+                  </Box>
+                ) : (
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="URL de la photo"
+                    placeholder="https://..."
+                    value={formData.avatar_url?.startsWith('http') ? formData.avatar_url : ''}
+                    onChange={(e) => handleUrlChange(e.target.value)}
+                  />
+                )}
+              </Paper>
+            </Grid>
+
+            {/* Section Informations */}
+            <Grid item xs={12} md={8}>
+              <Stack spacing={2.5}>
+                {/* Identité */}
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 2 }}>Identité</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={7}>
+                      <TextField 
+                        fullWidth 
+                        label="Nom complet" 
+                        value={formData.name} 
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                        size="small"
+                        required
+                        placeholder="Ex: Jean Dupont"
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={5}>
+                      <FormControl fullWidth size="small" required>
+                        <InputLabel>Rôle</InputLabel>
+                        <Select 
+                          value={formData.role} 
+                          label="Rôle"
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                        >
+                          {ROLES.map(role => (
+                            <MenuItem key={role} value={role}>{role}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField 
+                        fullWidth 
+                        label="Biographie" 
+                        value={formData.bio} 
+                        onChange={(e) => setFormData({ ...formData, bio: e.target.value })} 
+                        multiline 
+                        rows={3}
+                        size="small"
+                        placeholder="Quelques mots sur ce membre..."
+                      />
+                    </Grid>
+                  </Grid>
+                </Paper>
+
+                {/* Contact */}
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 2 }}>Contact & Réseaux sociaux</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <TextField 
+                        fullWidth 
+                        label="Email" 
+                        type="email"
+                        value={formData.email} 
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+                        size="small"
+                        placeholder="email@exemple.com"
+                        InputProps={{
+                          startAdornment: <MailOutlined style={{ marginRight: 8, color: '#999' }} />
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField 
+                        fullWidth 
+                        label="LinkedIn" 
+                        value={formData.linkedin_url} 
+                        onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })} 
+                        size="small"
+                        placeholder="https://linkedin.com/in/..."
+                        InputProps={{
+                          startAdornment: <LinkedinOutlined style={{ marginRight: 8, color: '#0077B5' }} />
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField 
+                        fullWidth 
+                        label="Twitter / X" 
+                        value={formData.twitter_url} 
+                        onChange={(e) => setFormData({ ...formData, twitter_url: e.target.value })} 
+                        size="small"
+                        placeholder="https://twitter.com/..."
+                        InputProps={{
+                          startAdornment: <TwitterOutlined style={{ marginRight: 8, color: '#1DA1F2' }} />
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Paper>
+
+                {/* Paramètres */}
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 2 }}>Paramètres d'affichage</Typography>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} md={6}>
+                      <TextField 
+                        fullWidth 
+                        label="Ordre d'affichage" 
+                        type="number"
+                        value={formData.order_index} 
+                        onChange={(e) => setFormData({ ...formData, order_index: e.target.value })} 
+                        size="small"
+                        InputProps={{ inputProps: { min: 0 } }}
+                        helperText="Les membres sont triés par ordre croissant"
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <FormControlLabel
+                        control={
+                          <Switch 
+                            checked={formData.active} 
+                            onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                            color="success"
+                          />
+                        }
+                        label={
+                          <Typography variant="body2">
+                            Actif <Typography component="span" variant="caption" color="text.secondary">(visible sur le site)</Typography>
+                          </Typography>
+                        }
+                      />
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </Stack>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Button onClick={handleCloseDialog} color="inherit">Annuler</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSave}
+            disabled={!formData.name.trim() || !formData.role.trim()}
+          >
+            {editingId ? 'Mettre à jour' : 'Ajouter le membre'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </MainCard>
   );
 }

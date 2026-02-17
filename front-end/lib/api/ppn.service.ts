@@ -1,5 +1,5 @@
 // Service API pour récupérer les données depuis le backend
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
 
 /**
  * Fonction utilitaire pour gérer les réponses API

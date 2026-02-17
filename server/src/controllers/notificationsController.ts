@@ -140,3 +140,30 @@ export const deleteReadNotifications = asyncHandler(async (req: Request, res: Re
     count: result.affectedRows
   });
 });
+
+/**
+ * Créer une notification pour tous les admins
+ */
+export const createForAllAdmins = async (
+  type: string,
+  title: string,
+  message: string,
+  data?: any
+): Promise<void> => {
+  // Récupérer tous les utilisateurs admin
+  const [admins] = await pool.query<RowDataPacket[]>(
+    'SELECT id FROM users WHERE role = "admin"'
+  );
+
+  // Créer une notification pour chaque admin
+  const promises = admins.map(admin => 
+    pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, data)
+       VALUES (?, ?, ?, ?, ?)`,
+      [admin.id, type, title, message, data ? JSON.stringify(data) : null]
+    )
+  );
+
+  await Promise.all(promises);
+  logger.info(`Notifications créées pour ${admins.length} administrateurs: ${title}`);
+};

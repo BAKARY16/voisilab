@@ -6,14 +6,20 @@ import path from 'path';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const API_URL = env.VITE_APP_BASE_NAME || '/';
-  const PORT = 3000;
+  const PORT = 3502;
 
   return {
     base: API_URL,
     server: {
       open: true,
       port: PORT,
-      host: true
+      host: true,
+      proxy: {
+        '/uploads': {
+          target: 'http://localhost:3500',
+          changeOrigin: true,
+        },
+      },
     },
     preview: {
       open: true,

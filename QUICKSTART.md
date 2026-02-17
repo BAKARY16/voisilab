@@ -1,289 +1,148 @@
-# 🚀 VoisiLab - Démarrage Rapide
+# 🚀 Guide de Démarrage Ultra Rapide VoisiLab
 
-## 🎯 Backend Custom avec PostgreSQL
+## ⚡ En 3 étapes (5 minutes)
 
-Le projet VoisiLab utilise maintenant un backend custom (Express + PostgreSQL) au lieu de Supabase.
-
-## ⚡ Installation Rapide
-
-### Option 1: Docker (Recommandé)
+### 1️⃣ **Installer les dépendances**
 
 ```bash
-# 1. Copier le fichier environnement
-cp .env.example .env
-
-# 2. Démarrer tous les services
-docker-compose up -d
-
-# 3. Accéder aux services
-# - Frontend: http://localhost:3000
-# - Admin: http://localhost:3001
-# - API Backend: http://localhost:5000
-# - PostgreSQL: localhost:5432
+npm run install:all
 ```
 
-### Option 2: Développement Local
+### 2️⃣ **Démarrer les services**
 
+**Option A - Script automatique (Windows):**
+```powershell
+.\start-dev.ps1
+```
+
+**Option B - Script automatique (Linux/Mac):**
 ```bash
-# 1. Installer PostgreSQL localement (ou utiliser Docker uniquement pour PostgreSQL)
-docker-compose up -d postgres
+chmod +x start-dev.sh
+./start-dev.sh
+```
 
-# 2. Installer et démarrer le backend
-cd server
-npm install
-cp .env.example .env
-# Éditer .env avec vos configurations
+**Option C - Commande npm:**
+```bash
 npm run dev
-
-# 3. Installer et démarrer le frontend (dans un nouveau terminal)
-cd front-end
-nom install
-npm run dev
-
-# 4. Installer et démarrer l'admin (dans un nouveau terminal)
-cd admins
-npm install
-npm start
 ```
 
-## 📁 Structure du Projet
+### 3️⃣ **Accéder aux interfaces**
 
+- 🌐 **Site Client** : http://localhost:3501
+- 🎨 **Admin** : http://localhost:3502
+  - Email: `admin@voisilab.ci`
+  - Mot de passe: `admin123`
+- ⚡ **API** : http://localhost:3500
+
+---
+
+## 📊 Ports et URLs
+
+| Service | Port | URL | Description |
+|---------|------|-----|-------------|
+| Backend API | 3500 | http://localhost:3500 | API REST |
+| Client | 3501 | http://localhost:3501 | Site public |
+| Admin | 3502 | http://localhost:3502 | Dashboard |
+| MySQL | 3306 | localhost:3306 | Base de données |
+| phpMyAdmin | 8080 | http://localhost:8080 | Interface MySQL |
+
+---
+
+## 🔧 Commandes Utiles
+
+### Vérifier la configuration
+```powershell
+.\check-config.ps1
 ```
-voisilab-app/
-├── server/              # Backend API (Express + TypeScript)
-│   ├── src/
-│   │   ├── controllers/ # Logique métier
-│   │   ├── routes/      # Routes API
-│   │   ├── middlewares/ # Middlewares
-│   │   ├── config/      # Configuration
-│   │   └── server.ts    # Point d'entrée
-│   ├── Dockerfile
-│   └── package.json
-├── front-end/           # Application utilisateur (Next.js)
-├── admins/              # Interface admin (Vite + React)
-├── database/            # Schémas SQL
-│   └── postgresql-schema.sql
-├── docker-compose.yml   # Orchestration Docker
-└── .env.example         # Variables d'environnement
-```
 
-## 🔐 Compte Admin Par Défaut
-
-**URL Admin**: http://localhost:3001
-
-**Email**: admin@voisilab.fr
-**Mot de passe**: admin123
-
-⚠️ **IMPORTANT**: Changez ce mot de passe immédiatement !
-
-## 🌐 URLs des Services
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| Frontend | http://localhost:3000 | Application utilisateur |
-| Admin | http://localhost:3001 | Interface d'administration |
-| API Backend | http://localhost:5000 | API REST |
-| PostgreSQL | localhost:5432 | Base de données |
-
-## API Health Check
-
-Vérifier que le backend fonctionne:
+### Démarrage manuel par service
 
 ```bash
-curl http://localhost:5000/health
+# Backend API (port 3500)
+cd server && npm run dev
+
+# Client (port 3501)
+cd front-end && npm run dev
+
+# Admin (port 3502)
+cd admins && npm run dev
 ```
 
-## 📚 Documentation Complète
-
-- **Backend**: [server/README.md](server/README.md)
-- **Database**: [database/README.md](database/README.md)
-- **Frontend**: [front-end/README.md](front-end/README.md)
-- **Admin**: [admins/README.md](admins/README.md)
-
-## 🛠 Commandes Docker Utiles
+### Docker
 
 ```bash
-# Démarrer tous les services
+# Tout démarrer
 docker-compose up -d
 
 # Voir les logs
 docker-compose logs -f
 
-# Voir les logs d'un service spécifique
-docker-compose logs -f backend
-
-# Arrêter tous les services
+# Arrêter
 docker-compose down
-
-# Redémarrer un service
-docker-compose restart backend
-
-# Supprimer tout (⚠️ données incluses)
-docker-compose down -v
 ```
 
-## 🗄 Base de Données
+---
 
-### Connexion directe à PostgreSQL
+## 📚 Documentation Complète
+
+- **[📖 DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md)** - Guide complet de déploiement
+- **[🐳 DOCKER-README.md](DOCKER-README.md)** - Documentation Docker
+- **[💾 database/README.md](database/README.md)** - Documentation BDD
+
+---
+
+## 🆘 Problèmes Courants
+
+### Les ports sont déjà utilisés
 
 ```bash
-# Via Docker
-docker-compose exec postgres psql -U voisilab_user -d voisilab_db
+# Windows - Trouver le processus
+netstat -ano | findstr "3500"
+netstat -ano | findstr "3501"
+netstat -ano | findstr "3502"
 
-# Localement (si PostgreSQL est installé)
-psql -U voisilab_user -d voisilab_db -h localhost
+# Tuer le processus (remplacer PID)
+taskkill /PID <PID> /F
 ```
 
-### Réinitialiser la base de données
+### Erreur de connexion à MySQL
 
 ```bash
-# Arrêter et supprimer les volumes
-docker-compose down -v
+# Démarrer MySQL avec Docker
+docker-compose up -d mysql
 
-# Redémarrer (le schéma sera automatiquement appliqué)
-docker-compose up -d postgres
-```
-
-## 🔧 Configuration
-
-### Variables d'Environnement Importantes
-
-Éditez `.env`:
-
-```env
-# Base de données
-DATABASE_USER=voisilab_user
-DATABASE_PASSWORD=changez_moi_en_production
-DATABASE_NAME=voisilab_db
-
-# JWT
-JWT_SECRET=changez_moi_secret_super_securise
-
-# Ports
-BACKEND_PORT=5000
-FRONTEND_PORT=3000
-ADMIN_PORT=3001
-```
-
-## 🚨 Problèmes Courants
-
-### Port déjà utilisé
-
-Changez les ports dans `.env`:
-
-```env
-BACKEND_PORT=5001
-FRONTEND_PORT=3002
-ADMIN_PORT=3003
-```
-
-### Base de données ne démarre pas
-
-```bash
-# Vérifier les logs
-docker-compose logs postgres
-
-# Redémarrer
-docker-compose restart postgres
-```
-
-### Backend ne se connecte pas à PostgreSQL
-
-Attendez que PostgreSQL soit complètement démarré (peut prendre 10-20 secondes):
-
-```bash
-# Vérifier le statut
+# Vérifier que MySQL est actif
 docker-compose ps
-
-# Redémarrer le backend
-docker-compose restart backend
 ```
 
-## 📊 Fonctionnalités
+### Problème d'authentification admin
 
-### Backend API (16 tables)
+Vérifier dans `DEBUG-CONNEXION.md` ou recréer l'admin :
 
-- ✅ Authentication (JWT)
-- ✅ Ateliers & Inscriptions
-- ✅ Services
-- ✅ Messages de contact
-- ✅ Équipe
-- ✅ Points PPN (carte)
-- ✅ Équipements
-- ✅ Blog
-- ✅ Médiathèque
-- ✅ Pages dynamiques
-- ✅ Projets
-- ✅ Paramètres du site
-- ✅ Gestion utilisateurs
-- ✅ Upload de fichiers
-- ✅ Logs système
+```bash
+docker exec -it voisilab-mysql mysql -uvoisilab_user -p
+# Puis exécuter le script dans server/create-admin.js
+```
 
-### Frontend
+---
 
-- Page d'accueil
-- À propos
-- Services
-- Ateliers
-- Carte PPN
-- Blog
-- Contact
-- Inscription aux ateliers
+## ✅ Checklist de Démarrage
 
-### Admin
+- [ ] Node.js 18+ installé
+- [ ] Docker Desktop démarré (si utilisation Docker)
+- [ ] Ports 3500, 3501, 3502 disponibles
+- [ ] Fichiers `.env` configurés
+- [ ] Dépendances installées (`npm run install:all`)
+- [ ] MySQL démarré
+- [ ] Services lancés
 
-- Dashboard
-- Gestion ateliers
-- Gestion services
-- Messages de contact
-- Gestion équipe
-- Points PPN
-- Équipements
-- Blog
-- Médiathèque
-- Pages dynamiques
-- Projets soumis
-- Utilisateurs
-- Paramètres
-
-## 🎨 Stack Technique
-
-### Backend
-- Node.js 20
-- Express.js 4
-- TypeScript 5
-- PostgreSQL 16
-- JWT Authentication
-- Multer (upload)
-- Winston (logs)
-
-### Frontend
-- Next.js 16
-- React 19
-- TypeScript
-- Tailwind CSS
-
-### Admin
-- Vite 7
-- React 19
-- Material-UI 7
-- TypeScript
-
-## 📞 Support
-
-Pour toute question ou problème:
-
-1. Consultez la documentation dans chaque dossier
-2. Vérifiez les logs: `docker-compose logs -f`
-3. Vérifiez le health check: `curl http://localhost:5000/health`
+---
 
 ## 🎯 Prochaines Étapes
 
 1. ✅ Démarrer les services
-2. ✅ Se connecter à l'admin
-3. ✅ Changer le mot de passe admin
-4. Configurer les paramètres du site
-5. Ajouter du contenu (ateliers, services, etc.)
-6. Personnaliser le frontend
+2. 📝 Se connecter à l'admin (http://localhost:3502)
+3. 🎨 Personnaliser le contenu
+4. 🚀 Déployer en production
 
-Bon développement ! 🚀
+**Bonne création ! 🎉**

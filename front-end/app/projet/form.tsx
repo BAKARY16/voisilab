@@ -133,7 +133,11 @@ export function SendPage() {
 
             setUploadProgress(50)
 
-            const response = await fetch('http://localhost:5000/api/project-submissions/submit', {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
+            console.log('🔍 API_URL utilisée:', API_URL)
+            console.log('🔍 URL complète:', `${API_URL}/api/project-submissions/submit`)
+            
+            const response = await fetch(`${API_URL}/api/project-submissions/submit`, {
                 method: 'POST',
                 body: formData,
                 // Ne pas définir Content-Type, le navigateur le fera automatiquement avec boundary pour multipart
@@ -478,20 +482,15 @@ export function SendPage() {
                                                     <Label htmlFor="projectType" className="text-sm font-medium flex items-center gap-1.5">
                                                         Type de projet <span className="text-red-500">*</span>
                                                     </Label>
-                                                    <select
+                                                    <input
                                                         {...register("projectType")}
                                                         id="projectType"
+                                                        type="text"
                                                         className={`w-full px-4 py-2.5 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${
                                                             errors.projectType ? 'border-red-500' : 'border-border'
                                                         }`}
-                                                    >
-                                                        <option value="">Sélectionnez un type</option>
-                                                        {skills.map((skill, index) => (
-                                                            <option key={index} value={skill.toLowerCase().replace(/\s+/g, '-')}>
-                                                                {skill}
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                                        placeholder="Ex: Impression 3D, Prototypage, IoT, Développement web..."
+                                                    />
                                                     {errors.projectType && (
                                                         <p className="text-sm text-red-500 flex items-center gap-1">
                                                             <AlertCircle size={12} />

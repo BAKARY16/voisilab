@@ -2,14 +2,16 @@
 import {
   FileTextOutlined,
   FileOutlined,
-  PictureOutlined
+  PictureOutlined,
+  BulbOutlined
 } from '@ant-design/icons';
 
 // icons
 const icons = {
   FileTextOutlined,
   FileOutlined,
-  PictureOutlined
+  PictureOutlined,
+  BulbOutlined
 };
 
 // ==============================|| MENU ITEMS - CONTENT ||============================== //
@@ -25,6 +27,14 @@ const content = {
       type: 'item',
       url: '/blog',
       icon: icons.FileTextOutlined,
+      breadcrumbs: true
+    },
+    {
+      id: 'innovations',
+      title: 'Innovations',
+      type: 'item',
+      url: '/innovations',
+      icon: icons.BulbOutlined,
       breadcrumbs: true
     },
     {

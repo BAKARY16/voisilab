@@ -12,7 +12,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
-  login: (user: User) => void
+  login: (user: User, token?: string) => void
   logout: () => void
 }
 
@@ -21,28 +21,37 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
 
-  const login = useCallback((userData: User) => {
+  const login = useCallback((userData: User, token?: string) => {
     setUser(userData)
-    // Sauvegarder dans localStorage
+    // Sauvegarder dans sessionStorage (vidé à la fermeture du navigateur)
     if (typeof window !== 'undefined') {
-      localStorage.setItem('user', JSON.stringify(userData))
+      sessionStorage.setItem('user', JSON.stringify(userData))
+      if (token) {
+        sessionStorage.setItem('token', token)
+      }
     }
   }, [])
 
   const logout = useCallback(() => {
     setUser(null)
-    // Supprimer du localStorage
+    // Supprimer du sessionStorage
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('user')
+      sessionStorage.removeItem('user')
+      sessionStorage.removeItem('token')
+      console.log('🚪 Déconnexion - Session vidée (sessionStorage)')
     }
   }, [])
 
   // Charger l'utilisateur au démarrage
   useState(() => {
     if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('user')
+      const savedUser = sessionStorage.getItem('user')
       if (savedUser) {
-        setUser(JSON.parse(savedUser))
+        try {
+          setUser(JSON.parse(savedUser))
+        } catch (e) {
+          sessionStorage.removeItem('user')
+        }
       }
     }
   })

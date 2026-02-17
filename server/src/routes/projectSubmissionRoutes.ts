@@ -6,6 +6,7 @@ import { body, param, validationResult } from 'express-validator';
 import pool from '../config/database';
 import { authenticate, requireAdmin } from '../middlewares/auth';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { createNotification } from '../controllers/notificationsController';
 
 const router = Router();
 
@@ -39,11 +40,11 @@ const getUploadPath = () => {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const monthDir = `${year}-${month}`;
-  const uploadPath = path.join(__dirname, '../../../uploads/confidential/projects', monthDir);
+  // Utiliser le dossier uploads de l'application (monté comme volume Docker)
+  const uploadPath = path.join(process.cwd(), 'uploads', 'confidential', 'projects', monthDir);
 
-  if (!fs.existsSync(uploadPath)) {
-    fs.mkdirSync(uploadPath, { recursive: true });
-  }
+  // NE PAS créer le dossier ici - cela bloque le chargement du module !
+  // La création se fait dans la fonction destination de Multer
 
   return { uploadPath, monthDir };
 };
@@ -52,6 +53,15 @@ const getUploadPath = () => {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const { uploadPath } = getUploadPath();
+    // Créer le dossier de façon asynchrone seulement quand nécessaire
+    if (!fs.existsSync(uploadPath)) {
+      try {
+        fs.mkdirSync(uploadPath, { recursive: true });
+      } catch (error) {
+        console.error('Erreur création dossier upload:', error);
+        return cb(new Error('Impossible de créer le dossier de destination'), '');
+      }
+    }
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
@@ -181,6 +191,22 @@ router.post(
         );
       }
 
+      // Créer une notification pour tous les admins
+      const [admins] = await pool.query<RowDataPacket[]>(
+        'SELECT id FROM users WHERE role = ?',
+        ['admin']
+      );
+
+      for (const admin of admins) {
+        await createNotification(
+          admin.id.toString(),
+          'project',
+          'Nouvelle soumission de projet',
+          `${name} a soumis un projet: ${projectType}`,
+          `/voisilab/projects/${submissionId}`
+        );
+      }
+
       res.status(201).json({
         success: true,
         message: 'Projet soumis avec succès! Notre équipe vous contactera sous 48h.',
@@ -246,6 +272,21 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
         offset: Number(offset)
       }
     });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Route pour obtenir le nombre de projets non lus (AVANT /:id pour éviter les conflits)
+router.get('/unread-count', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const [result] = await pool.query<RowDataPacket[]>(
+      'SELECT COUNT(*) as count FROM project_submissions WHERE status = ?',
+      ['pending']
+    );
+
+    res.json({ success: true, count: result[0].count });
   } catch (error) {
     console.error('Erreur:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });

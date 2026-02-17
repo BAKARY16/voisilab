@@ -18,18 +18,17 @@ const pool = mysql.createPool({
   keepAliveInitialDelay: 0,
 });
 
-// Test initial de connexion
-(async () => {
-  try {
-    const connection = await pool.getConnection();
+// Test initial de connexion (non-bloquant)
+pool.getConnection()
+  .then(connection => {
     logger.info('✅ Connexion MySQL établie avec succès');
     connection.release();
-  } catch (error) {
+  })
+  .catch(error => {
     logger.error('❌ Impossible de se connecter à MySQL:', error);
-  }
-})();
+  });
 
-// Gestion des erreurs du pool
+// Gestion des erreurs del pool
 pool.on('connection', (connection) => {
   logger.info('✅ Nouvelle connexion à la base de données MySQL');
 });

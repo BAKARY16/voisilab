@@ -14,6 +14,9 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
       projectStats,
       teamStats,
       workshopStats,
+      ppnStats,
+      blogStats,
+      equipmentStats,
       recentContacts,
       recentProjects,
       monthlyActivity
@@ -58,6 +61,27 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
           SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
         FROM workshops
       `).catch(() => [{ total: 0, upcoming: 0, ongoing: 0, completed: 0 }]),
+
+      // Stats PPN
+      pool.query<RowDataPacket[]>(`
+        SELECT COUNT(*) as total FROM ppn_locations
+      `).catch(() => [{ total: 0 }]),
+
+      // Stats Blog
+      pool.query<RowDataPacket[]>(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN status = 'published' THEN 1 ELSE 0 END) as published
+        FROM blog_posts
+      `).catch(() => [{ total: 0, published: 0 }]),
+
+      // Stats Equipment
+      pool.query<RowDataPacket[]>(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available
+        FROM equipment
+      `).catch(() => [{ total: 0, available: 0 }]),
 
       // 5 derniers messages de contact
       pool.query<RowDataPacket[]>(`
@@ -156,6 +180,17 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
             upcoming: workshopStats[0]?.[0]?.upcoming || 0,
             ongoing: workshopStats[0]?.[0]?.ongoing || 0,
             completed: workshopStats[0]?.[0]?.completed || 0
+          },
+          ppn: {
+            total: ppnStats[0]?.[0]?.total || 0
+          },
+          blog: {
+            total: blogStats[0]?.[0]?.total || 0,
+            published: blogStats[0]?.[0]?.published || 0
+          },
+          equipment: {
+            total: equipmentStats[0]?.[0]?.total || 0,
+            available: equipmentStats[0]?.[0]?.available || 0
           }
         },
         recent: {

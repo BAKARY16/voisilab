@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { pool } from '../config/database';
+import pool from '../config/database';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { asyncHandler, NotFoundError } from '../middlewares/errors';
 import logger from '../config/logger';
@@ -18,9 +18,9 @@ export const getAllSettings = asyncHandler(async (req: Request, res: Response) =
     params.push(category);
   }
 
-  query += ' ORDER BY category, key';
+  query += ' ORDER BY category, `key`';
 
-  let result = await pool.query(query, params);
+  const [rows] = await pool.query<RowDataPacket[]>(query, params);
 
   res.json({ data: rows });
 });
@@ -29,14 +29,12 @@ export const getAllSettings = asyncHandler(async (req: Request, res: Response) =
  * Get public settings (for front-end)
  */
 export const getPublicSettings = asyncHandler(async (req: Request, res: Response) => {
-  // Only return non-sensitive settings
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT \`key\`, value FROM site_settings
      WHERE category IN ('general', 'social')
      ORDER BY \`key\``
   );
 
-  // Convert to key-value object
   const settings: Record<string, any> = {};
   rows.forEach(row => {
     settings[row.key] = row.value;
@@ -51,12 +49,13 @@ export const getPublicSettings = asyncHandler(async (req: Request, res: Response
 export const getSettingByKey = asyncHandler(async (req: Request, res: Response) => {
   const { key } = req.params;
 
-  const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM site_settings WHERE key = ?',
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM site_settings WHERE `key` = ?',
     [key]
   );
 
   if (rows.length === 0) {
-    throw new NotFoundError('Paramètre non trouvé');
+    throw new NotFoundError('Parametre non trouve');
   }
 
   res.json({ data: rows[0] });
@@ -68,7 +67,7 @@ export const getSettingByKey = asyncHandler(async (req: Request, res: Response) 
 export const upsertSetting = asyncHandler(async (req: Request, res: Response) => {
   const { key, value, description, category = 'general' } = req.body;
 
-  const [insertResult] = await pool.query<ResultSetHeader>(
+  await pool.query<ResultSetHeader>(
     `INSERT INTO site_settings (\`key\`, value, description, category)
      VALUES (?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
@@ -78,10 +77,15 @@ export const upsertSetting = asyncHandler(async (req: Request, res: Response) =>
     [key, value, description, category]
   );
 
-  logger.info(`Paramètre mis à jour: ${key}`);
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM site_settings WHERE `key` = ?',
+    [key]
+  );
+
+  logger.info(`Parametre mis a jour: ${key}`);
 
   res.json({
-    message: `Paramètre enregistré avec succès',
+    message: 'Parametre enregistre avec succes',
     data: rows[0]
   });
 });
@@ -90,48 +94,42 @@ export const upsertSetting = asyncHandler(async (req: Request, res: Response) =>
  * Update multiple settings at once
  */
 export const updateMultipleSettings = asyncHandler(async (req: Request, res: Response) => {
-  const { settings } = req.body; // Array of {key, value, description?, category?}
+  const { settings } = req.body;
 
   if (!Array.isArray(settings) || settings.length === 0) {
-    throw new Error('Format de données invalide');
+    throw new Error('Format de donnees invalide');
   }
 
-  const client = await pool.connect();
+  const connection = await pool.getConnection();
   try {
-    await client.query('BEGIN');
+    await connection.beginTransaction();
 
-    const results = [];
     for (const setting of settings) {
       const { key, value, description, category } = setting;
 
-      let result = await client.query(
-        `INSERT INTO site_settings (key, value, description, category)
+      await connection.query(
+        `INSERT INTO site_settings (\`key\`, value, description, category)
          VALUES (?, ?, ?, ?)
-         ON CONFLICT (key)
-         DO UPDATE SET
-           value = EXCLUDED.value,
-           description = COALESCE(EXCLUDED.description, site_settings.description),
-           category = COALESCE(EXCLUDED.category, site_settings.category)
-        `,
+         ON DUPLICATE KEY UPDATE
+           value = VALUES(value),
+           description = COALESCE(VALUES(description), description),
+           category = COALESCE(VALUES(category), category)`,
         [key, value, description || null, category || 'general']
       );
-
-      results.push(rows[0]);
     }
 
-    await client.query('COMMIT');
+    await connection.commit();
 
-    logger.info(`${settings.length} paramètres mis à jour`);
+    logger.info(`${settings.length} parametres mis a jour`);
 
     res.json({
-      message: 'Paramètres mis à jour avec succès',
-      data: results
+      message: 'Parametres mis a jour avec succes'
     });
   } catch (error) {
-    await client.query('ROLLBACK');
+    await connection.rollback();
     throw error;
   } finally {
-    client.release();
+    connection.release();
   }
 });
 
@@ -141,17 +139,18 @@ export const updateMultipleSettings = asyncHandler(async (req: Request, res: Res
 export const deleteSetting = asyncHandler(async (req: Request, res: Response) => {
   const { key } = req.params;
 
-  const [result] = await pool.query<ResultSetHeader>('DELETE FROM site_settings WHERE key = ? RETURNING key',
+  const [result] = await pool.query<ResultSetHeader>(
+    'DELETE FROM site_settings WHERE `key` = ?',
     [key]
   );
 
-  if (rows.length === 0) {
-    throw new NotFoundError('Paramètre non trouvé');
+  if (result.affectedRows === 0) {
+    throw new NotFoundError('Parametre non trouve');
   }
 
-  logger.info(`Paramètre supprimé: ${key}`);
+  logger.info(`Parametre supprime: ${key}`);
 
-  res.json({ message: 'Paramètre supprimé avec succès' });
+  res.json({ message: 'Parametre supprime avec succes' });
 });
 
 /**
@@ -160,7 +159,8 @@ export const deleteSetting = asyncHandler(async (req: Request, res: Response) =>
 export const getSettingsByCategory = asyncHandler(async (req: Request, res: Response) => {
   const { category } = req.params;
 
-  const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM site_settings WHERE category = ? ORDER BY key',
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM site_settings WHERE category = ? ORDER BY `key`',
     [category]
   );
 
@@ -171,7 +171,8 @@ export const getSettingsByCategory = asyncHandler(async (req: Request, res: Resp
  * Get all categories
  */
 export const getCategories = asyncHandler(async (req: Request, res: Response) => {
-  const [rows] = await pool.query<RowDataPacket[]>('SELECT DISTINCT category FROM site_settings ORDER BY category'
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT DISTINCT category FROM site_settings ORDER BY category'
   );
 
   const categories = rows.map(row => row.category);

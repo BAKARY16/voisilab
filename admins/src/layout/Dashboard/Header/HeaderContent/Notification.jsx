@@ -31,6 +31,27 @@ import MessageOutlined from '@ant-design/icons/MessageOutlined';
 import SettingOutlined from '@ant-design/icons/SettingOutlined';
 import ContactsOutlined from '@ant-design/icons/ContactsOutlined';
 import FileTextOutlined from '@ant-design/icons/FileTextOutlined';
+import { keyframes } from '@mui/system';
+
+// Animation de la cloche qui sonne
+const bellRing = keyframes`
+  0% { transform: rotate(0) scale(1); }
+  10% { transform: rotate(25deg) scale(1.1); }
+  20% { transform: rotate(-25deg) scale(1.1); }
+  30% { transform: rotate(20deg) scale(1.05); }
+  40% { transform: rotate(-20deg) scale(1.05); }
+  50% { transform: rotate(15deg) scale(1); }
+  60% { transform: rotate(-15deg) scale(1); }
+  70% { transform: rotate(10deg) scale(1); }
+  80% { transform: rotate(-10deg) scale(1); }
+  90% { transform: rotate(5deg) scale(1); }
+  100% { transform: rotate(0) scale(1); }
+`;
+
+// Animation de pause entre les sonneries
+const bellPause = keyframes`
+  0%, 100% { transform: rotate(0); }
+`;
 
 // sx styles
 const avatarSX = {
@@ -183,8 +204,36 @@ export default function Notification() {
         aria-haspopup="true"
         onClick={handleToggle}
       >
-        <Badge badgeContent={unreadCount} color="primary">
-          <BellOutlined />
+        <Badge 
+          badgeContent={unreadCount} 
+          color="error"
+          sx={{
+            '& .MuiBadge-badge': {
+              animation: unreadCount > 0 ? 'badgePulse 1.5s ease-in-out infinite' : 'none',
+              '@keyframes badgePulse': {
+                '0%, 100%': { transform: 'scale(1) translate(50%, -50%)', boxShadow: '0 0 0 0 rgba(244, 67, 54, 0.7)' },
+                '50%': { transform: 'scale(1.15) translate(50%, -50%)', boxShadow: '0 0 0 4px rgba(244, 67, 54, 0)' }
+              }
+            }
+          }}
+        >
+          <Box
+            component="span"
+            sx={{
+              display: 'inline-flex',
+              fontSize: '1.25rem',
+              transformOrigin: 'top center',
+              animation: unreadCount > 0 ? `${bellRing} 1s ease-in-out infinite` : 'none',
+              animationDelay: '0.5s',
+              color: unreadCount > 0 ? 'warning.main' : 'inherit',
+              '&:hover': {
+                animation: `${bellRing} 0.6s ease-in-out`,
+                color: 'primary.main'
+              }
+            }}
+          >
+            <BellOutlined style={{ fontSize: '1.3rem' }} />
+          </Box>
         </Badge>
       </IconButton>
       <Popper

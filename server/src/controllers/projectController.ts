@@ -13,43 +13,38 @@ export const getAllProjects = asyncHandler(async (req: Request, res: Response) =
 
   let query = 'SELECT * FROM project_submissions WHERE 1=1';
   const params: any[] = [];
-  let paramIndex = 1;
 
   if (status) {
-    query += ` AND status = $${paramIndex}`;
+    query += ` AND status = ?`;
     params.push(status);
-    paramIndex++;
   }
 
   if (search) {
-    query += ` AND (title ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR name ILIKE $${paramIndex})`;
-    params.push(`%${search}%`);
-    paramIndex++;
+    query += ` AND (title LIKE ? OR description LIKE ? OR name LIKE ?)`;
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
 
-  query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+  query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
   params.push(limit, offset);
 
-  let result = await pool.query(query, params);
+  const [rows] = await pool.query<RowDataPacket[]>(query, params);
 
   // Get total count
   let countQuery = 'SELECT COUNT(*) as count FROM project_submissions WHERE 1=1';
   const countParams: any[] = [];
-  let countParamIndex = 1;
 
   if (status) {
-    countQuery += ` AND status = $${countParamIndex}`;
+    countQuery += ` AND status = ?`;
     countParams.push(status);
-    countParamIndex++;
   }
 
   if (search) {
-    countQuery += ` AND (title ILIKE $${countParamIndex} OR description ILIKE $${countParamIndex} OR name ILIKE $${countParamIndex})`;
-    countParams.push(`%${search}%`);
+    countQuery += ` AND (title LIKE ? OR description LIKE ? OR name LIKE ?)`;
+    countParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
 
   const [countRows] = await pool.query<RowDataPacket[]>(countQuery, countParams);
-  const total = parseInt(countRows[0].count);
+  const total = parseInt((countRows[0] as any).count);
 
   res.json({
     data: rows,
@@ -97,18 +92,20 @@ export const createProject = asyncHandler(async (req: Request, res: Response) =>
     attachments
   } = req.body;
 
-  const [insertResult] = await pool.query<ResultSetHeader>( `INSERT INTO project_submissions (
+  const [insertResult] = await pool.query<ResultSetHeader>(`INSERT INTO project_submissions (
       name, email, phone, project_type, title, description,
       objectives, timeline, budget, team_size, attachments
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-   `,
-    [name, email, phone, project_type, title, description, objectives, timeline, budget, team_size, attachments || []]
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [name, email, phone, project_type, title, description, objectives, timeline, budget, team_size, JSON.stringify(attachments || [])]
   );
+
+  // Récupérer le projet créé
+  const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM project_submissions WHERE id = ?', [insertResult.insertId]);
 
   logger.info(`Nouveau projet soumis: ${title} par ${email}`);
 
   res.status(201).json({
-    message: `Projet soumis avec succès',
+    message: 'Projet soumis avec succès',
     data: rows[0]
   });
 });
@@ -124,9 +121,12 @@ export const updateProjectStatus = asyncHandler(async (req: Request, res: Respon
     [status, admin_notes, id]
   );
 
-  if (rows.length === 0) {
+  if (result.affectedRows === 0) {
     throw new NotFoundError('Projet non trouvé');
   }
+
+  // Récupérer le projet mis à jour
+  const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM project_submissions WHERE id = ?', [id]);
 
   logger.info(`Statut du projet ${id} mis à jour: ${status}`);
 
@@ -146,7 +146,7 @@ export const deleteProject = asyncHandler(async (req: Request, res: Response) =>
     [id]
   );
 
-  if (rows.length === 0) {
+  if (result.affectedRows === 0) {
     throw new NotFoundError('Projet non trouvé');
   }
 
@@ -159,13 +159,13 @@ export const deleteProject = asyncHandler(async (req: Request, res: Response) =>
  * Get project statistics (admin only)
  */
 export const getProjectStats = asyncHandler(async (req: Request, res: Response) => {
-  let result = await pool.query(`
+  const [rows] = await pool.query(`
     SELECT
       COUNT(*) as total,
-      COUNT(*) as count FILTER (WHERE status = 'pending') as pending,
-      COUNT(*) as count FILTER (WHERE status = 'reviewing') as reviewing,
-      COUNT(*) as count FILTER (WHERE status = 'approved') as approved,
-      COUNT(*) as count FILTER (WHERE status = 'rejected') as rejected
+      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+      SUM(CASE WHEN status = 'reviewing' THEN 1 ELSE 0 END) as reviewing,
+      SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
+      SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
     FROM project_submissions
   `);
 

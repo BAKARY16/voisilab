@@ -81,7 +81,8 @@ export function ProjectRequestSection() {
         formDataToSend.append('files', file)
       })
 
-      const response = await fetch('http://localhost:5000/api/project-submissions/submit', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
+      const response = await fetch(`${API_URL}/api/project-submissions/submit`, {
         method: 'POST',
         body: formDataToSend,
       })

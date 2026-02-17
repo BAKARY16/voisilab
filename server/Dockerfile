@@ -32,8 +32,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 
-# Create uploads directory
-RUN mkdir -p uploads && chown -R expressuser:nodejs uploads
+# Create uploads and logs directories with full structure
+RUN mkdir -p uploads/confidential/projects logs && chown -R expressuser:nodejs uploads logs
 
 USER expressuser
 

@@ -3,6 +3,7 @@ import { body, param, validationResult } from 'express-validator';
 import pool from '../config/database';
 import { authenticate, requireAdmin } from '../middlewares/auth';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { createNotification } from '../controllers/notificationsController';
 
 const router = Router();
 
@@ -61,6 +62,22 @@ router.post(
       );
 
       console.log('Message inséré avec succès, ID:', result.insertId);
+
+      // Créer une notification pour tous les admins
+      const [admins] = await pool.query<RowDataPacket[]>(
+        'SELECT id FROM users WHERE role = ?',
+        ['admin']
+      );
+
+      for (const admin of admins) {
+        await createNotification(
+          admin.id.toString(),
+          'contact',
+          'Nouveau message de contact',
+          `${firstname} ${lastname} a envoyé un message: ${subject}`,
+          `/voisilab/contacts/${result.insertId}`
+        );
+      }
 
       res.status(201).json({
         success: true,
@@ -123,6 +140,21 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
         offset: Number(offset)
       }
     });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Route pour obtenir le nombre de messages non lus (AVANT /:id pour éviter les conflits)
+router.get('/unread-count', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const [result] = await pool.query<RowDataPacket[]>(
+      'SELECT COUNT(*) as count FROM contact_messages WHERE status = ?',
+      ['unread']
+    );
+
+    res.json({ success: true, count: result[0].count });
   } catch (error) {
     console.error('Erreur:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });

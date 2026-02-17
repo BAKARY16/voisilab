@@ -126,8 +126,8 @@ export default function ProfilePage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/upload/avatar', {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch('http://localhost:3500/api/upload/avatar', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

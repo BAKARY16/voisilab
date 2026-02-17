@@ -37,10 +37,12 @@ export function ActualitesContent() {
 
     // Récupérer les actualités depuis le backend
     useEffect(() => {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
+        
         const fetchNews = async () => {
             try {
                 setLoading(true)
-                const response = await fetch('http://localhost:5000/api/blog/published')
+                const response = await fetch(`${API_URL}/api/blog/published`)
                 
                 if (!response.ok) {
                     throw new Error('Erreur lors du chargement des actualités')
@@ -62,7 +64,7 @@ export function ActualitesContent() {
         
         // Auto-refresh toutes les 30 secondes en arrière-plan (au lieu de 5s)
         const interval = setInterval(() => {
-            fetch('http://localhost:5000/api/blog/published')
+            fetch(`${API_URL}/api/blog/published`)
                 .then(res => res.ok ? res.json() : null)
                 .then(result => {
                     if (result) {
@@ -98,17 +100,31 @@ export function ActualitesContent() {
     return (
         <section className="min-h-screen bg-background">
             {/* Hero Section */}
-            <section className="relative pt-16 pb-12 lg:pt-32 lg:pb-20 bg-muted/30">
-                <div className="container mx-auto px-4 lg:px-8">
+            <section className="relative pt-16 pb-12 lg:pt-32 lg:pb-20 overflow-hidden">
+                {/* Image de fond */}
+                <div className="absolute inset-0 z-0">
+                    <Image
+                        src="/6.jpg"
+                        alt="Bannière Actualités"
+                        fill
+                        className="object-cover"
+                        priority
+                    />
+                    {/* Overlay sombre pour améliorer la lisibilité */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
+                </div>
+
+                {/* Contenu par-dessus */}
+                <div className="container mx-auto px-4 lg:px-8 relative z-10">
                     <div className="flex items-center justify-center mb-8 fade-in-up">
                         <PageBreadcrumb pageTitle="Actualités" />
                     </div>
 
                     <div className="max-w-4xl mx-auto text-center fade-in-up">
-                        <h1 className="text-4xl lg:text-6xl font-bold text-foreground leading-tight mb-6">
+                        <h1 className="text-4xl lg:text-6xl font-bold text-white leading-tight mb-6 drop-shadow-lg [text-shadow:_2px_2px_4px_rgba(0,0,0,0.8)]">
                             Actualités
                         </h1>
-                        <p className="text-lg lg:text-xl text-muted-foreground mb-10 leading-relaxed">
+                        <p className="text-lg lg:text-xl text-white/95 mb-10 leading-relaxed drop-shadow-md [text-shadow:_1px_1px_3px_rgba(0,0,0,0.8)]">
                             Restez informé des dernières nouveautés, événements et partenariats de l'UVCI
                         </p>
                     </div>

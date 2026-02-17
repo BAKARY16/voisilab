@@ -43,8 +43,8 @@ export default function AuthLogin() {
   return (
     <Formik
       initialValues={{
-        email: 'admin@voisilab.fr',
-        password: 'admin123',
+        email: 'bakarysinon@uvci.edu.ci',
+        password: 'Admin2026!',
         submit: null
       }}
       validationSchema={Yup.object().shape({
@@ -82,7 +82,7 @@ export default function AuthLogin() {
                   name="email"
                   onBlur={handleBlur}
                   onChange={handleChange}
-                  placeholder="admin@voisilab.fr"
+                  placeholder="votre@email.com"
                   fullWidth
                   error={Boolean(touched.email && errors.email)}
                 />

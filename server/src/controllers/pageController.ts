@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { pool } from '../config/database';
+import pool from '../config/database';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { asyncHandler, NotFoundError } from '../middlewares/errors';
 import logger from '../config/logger';
@@ -11,10 +11,10 @@ function generateSlug(title: string): string {
   return title
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
-    .replace(/\s+/g, '-') // Replace spaces with -
-    .replace(/-+/g, '-') // Replace multiple - with single -
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
     .trim();
 }
 
@@ -23,67 +23,62 @@ function generateSlug(title: string): string {
  */
 export const getAllPages = asyncHandler(async (req: Request, res: Response) => {
   const { status, template, page = 1, limit = 10, search } = req.query;
-  const offset = ((page as number) - 1) * (limit as number);
+  const pageNum = parseInt(page as string) || 1;
+  const limitNum = parseInt(limit as string) || 10;
+  const offset = (pageNum - 1) * limitNum;
 
   let query = 'SELECT * FROM dynamic_pages WHERE 1=1';
   const params: any[] = [];
-  let paramIndex = 1;
 
   if (status) {
-    query += ` AND status = $${paramIndex}`;
+    query += ` AND status = ?`;
     params.push(status);
-    paramIndex++;
   }
 
   if (template) {
-    query += ` AND template = $${paramIndex}`;
+    query += ` AND template = ?`;
     params.push(template);
-    paramIndex++;
   }
 
   if (search) {
-    query += ` AND (title ILIKE $${paramIndex} OR slug ILIKE $${paramIndex})`;
-    params.push(`%${search}%`);
-    paramIndex++;
+    query += ` AND (title LIKE ? OR slug LIKE ?)`;
+    params.push(`%${search}%`, `%${search}%`);
   }
 
-  query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-  params.push(limit, offset);
+  query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+  params.push(limitNum, offset);
 
-  let result = await pool.query(query, params);
+  const [rows] = await pool.query<RowDataPacket[]>(query, params);
 
   // Get total count
   let countQuery = 'SELECT COUNT(*) as count FROM dynamic_pages WHERE 1=1';
   const countParams: any[] = [];
-  let countParamIndex = 1;
 
   if (status) {
-    countQuery += ` AND status = $${countParamIndex}`;
+    countQuery += ` AND status = ?`;
     countParams.push(status);
-    countParamIndex++;
   }
 
   if (template) {
-    countQuery += ` AND template = $${countParamIndex}`;
+    countQuery += ` AND template = ?`;
     countParams.push(template);
-    countParamIndex++;
   }
 
   if (search) {
-    countQuery += ` AND (title ILIKE $${countParamIndex} OR slug ILIKE $${countParamIndex})`;
-    countParams.push(`%${search}%`);
+    countQuery += ` AND (title LIKE ? OR slug LIKE ?)`;
+    countParams.push(`%${search}%`, `%${search}%`);
   }
 
-  const [countRows] = await pool.query<RowDataPacket[]>( pool.query(countQuery, countParams);
-  const total = parseInt(countRows[0].count);
+  const [countRows] = await pool.query<RowDataPacket[]>(countQuery, countParams);
+  const total = (countRows[0] as any).count;
 
   res.json({
     data: rows,
     pagination: {
       total,
-      page: parseInt(page as string),
-      limit: parseInt(limit as string),
-      totalPages: Math.ceil(total / (limit as number))
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum)
     }
   });
 });
@@ -92,7 +87,8 @@ export const getAllPages = asyncHandler(async (req: Request, res: Response) => {
  * Get published pages (public)
  */
 export const getPublishedPages = asyncHandler(async (req: Request, res: Response) => {
-  const [rows] = await pool.query<RowDataPacket[]>('SELECT id, slug, title, template FROM dynamic_pages WHERE status = ? ORDER BY title ASC',
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, slug, title, template FROM dynamic_pages WHERE status = ? ORDER BY title ASC',
     ['published']
   );
 
@@ -105,12 +101,13 @@ export const getPublishedPages = asyncHandler(async (req: Request, res: Response
 export const getPageBySlug = asyncHandler(async (req: Request, res: Response) => {
   const { slug } = req.params;
 
-  const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM dynamic_pages WHERE slug = ? AND status = ?',
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM dynamic_pages WHERE slug = ? AND status = ?',
     [slug, 'published']
   );
 
   if (rows.length === 0) {
-    throw new NotFoundError('Page non trouvée');
+    throw new NotFoundError('Page non trouvee');
   }
 
   res.json({ data: rows[0] });
@@ -122,12 +119,13 @@ export const getPageBySlug = asyncHandler(async (req: Request, res: Response) =>
 export const getPageById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM dynamic_pages WHERE id = ?',
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM dynamic_pages WHERE id = ?',
     [id]
   );
 
   if (rows.length === 0) {
-    throw new NotFoundError('Page non trouvée');
+    throw new NotFoundError('Page non trouvee');
   }
 
   res.json({ data: rows[0] });
@@ -150,26 +148,36 @@ export const createPage = asyncHandler(async (req: Request, res: Response) => {
   const slug = generateSlug(title);
 
   // Check if slug exists
-  const existing = await pool.query('SELECT id FROM dynamic_pages WHERE slug = ?', [slug]);
-  if (existing.rows.length > 0) {
-    throw new Error('Une page avec ce titre existe déjà');
+  const [existing] = await pool.query<RowDataPacket[]>(
+    'SELECT id FROM dynamic_pages WHERE slug = ?',
+    [slug]
+  );
+  
+  if (existing.length > 0) {
+    throw new Error('Une page avec ce titre existe deja');
   }
 
-  const publishedAt = status === 'published' ? 'NOW()' : null;
+  const publishedAt = status === 'published' ? new Date() : null;
 
-  const [insertResult] = await pool.query<ResultSetHeader>( `INSERT INTO dynamic_pages (
+  const [insertResult] = await pool.query<ResultSetHeader>(
+    `INSERT INTO dynamic_pages (
       slug, title, content, template, status,
       meta_title, meta_description, meta_keywords, published_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${publishedAt})
-   `,
-    [slug, title, content, template, status, meta_title, meta_description, meta_keywords || []]
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [slug, title, content, template, status, meta_title, meta_description, 
+     meta_keywords ? JSON.stringify(meta_keywords) : null, publishedAt]
   );
 
-  logger.info(`Nouvelle page créée: ${title}`);
+  const [newRows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM dynamic_pages WHERE id = ?',
+    [insertResult.insertId]
+  );
+
+  logger.info(`Nouvelle page creee: ${title}`);
 
   res.status(201).json({
-    message: `Page créée avec succès',
-    data: rows[0]
+    message: 'Page creee avec succes',
+    data: newRows[0]
   });
 });
 
@@ -189,49 +197,67 @@ export const updatePage = asyncHandler(async (req: Request, res: Response) => {
   } = req.body;
 
   // Get current page
-  const current = await pool.query('SELECT status, slug FROM dynamic_pages WHERE id = ?', [id]);
-  if (current.rows.length === 0) {
-    throw new NotFoundError('Page non trouvée');
+  const [current] = await pool.query<RowDataPacket[]>(
+    'SELECT status, slug FROM dynamic_pages WHERE id = ?',
+    [id]
+  );
+  
+  if (current.length === 0) {
+    throw new NotFoundError('Page non trouvee');
   }
 
-  let slug = current.rows[0].slug;
+  let slug = current[0].slug;
   if (title) {
     const newSlug = generateSlug(title);
     if (newSlug !== slug) {
-      const existing = await pool.query('SELECT id FROM dynamic_pages WHERE slug = ? AND id != ?', [newSlug, id]);
-      if (existing.rows.length > 0) {
-        throw new Error('Une page avec ce titre existe déjà');
+      const [existing] = await pool.query<RowDataPacket[]>(
+        'SELECT id FROM dynamic_pages WHERE slug = ? AND id != ?',
+        [newSlug, id]
+      );
+      if (existing.length > 0) {
+        throw new Error('Une page avec ce titre existe deja');
       }
       slug = newSlug;
     }
   }
 
   // Set published_at if status changes from draft to published
-  let publishedAtQuery = '';
-  if (status === 'published' && current.rows[0].status !== 'published') {
-    publishedAtQuery = ', published_at = NOW()';
-  }
+  const publishedAt = (status === 'published' && current[0].status !== 'published') 
+    ? new Date() 
+    : undefined;
 
-  const [updateResult] = await pool.query<ResultSetHeader>( `UPDATE dynamic_pages SET
-      slug = ?,
-      title = COALESCE(?, title),
-      content = COALESCE(?, content),
-      template = COALESCE(?, template),
-      status = COALESCE(?, status),
-      meta_title = COALESCE(?, meta_title),
-      meta_description = COALESCE(?, meta_description),
-      meta_keywords = COALESCE(?, meta_keywords)
-      ${publishedAtQuery}
-    WHERE id = ?
-   `,
-    [slug, title, content, template, status, meta_title, meta_description, meta_keywords, id]
+  const updates: string[] = ['slug = ?'];
+  const params: any[] = [slug];
+
+  if (title !== undefined) { updates.push('title = ?'); params.push(title); }
+  if (content !== undefined) { updates.push('content = ?'); params.push(content); }
+  if (template !== undefined) { updates.push('template = ?'); params.push(template); }
+  if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+  if (meta_title !== undefined) { updates.push('meta_title = ?'); params.push(meta_title); }
+  if (meta_description !== undefined) { updates.push('meta_description = ?'); params.push(meta_description); }
+  if (meta_keywords !== undefined) { 
+    updates.push('meta_keywords = ?'); 
+    params.push(JSON.stringify(meta_keywords)); 
+  }
+  if (publishedAt) { updates.push('published_at = ?'); params.push(publishedAt); }
+
+  params.push(id);
+
+  await pool.query<ResultSetHeader>(
+    `UPDATE dynamic_pages SET ${updates.join(', ')} WHERE id = ?`,
+    params
   );
 
-  logger.info(`Page mise à jour: ${id}`);
+  const [updatedRows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM dynamic_pages WHERE id = ?',
+    [id]
+  );
+
+  logger.info(`Page mise a jour: ${id}`);
 
   res.json({
-    message: `Page mise à jour avec succès',
-    data: rows[0]
+    message: 'Page mise a jour avec succes',
+    data: updatedRows[0]
   });
 });
 
@@ -241,15 +267,16 @@ export const updatePage = asyncHandler(async (req: Request, res: Response) => {
 export const deletePage = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const [result] = await pool.query<ResultSetHeader>('DELETE FROM dynamic_pages WHERE id = ?',
+  const [result] = await pool.query<ResultSetHeader>(
+    'DELETE FROM dynamic_pages WHERE id = ?',
     [id]
   );
 
-  if (rows.length === 0) {
-    throw new NotFoundError('Page non trouvée');
+  if (result.affectedRows === 0) {
+    throw new NotFoundError('Page non trouvee');
   }
 
-  logger.info(`Page supprimée: ${id}`);
+  logger.info(`Page supprimee: ${id}`);
 
-  res.json({ message: 'Page supprimée avec succès' });
+  res.json({ message: 'Page supprimee avec succes' });
 });

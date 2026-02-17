@@ -34,10 +34,12 @@ export function ActualiteDetailContent({ slug }: { slug: string }) {
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
+        
         const fetchArticle = async () => {
             try {
                 setLoading(true)
-                const response = await fetch(`http://localhost:5000/api/blog/slug/${slug}`)
+                const response = await fetch(`${API_URL}/api/blog/slug/${slug}`)
 
                 if (!response.ok) {
                     throw new Error('Article non trouvé')

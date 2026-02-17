@@ -4,67 +4,109 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { asyncHandler, NotFoundError } from '../middlewares/errors';
 import logger from '../config/logger';
 
+// Helper function for creating notifications
+async function createNotificationHelper(
+  userId: string,
+  type: string,
+  title: string,
+  message: string,
+  link?: string
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO notifications (user_id, type, title, message, link)
+     VALUES (?, ?, ?, ?, ?)`,
+    [userId, type, title, message, link || null]
+  );
+}
+
+interface Equipment extends RowDataPacket {
+  id: number;
+  name: string;
+  category: string;
+  description: string;
+  image_url: string;
+  count_info: string;
+  specs: string;
+  status: 'available' | 'maintenance' | 'unavailable';
+  category_color: string;
+  gradient: string;
+  order_index: number;
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
 /**
  * Get all equipment with pagination and filters
  */
 export const getAllEquipment = asyncHandler(async (req: Request, res: Response) => {
-  const { status, category, page = 1, limit = 10, search } = req.query;
+  const { status, category, page = 1, limit = 50, search, active } = req.query;
   const offset = ((page as number) - 1) * (limit as number);
 
   let query = 'SELECT * FROM equipment WHERE 1=1';
   const params: any[] = [];
-  let paramIndex = 1;
 
   if (status) {
-    query += ` AND status = $${paramIndex}`;
+    query += ` AND status = ?`;
     params.push(status);
-    paramIndex++;
   }
 
   if (category) {
-    query += ` AND category = $${paramIndex}`;
+    query += ` AND category = ?`;
     params.push(category);
-    paramIndex++;
+  }
+
+  if (active !== undefined) {
+    query += ` AND active = ?`;
+    params.push(active === 'true' ? 1 : 0);
   }
 
   if (search) {
-    query += ` AND (name ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`;
-    params.push(`%${search}%`);
-    paramIndex++;
+    query += ` AND (name LIKE ? OR description LIKE ?)`;
+    params.push(`%${search}%`, `%${search}%`);
   }
 
-  query += ` ORDER BY name ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+  query += ` ORDER BY order_index ASC, name ASC LIMIT ? OFFSET ?`;
   params.push(limit, offset);
 
-  let result = await pool.query(query, params);
+  const [rows] = await pool.query<Equipment[]>(query, params);
+
+  // Parser les specs JSON
+  const equipment = rows.map(item => ({
+    ...item,
+    specs: item.specs ? JSON.parse(item.specs as string) : []
+  }));
 
   // Get total count
   let countQuery = 'SELECT COUNT(*) as count FROM equipment WHERE 1=1';
   const countParams: any[] = [];
-  let countParamIndex = 1;
 
   if (status) {
-    countQuery += ` AND status = $${countParamIndex}`;
+    countQuery += ` AND status = ?`;
     countParams.push(status);
-    countParamIndex++;
   }
 
   if (category) {
-    countQuery += ` AND category = $${countParamIndex}`;
+    countQuery += ` AND category = ?`;
     countParams.push(category);
-    countParamIndex++;
+  }
+
+  if (active !== undefined) {
+    countQuery += ` AND active = ?`;
+    countParams.push(active === 'true' ? 1 : 0);
   }
 
   if (search) {
-    countQuery += ` AND (name ILIKE $${countParamIndex} OR description ILIKE $${countParamIndex})`;
-    countParams.push(`%${search}%`);
+    countQuery += ` AND (name LIKE ? OR description LIKE ?)`;
+    countParams.push(`%${search}%`, `%${search}%`);
   }
 
-  const [countRows] = await pool.query<RowDataPacket[]>( pool.query(countQuery, countParams);
-  const total = parseInt(countRows[0].count);
+  const [countRows] = await pool.query<RowDataPacket[]>(countQuery, countParams);
+  const total = parseInt((countRows[0] as any).count);
 
   res.json({
-    data: rows,
+    success: true,
+    data: equipment,
     pagination: {
       total,
       page: parseInt(page as string),
@@ -80,19 +122,24 @@ export const getAllEquipment = asyncHandler(async (req: Request, res: Response) 
 export const getAvailableEquipment = asyncHandler(async (req: Request, res: Response) => {
   const { category } = req.query;
 
-  let query = 'SELECT * FROM equipment WHERE status = ?';
-  const params: any[] = ['available'];
+  let query = 'SELECT * FROM equipment WHERE active = TRUE';
+  const params: any[] = [];
 
   if (category) {
     query += ' AND category = ?';
     params.push(category);
   }
 
-  query += ' ORDER BY name ASC';
+  query += ' ORDER BY order_index ASC, name ASC';
 
-  let result = await pool.query(query, params);
+  const [rows] = await pool.query<Equipment[]>(query, params);
 
-  res.json({ data: rows });
+  const equipment = rows.map(item => ({
+    ...item,
+    specs: item.specs ? JSON.parse(item.specs as string) : []
+  }));
+
+  res.json({ success: true, data: equipment });
 });
 
 /**
@@ -101,7 +148,8 @@ export const getAvailableEquipment = asyncHandler(async (req: Request, res: Resp
 export const getEquipmentById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM equipment WHERE id = ?',
+  const [rows] = await pool.query<Equipment[]>(
+    'SELECT * FROM equipment WHERE id = ?',
     [id]
   );
 
@@ -109,7 +157,25 @@ export const getEquipmentById = asyncHandler(async (req: Request, res: Response)
     throw new NotFoundError('Équipement non trouvé');
   }
 
-  res.json({ data: rows[0] });
+  const equipment = {
+    ...rows[0],
+    specs: rows[0].specs ? JSON.parse(rows[0].specs as string) : []
+  };
+
+  res.json({ success: true, data: equipment });
+});
+
+/**
+ * Get equipment categories
+ */
+export const getEquipmentCategories = asyncHandler(async (req: Request, res: Response) => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT DISTINCT category FROM equipment WHERE active = TRUE ORDER BY category ASC'
+  );
+
+  const categories = rows.map(row => row.category);
+
+  res.json({ success: true, data: categories });
 });
 
 /**
@@ -118,33 +184,51 @@ export const getEquipmentById = asyncHandler(async (req: Request, res: Response)
 export const createEquipment = asyncHandler(async (req: Request, res: Response) => {
   const {
     name,
-    description,
     category,
+    description,
     image_url,
+    count_info,
+    specs,
     status = 'available',
-    specifications,
-    location
+    category_color,
+    gradient,
+    order_index = 0,
+    active = true
   } = req.body;
 
-  const [insertResult] = await pool.query<ResultSetHeader>(`
-    INSERT INTO equipment (
-      name, description, category, image_url, status,
-      specifications, location
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [name, description, category, image_url, status, JSON.stringify(specifications || {}), location]
+  const specsJson = specs ? JSON.stringify(specs) : null;
+
+  const [insertResult] = await pool.query<ResultSetHeader>(
+    `INSERT INTO equipment 
+     (name, category, description, image_url, count_info, specs, status, 
+      category_color, gradient, order_index, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [name, category, description, image_url, count_info, specsJson, status, 
+     category_color, gradient, order_index, active]
   );
 
-  // Récupérer l'équipement créé
-  const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT * FROM equipment WHERE name = ? ORDER BY created_at DESC LIMIT 1',
-    [name]
+  // Créer une notification pour tous les admins
+  const [admins] = await pool.query<RowDataPacket[]>(
+    'SELECT id FROM users WHERE role = ?',
+    ['admin']
   );
+
+  for (const admin of admins) {
+    await createNotificationHelper(
+      admin.id.toString(),
+      'equipment',
+      'Nouvel équipement ajouté',
+      `L'équipement "${name}" (${category}) a été ajouté au catalogue`,
+      `/voisilab/equipment`
+    );
+  }
 
   logger.info(`Nouvel équipement créé: ${name}`);
 
   res.status(201).json({
+    success: true,
     message: 'Équipement créé avec succès',
-    data: rows[0]
+    data: { id: insertResult.insertId }
   });
 });
 
@@ -153,39 +237,65 @@ export const createEquipment = asyncHandler(async (req: Request, res: Response) 
  */
 export const updateEquipment = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const {
-    name,
-    description,
-    category,
-    image_url,
-    status,
-    specifications,
-    location
-  } = req.body;
+  const updateData = { ...req.body };
 
-  const [updateResult] = await pool.query<ResultSetHeader>( `UPDATE equipment SET
-      name = COALESCE(?, name),
-      description = COALESCE(?, description),
-      category = COALESCE(?, category),
-      image_url = COALESCE(?, image_url),
-      status = COALESCE(?, status),
-      specifications = COALESCE(?, specifications),
-      location = COALESCE(?, location)
-    WHERE id = ?
-   `,
-    [name, description, category, image_url, status, specifications, location, id]
-  );
-
-  if (rows.length === 0) {
-    throw new NotFoundError(`Équipement non trouvé');
+  // Convertir specs en JSON si présent
+  if (updateData.specs) {
+    updateData.specs = JSON.stringify(updateData.specs);
   }
 
-  logger.info(`Équipement mis à jour: ${id}`);
+  // Construire la requête UPDATE dynamiquement
+  const fields = Object.keys(updateData);
+  const values = Object.values(updateData);
 
-  res.json({
-    message: 'Équipement mis à jour avec succès',
-    data: rows[0]
-  });
+  if (fields.length === 0) {
+    return res.status(400).json({ success: false, message: 'Aucune donnée à mettre à jour' });
+  }
+
+  const setClause = fields.map(field => `${field} = ?`).join(', ');
+  values.push(id);
+
+  const [result] = await pool.query<ResultSetHeader>(
+    `UPDATE equipment SET ${setClause} WHERE id = ?`,
+    values
+  );
+
+  if (result.affectedRows === 0) {
+    throw new NotFoundError('Équipement non trouvé');
+  }
+
+  // Notification si changement de statut
+  if (updateData.status) {
+    const [admins] = await pool.query<RowDataPacket[]>(
+      'SELECT id FROM users WHERE role = ?',
+      ['admin']
+    );
+
+    const [equipment] = await pool.query<Equipment[]>(
+      'SELECT name FROM equipment WHERE id = ?',
+      [id]
+    );
+
+    const statusLabels: Record<string, string> = {
+      available: 'disponible',
+      maintenance: 'en maintenance',
+      unavailable: 'indisponible'
+    };
+
+    for (const admin of admins) {
+      await createNotificationHelper(
+        admin.id.toString(),
+        'equipment',
+        'Statut équipement modifié',
+        `${equipment[0].name} est maintenant ${statusLabels[updateData.status]}`,
+        `/voisilab/equipment`
+      );
+    }
+  }
+
+  logger.info(`Équipement modifié: ${id}`);
+
+  res.json({ success: true, message: 'Équipement mis à jour avec succès' });
 });
 
 /**
@@ -194,11 +304,57 @@ export const updateEquipment = asyncHandler(async (req: Request, res: Response) 
 export const deleteEquipment = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
+  // Récupérer le nom avant suppression pour la notification
+  const [equipment] = await pool.query<Equipment[]>(
+    'SELECT name FROM equipment WHERE id = ?',
+    [id]
+  );
+
+  if (equipment.length === 0) {
+    throw new NotFoundError('Équipement non trouvé');
+  }
+
+  const [result] = await pool.query<ResultSetHeader>(
+    'DELETE FROM equipment WHERE id = ?',
+    [id]
+  );
+
+  if (result.affectedRows === 0) {
+    throw new NotFoundError('Équipement non trouvé');
+  }
+
+  // Notification de suppression
+  const [admins] = await pool.query<RowDataPacket[]>(
+    'SELECT id FROM users WHERE role = ?',
+    ['admin']
+  );
+
+  for (const admin of admins) {
+    await createNotificationHelper(
+      admin.id.toString(),
+      'equipment',
+      'Équipement supprimé',
+      `L'équipement "${equipment[0].name}" a été supprimé du catalogue`,
+      `/voisilab/equipment`
+    );
+  }
+
+  logger.info(`Équipement supprimé: ${id}`);
+
+  res.json({ success: true, message: 'Équipement supprimé avec succès' });
+});
+
+/**
+ * Delete equipment
+ */
+export const deleteEquipment2 = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
   const [result] = await pool.query<ResultSetHeader>('DELETE FROM equipment WHERE id = ?',
     [id]
   );
 
-  if (rows.length === 0) {
+  if (result.affectedRows === 0) {
     throw new NotFoundError('Équipement non trouvé');
   }
 

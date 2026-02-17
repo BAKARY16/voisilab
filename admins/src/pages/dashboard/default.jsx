@@ -66,14 +66,20 @@ export default function DashboardDefault() {
   useEffect(() => {
     // Vérifier la validité du token au montage
     const checkAuth = async () => {
-      const isValid = await authService.verifyToken();
-      if (!isValid) {
-        console.warn('⚠️ Token invalide - redirection vers login');
+      try {
+        const result = await authService.verifyToken();
+        // La route profile retourne { user: {...} }
+        if (!result || !result.user) {
+          console.warn('⚠️ Token invalide - redirection vers login');
+          navigate('/login');
+          return;
+        }
+        // Token valide, charger les stats
+        loadStats();
+      } catch (error) {
+        console.warn('⚠️ Erreur vérification token:', error.message);
         navigate('/login');
-        return;
       }
-      // Token valide, charger les stats
-      loadStats();
     };
     
     checkAuth();
@@ -83,9 +89,9 @@ export default function DashboardDefault() {
     try {
       setLoading(true);
       console.log('🔄 Chargement des stats du dashboard...');
-      console.log('📍 API URL:', import.meta.env.VITE_API_URL || 'http://localhost:5000');
+      console.log('📍 API URL:', import.meta.env.VITE_API_URL || 'http://localhost:3500');
       
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       console.log('🔑 Token présent:', !!token);
       if (token) {
         console.log('🔑 Token:', token.substring(0, 20) + '...');

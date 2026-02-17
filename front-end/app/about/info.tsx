@@ -59,7 +59,8 @@ export function AboutContact() {
     setError(null)
 
     try {
-      const response = await fetch('http://localhost:5000/api/contacts/submit', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
+      const response = await fetch(`${API_URL}/api/contacts/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -484,6 +485,116 @@ export function AboutContact() {
                 </Card>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Témoignages Section */}
+      <section className="py-20 lg:py-32 bg-muted/30 relative">
+        <div className="container mx-auto px-4 lg:px-8">
+          <SectionHeader
+            title="Ce que disent nos membres"
+            subtitle="Découvrez les témoignages de ceux qui ont fait confiance à Voisilab"
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {[
+              {
+                name: "Kouamé Yao",
+                role: "Entrepreneur",
+                quote: "Voisilab m'a permis de concrétiser mon prototype en un temps record. L'accompagnement technique est exceptionnel !",
+                avatar: "/avatar1.jpg",
+                rating: 5
+              },
+              {
+                name: "Aminata Diallo",
+                role: "Designer Produit",
+                quote: "Un espace incroyable où la créativité n'a pas de limites. Les équipements sont de qualité professionnelle.",
+                avatar: "/avatar2.jpg",
+                rating: 5
+              },
+              {
+                name: "Jean-Pierre N'Goran",
+                role: "Étudiant Ingénieur",
+                quote: "Les formations proposées sont très complètes. J'ai appris à utiliser l'impression 3D et la découpe laser en quelques jours.",
+                avatar: "/avatar3.jpg",
+                rating: 5
+              }
+            ].map((testimonial, index) => (
+              <div key={index} className="fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
+                <Card className="border-2 border-border hover:border-primary/50 transition-all duration-300 h-full">
+                  <CardContent className="p-8">
+                    {/* Stars */}
+                    <div className="flex gap-1 mb-4">
+                      {[...Array(testimonial.rating)].map((_, i) => (
+                        <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+                    
+                    {/* Quote */}
+                    <p className="text-muted-foreground italic mb-6 leading-relaxed">
+                      &quot;{testimonial.quote}&quot;
+                    </p>
+                    
+                    {/* Author */}
+                    <div className="flex items-center gap-3 pt-4 border-t border-border">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-lg font-bold text-primary">
+                          {testimonial.name.charAt(0)}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">{testimonial.name}</p>
+                        <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Visite Virtuelle Section */}
+      <section className="py-20 lg:py-32 relative">
+        <div className="container mx-auto px-4 lg:px-8">
+          <SectionHeader
+            title="Visite Virtuelle"
+            subtitle="Découvrez nos locaux et équipements en vidéo"
+          />
+
+          <div className="max-w-5xl mx-auto">
+            <Card className="border-2 border-border overflow-hidden">
+              <div className="relative aspect-video bg-muted">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src="https://www.youtube.com/embed/oCZJ-RQFRi8"
+                  title="Visite Virtuelle Voisilab"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              </div>
+              <CardContent className="p-6 bg-muted/30">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-bold text-foreground mb-1">Venez nous rendre visite</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Abidjan Cocody Deux-Plateaux, rue K4 - Du lundi au samedi
+                    </p>
+                  </div>
+                  <Button asChild>
+                    <Link href="https://maps.google.com/maps?q=Abidjan+Cocody+Deux-Plateaux+rue+K4" target="_blank">
+                      <MapPin className="mr-2" size={18} />
+                      Voir sur la carte
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

@@ -17,6 +17,15 @@ import blogRoutes from './routes/blogRoutes';
 import notificationsRoutes from './routes/notificationsRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import ppnRoutes from './routes/ppnRoutes';
+import pageSectionRoutes from './routes/pageSectionRoutes';
+import equipmentRoutes from './routes/equipmentRoutesSimple';
+import equipmentRequestsRoutes from './routes/equipmentRequests';
+import workshopRoutes from './routes/workshopRoutes';
+import innovationRoutes from './routes/innovationRoutes';
+import userRoutes from './routes/userRoutes';
+import mediaRoutes from './routes/mediaRoutes';
+import settingsRoutes from './routes/settingsRoutes';
+import pageRoutes from './routes/pageRoutes';
 
 const app = express();
 
@@ -26,8 +35,10 @@ app.use(helmet());
 // CORS
 const corsOptions = {
   origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    process.env.ADMIN_URL || 'http://localhost:3001',
+    process.env.FRONTEND_URL || 'http://localhost:3501',
+    process.env.ADMIN_URL || 'http://localhost:3502',
+    'http://localhost:5001', // Frontend Next.js
+    'http://localhost:5002', // Admin Vite
     'http://localhost:5173', // Vite dev server (default)
     'http://localhost:5174', // Vite dev server (alternate)
     'http://localhost:5175'  // Vite dev server (alternate)
@@ -37,10 +48,12 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Rate limiting - Augmenté pour permettre auto-refresh
+// Rate limiting - Désactivé en développement, augmenté en production
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300 // limit each IP to 300 requests per windowMs (au lieu de 100)
+  max: process.env.NODE_ENV === 'development' ? 10000 : 500, // Quasi illimité en dev
+  skip: () => process.env.NODE_ENV === 'development', // Skip rate limiting en dev
+  message: { error: 'Trop de requêtes, veuillez réessayer plus tard.' }
 });
 
 app.use('/api', limiter);
@@ -97,6 +110,15 @@ app.use('/api/blog', blogRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/ppn', ppnRoutes);
+app.use('/api/page-sections', pageSectionRoutes);
+app.use('/api/equipment', equipmentRoutes);
+app.use('/api/equipment-requests', equipmentRequestsRoutes);
+app.use('/api/workshops', workshopRoutes);
+app.use('/api/innovations', innovationRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/media', mediaRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/pages', pageRoutes);
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
@@ -140,13 +162,13 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3500;
 
 app.listen(PORT, () => {
   logger.info(`🚀 Serveur VoisiLab démarré sur le port ${PORT}`);
   logger.info(`📱 Mode: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`🌐 Frontend: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-  logger.info(`🔧 Admin: ${process.env.ADMIN_URL || 'http://localhost:3001'}`);
+  logger.info(`🌐 Frontend: ${process.env.FRONTEND_URL || 'http://localhost:3501'}`);
+  logger.info(`🔧 Admin: ${process.env.ADMIN_URL || 'http://localhost:3502'}`);
 });
 
 export default app;
