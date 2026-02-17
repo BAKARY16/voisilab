@@ -25,14 +25,19 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'uvci.online',
       },
+      {
+        protocol: 'https',
+        hostname: '69.62.106.191',
+      },
     ],
   },
   // Proxy les images du backend pour éviter les problèmes CORS
   async rewrites() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500';
     return [
       {
         source: '/uploads/:path*',
-        destination: 'http://localhost:3500/uploads/:path*',
+        destination: `${apiUrl}/uploads/:path*`,
       },
     ]
   },
