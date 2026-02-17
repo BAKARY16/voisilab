@@ -36,6 +36,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : [
       process.env.FRONTEND_URL || 'http://localhost:3501',
       process.env.ADMIN_URL || 'http://localhost:3502',
+      'http://localhost:3501', // Frontend Next.js dev
+      'http://localhost:3502', // Admin Vite dev
       'http://localhost:5001', // Frontend Next.js
       'http://localhost:5002', // Admin Vite
       'http://localhost:5173', // Vite dev server (default)
@@ -44,11 +46,21 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
     ];
 
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // Autoriser les requêtes sans origin (mobile, Postman, etc.)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      logger.warn(`CORS bloqué pour: ${origin}`);
+      callback(new Error('Non autorisé par CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 logger.info(`CORS configuré pour: ${allowedOrigins.join(', ')}`);
@@ -65,9 +77,9 @@ const limiter = rateLimit({
 
 app.use('/api', limiter);
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body parsing - Augmenter la limite pour les fichiers
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb', parameterLimit: 50000 }));
 
 // Compression middleware
 app.use(compression());

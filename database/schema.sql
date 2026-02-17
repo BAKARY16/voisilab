@@ -84,13 +84,18 @@ CREATE TABLE IF NOT EXISTS contact_messages (
     subject VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
     status ENUM('unread', 'read', 'replied', 'archived') DEFAULT 'unread',
+    ip_address VARCHAR(45) DEFAULT NULL COMMENT 'Adresse IP du visiteur',
+    user_agent VARCHAR(500) DEFAULT NULL COMMENT 'User agent du navigateur',
     replied_at TIMESTAMP NULL DEFAULT NULL,
+    replied_by VARCHAR(36) DEFAULT NULL COMMENT 'ID admin qui a répondu',
     reply_message TEXT DEFAULT NULL,
+    reply_content TEXT DEFAULT NULL COMMENT 'Contenu de la réponse',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     read_at TIMESTAMP NULL DEFAULT NULL,
     INDEX idx_status (status),
-    INDEX idx_created_at (created_at)
+    INDEX idx_created_at (created_at),
+    INDEX idx_ip_address (ip_address)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
@@ -102,13 +107,17 @@ CREATE TABLE IF NOT EXISTS project_submissions (
     email VARCHAR(255) NOT NULL,
     phone VARCHAR(20) DEFAULT NULL,
     organization VARCHAR(255) DEFAULT NULL,
-    project_name VARCHAR(255) NOT NULL,
+    project_name VARCHAR(255) DEFAULT NULL,
     project_type VARCHAR(100) NOT NULL COMMENT 'impression3d, prototypage, formation, etc.',
     description TEXT NOT NULL,
     budget VARCHAR(100) DEFAULT NULL,
+    timeline VARCHAR(100) DEFAULT NULL COMMENT 'Délai souhaité',
     deadline DATE DEFAULT NULL,
     files_json JSON DEFAULT NULL COMMENT 'Fichiers joints en JSON',
     status ENUM('pending', 'reviewing', 'approved', 'rejected', 'completed') DEFAULT 'pending',
+    ip_address VARCHAR(45) DEFAULT NULL COMMENT 'Adresse IP du visiteur',
+    user_agent VARCHAR(500) DEFAULT NULL COMMENT 'User agent du navigateur',
+    submission_source VARCHAR(50) DEFAULT 'web' COMMENT 'Source de la soumission',
     admin_notes TEXT DEFAULT NULL,
     reviewed_by VARCHAR(36) DEFAULT NULL,
     reviewed_at TIMESTAMP NULL DEFAULT NULL,
@@ -116,7 +125,25 @@ CREATE TABLE IF NOT EXISTS project_submissions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_status (status),
     INDEX idx_project_type (project_type),
-    INDEX idx_created_at (created_at)
+    INDEX idx_created_at (created_at),
+    INDEX idx_ip_address (ip_address)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- TABLE: submission_files (Fichiers joints aux projets)
+-- ============================================
+CREATE TABLE IF NOT EXISTS submission_files (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submission_id INT NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    stored_filename VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_size BIGINT NOT NULL COMMENT 'Taille en octets',
+    mime_type VARCHAR(100) NOT NULL,
+    file_extension VARCHAR(10) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_submission_id (submission_id),
+    FOREIGN KEY (submission_id) REFERENCES project_submissions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
