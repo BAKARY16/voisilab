@@ -3,10 +3,13 @@
   "version": "2.0.0",
   "description": "Backend API complet pour VoisiLab - MySQL + Express + TypeScript",
   "main": "dist/server.js",
+  "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc || true",
+    "build": "rm -rf dist && tsc",
+    "build:win": "if exist dist rmdir /s /q dist && tsc",
     "start": "node dist/server.js",
+    "start:dev": "tsx src/server.ts",
     "migrate": "node dist/scripts/migrate.js",
     "seed": "node dist/scripts/seed.js"
   },

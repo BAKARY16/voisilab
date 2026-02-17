@@ -81,6 +81,23 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_j15OyQqZASGQP_Lx3fc_Gg_90G6AumE
 
 ## 🐛 Résolution de problèmes
 
+### Warning "baseline-browser-mapping is over two months old"
+
+**Cause :** Module de compatibilité des navigateurs obsolète.
+
+**Solution :**
+```bash
+# Installer/mettre à jour le module
+npm install baseline-browser-mapping@latest -D
+# ou avec pnpm
+pnpm add -D baseline-browser-mapping@latest
+
+# Rebuild
+npm run build
+```
+
+**Note :** Ce warning n'empêche PAS le build de fonctionner. C'est juste un avertissement de données obsolètes.
+
 ### Erreur "pnpm not found"
 
 **Solution :** Utiliser `npm` au lieu de `pnpm` sur le serveur :

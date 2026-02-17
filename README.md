@@ -247,6 +247,102 @@ Voir **[DOCKER-README.md](DOCKER-README.md)** pour les détails.
 
 ---
 
+---
+
+## 🚀 Déploiement en Production
+
+### Scripts de Déploiement Automatique
+
+Des scripts de déploiement automatique sont disponibles pour faciliter la mise en production :
+
+**Backend:**
+```bash
+cd server
+chmod +x deploy.sh
+./deploy.sh  # Déploiement complet automatique
+```
+
+**Front-End:**
+```bash
+cd front-end
+chmod +x deploy.sh
+./deploy.sh  # Déploiement complet automatique
+```
+
+### Résolution de Problèmes de Déploiement
+
+#### ❌ Backend: "Cannot find module dist/server.js"
+
+**Problème:** Le build TypeScript n'a pas été exécuté ou a échoué.
+
+**Solution:**
+```bash
+cd server
+rm -rf dist           # Nettoyer
+npm run build         # Rebuild
+ls -la dist/          # Vérifier
+pm2 restart voisilab-api
+```
+
+#### ⚠️ Front-End: "baseline-browser-mapping is old"
+
+**Problème:** Module de compatibilité navigateurs obsolète (warning uniquement, pas bloquant).
+
+**Solution:**
+```bash
+cd front-end
+npm install baseline-browser-mapping@latest -D
+npm run build
+```
+
+#### 🔧 Support npm ET pnpm
+
+Le projet supporte désormais npm et pnpm sans configuration supplémentaire :
+- Scripts optimisés pour les deux gestionnaires
+- Fichiers `.npmrc` configurés
+- Lockfiles multiples gérés automatiquement
+
+**Utiliser npm:**
+```bash
+npm install
+npm run build
+npm start
+```
+
+**Utiliser pnpm:**
+```bash
+pnpm install
+pnpm build
+pnpm start
+```
+
+### Configuration PM2
+
+```bash
+# Démarrer tous les services
+pm2 start npm --name "voisilab-api" -- start
+pm2 start npm --name "voisilab-front" -- start
+
+# Sauvegarder
+pm2 save
+
+# Démarrage automatique au boot
+pm2 startup
+
+# Voir les logs
+pm2 logs
+
+# Voir le statut
+pm2 status
+```
+
+### Guides Détaillés
+
+- [📘 Guide de déploiement Backend](server/DEPLOYMENT.md)
+- [📗 Guide de déploiement Front-End](front-end/DEPLOYMENT.md)
+
+---
+
 ## ❓ Support
 
 ### Problèmes Courants
