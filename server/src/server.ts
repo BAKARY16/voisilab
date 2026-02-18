@@ -30,40 +30,47 @@ const app = express();
 // Middleware de sécurité
 app.use(helmet());
 
-// CORS - Configuration pour production et développement
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-  : [
-      process.env.FRONTEND_URL || 'http://localhost:3501',
-      process.env.ADMIN_URL || 'http://localhost:3502',
-      'http://localhost:3501', // Frontend Next.js dev
-      'http://localhost:3502', // Admin Vite dev
-      'http://localhost:5001', // Frontend Next.js
-      'http://localhost:5002', // Admin Vite
-      'http://localhost:5173', // Vite dev server (default)
-      'http://localhost:5174', // Vite dev server (alternate)
-      'http://localhost:5175'  // Vite dev server (alternate)
-    ];
+// CORS - Configuration simplifiée et permissive
+const isDevelopment = process.env.NODE_ENV === 'development';
 
-const corsOptions = {
+// En développement : autoriser TOUT
+// En production : utiliser la liste d'origines autorisées
+const corsOptions = isDevelopment ? {
+  origin: true, // Autoriser toutes les origines en dev
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: '*',
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  optionsSuccessStatus: 204
+} : {
   origin: (origin, callback) => {
-    // Autoriser les requêtes sans origin (mobile, Postman, etc.)
+    const allowedOrigins = process.env.ALLOWED_ORIGINS 
+      ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+      : [
+          'https://fablab.voisilab.online',
+          'https://admin.fablab.voisilab.online',
+          'https://www.fablab.voisilab.online'
+        ];
+    
+    // Autoriser requêtes sans origin (mobile, Postman) + origines autorisées
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      logger.warn(`CORS bloqué pour: ${origin}`);
-      callback(new Error('Non autorisé par CORS'));
+      logger.warn(`CORS bloqué: ${origin}`);
+      callback(null, false); // Retourner false au lieu d'erreur
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  preflightContinue: false,
   optionsSuccessStatus: 204
 };
 
-logger.info(`CORS configuré pour: ${allowedOrigins.join(', ')}`);
+logger.info(`CORS: ${isDevelopment ? 'Mode permissif (dev)' : 'Liste blanche (prod)'}`);
+if (!isDevelopment && process.env.ALLOWED_ORIGINS) {
+  logger.info(`Origines autorisées: ${process.env.ALLOWED_ORIGINS}`);
+}
 
 app.use(cors(corsOptions));
 
