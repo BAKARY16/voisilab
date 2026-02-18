@@ -142,28 +142,37 @@ export const deleteReadNotifications = asyncHandler(async (req: Request, res: Re
 });
 
 /**
- * Créer une notification pour tous les admins
+ * Créer une notification pour tous les admins et superadmins
  */
 export const createForAllAdmins = async (
   type: string,
   title: string,
   message: string,
-  data?: any
+  link?: string
 ): Promise<void> => {
-  // Récupérer tous les utilisateurs admin
-  const [admins] = await pool.query<RowDataPacket[]>(
-    'SELECT id FROM users WHERE role = "admin"'
-  );
+  try {
+    // Récupérer tous les utilisateurs admin ET superadmin
+    const [admins] = await pool.query<RowDataPacket[]>(
+      'SELECT id FROM users WHERE role IN ("admin", "superadmin") AND active = TRUE'
+    );
 
-  // Créer une notification pour chaque admin
-  const promises = admins.map(admin => 
-    pool.query(
-      `INSERT INTO notifications (user_id, type, title, message, data)
-       VALUES (?, ?, ?, ?, ?)`,
-      [admin.id, type, title, message, data ? JSON.stringify(data) : null]
-    )
-  );
+    if (admins.length === 0) {
+      logger.warn(`Aucun admin trouvé pour la notification: ${title}`);
+      return;
+    }
 
-  await Promise.all(promises);
-  logger.info(`Notifications créées pour ${admins.length} administrateurs: ${title}`);
+    // Créer une notification pour chaque admin/superadmin
+    const promises = admins.map(admin =>
+      pool.query(
+        `INSERT INTO notifications (user_id, type, title, message, link)
+         VALUES (?, ?, ?, ?, ?)`,
+        [admin.id, type, title, message, link || null]
+      )
+    );
+
+    await Promise.all(promises);
+    logger.info(`Notifications créées pour ${admins.length} administrateur(s): ${title}`);
+  } catch (err) {
+    logger.error(`Erreur création notifications admins: ${err}`);
+  }
 };

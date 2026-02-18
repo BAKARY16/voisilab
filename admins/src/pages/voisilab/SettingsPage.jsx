@@ -1,20 +1,90 @@
 import { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton, Paper, Chip } from '@mui/material';
-import { EditOutlined, DeleteOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons';
+import {
+  Box, Grid, TextField, Button, Typography, Paper, Stack, Divider,
+  Alert, Tabs, Tab, CircularProgress, InputAdornment
+} from '@mui/material';
+import {
+  SaveOutlined, GlobalOutlined, FacebookOutlined, InstagramOutlined,
+  LinkedinOutlined, TwitterOutlined, YoutubeOutlined, MailOutlined,
+  PhoneOutlined, EnvironmentOutlined, FileTextOutlined, SearchOutlined
+} from '@ant-design/icons';
 import MainCard from 'components/MainCard';
 import { settingsService } from 'api/voisilab';
 
+// ─── Définition des sections et de leurs champs ──────────────────────────────
+
+const SECTIONS = [
+  {
+    id: 'general',
+    label: 'Général',
+    icon: <GlobalOutlined />,
+    category: 'general',
+    fields: [
+      { key: 'site_name', label: 'Nom du site', placeholder: 'VoISiLab', required: true },
+      { key: 'site_tagline', label: 'Slogan / Sous-titre', placeholder: 'Fablab de l\'UVCI' },
+      { key: 'contact_email', label: 'Email de contact', placeholder: 'contact@voisilab.ci', type: 'email',
+        icon: <MailOutlined style={{ color: '#bbb' }} /> },
+      { key: 'contact_phone', label: 'Téléphone', placeholder: '+225 07 00 00 00 00',
+        icon: <PhoneOutlined style={{ color: '#bbb' }} /> },
+      { key: 'address', label: 'Adresse', placeholder: 'Abidjan, Côte d\'Ivoire', multiline: true, rows: 2,
+        icon: <EnvironmentOutlined style={{ color: '#bbb' }} /> },
+    ]
+  },
+  {
+    id: 'footer',
+    label: 'Footer',
+    icon: <FileTextOutlined />,
+    category: 'footer',
+    fields: [
+      { key: 'footer_description', label: 'Description footer', placeholder: 'Courte présentation du FabLab...', multiline: true, rows: 3 },
+      { key: 'footer_copyright', label: 'Texte copyright', placeholder: '© 2025 VoISiLab. Tous droits réservés.' },
+      { key: 'footer_address', label: 'Adresse (footer)', placeholder: 'Abidjan, Côte d\'Ivoire' },
+      { key: 'footer_email', label: 'Email (footer)', placeholder: 'contact@voisilab.ci', type: 'email',
+        icon: <MailOutlined style={{ color: '#bbb' }} /> },
+      { key: 'footer_phone', label: 'Téléphone (footer)', placeholder: '+225 07 00 00 00 00',
+        icon: <PhoneOutlined style={{ color: '#bbb' }} /> },
+    ]
+  },
+  {
+    id: 'social',
+    label: 'Réseaux sociaux',
+    icon: <FacebookOutlined />,
+    category: 'social',
+    fields: [
+      { key: 'facebook_url', label: 'Facebook', placeholder: 'https://facebook.com/voisilab',
+        icon: <FacebookOutlined style={{ color: '#bbb' }} /> },
+      { key: 'instagram_url', label: 'Instagram', placeholder: 'https://instagram.com/voisilab',
+        icon: <InstagramOutlined style={{ color: '#bbb' }} /> },
+      { key: 'linkedin_url', label: 'LinkedIn', placeholder: 'https://linkedin.com/company/voisilab',
+        icon: <LinkedinOutlined style={{ color: '#bbb' }} /> },
+      { key: 'twitter_url', label: 'Twitter / X', placeholder: 'https://twitter.com/voisilab',
+        icon: <TwitterOutlined style={{ color: '#bbb' }} /> },
+      { key: 'youtube_url', label: 'YouTube', placeholder: 'https://youtube.com/@voisilab',
+        icon: <YoutubeOutlined style={{ color: '#bbb' }} /> },
+    ]
+  },
+  {
+    id: 'seo',
+    label: 'SEO',
+    icon: <SearchOutlined />,
+    category: 'seo',
+    fields: [
+      { key: 'meta_title', label: 'Meta title', placeholder: 'VoISiLab — FabLab de l\'UVCI' },
+      { key: 'meta_description', label: 'Meta description', placeholder: 'Découvrez le FabLab de l\'UVCI...', multiline: true, rows: 3 },
+      { key: 'google_analytics_id', label: 'Google Analytics ID', placeholder: 'G-XXXXXXXXXX' },
+    ]
+  }
+];
+
+// ─── Composant principal ─────────────────────────────────────────────────────
+
 export default function SettingsPage() {
-  const [settings, setSettings] = useState([]);
+  const [activeTab, setActiveTab] = useState(0);
+  const [values, setValues] = useState({});   // { key: value, ... }
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    key: '',
-    value: '',
-    description: '',
-    category: 'general'
-  });
-  const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => { loadSettings(); }, []);
 
@@ -22,156 +92,138 @@ export default function SettingsPage() {
     try {
       setLoading(true);
       const result = await settingsService.getAll();
-      setSettings(result.data || []);
-    } catch (error) {
-      console.error('Erreur:', error);
+      const map = {};
+      (result.data || []).forEach(s => { map[s.key] = s.value || ''; });
+      setValues(map);
+    } catch (e) {
+      setError('Impossible de charger les paramètres');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleChange = (key, val) => {
+    setValues(prev => ({ ...prev, [key]: val }));
+  };
+
   const handleSave = async () => {
-    try {
-      const dataToSave = {
-        ...formData,
-        value: typeof formData.value === 'string' ? formData.value : JSON.stringify(formData.value)
-      };
+    const section = SECTIONS[activeTab];
+    setError('');
+    setSuccess('');
+    setSaving(true);
 
-      if (editingId) {
-        await settingsService.update(editingId, dataToSave);
-      } else {
-        await settingsService.create(dataToSave);
-      }
-      setOpen(false);
-      loadSettings();
-      setFormData({ key: '', value: '', description: '', category: 'general' });
-      setEditingId(null);
-    } catch (error) {
-      console.error('Erreur:', error);
+    // Vérifier les champs requis
+    const missing = section.fields.filter(f => f.required && !values[f.key]?.trim());
+    if (missing.length > 0) {
+      setError(`Champ requis manquant : ${missing.map(f => f.label).join(', ')}`);
+      setSaving(false);
+      return;
+    }
+
+    try {
+      const settings = section.fields.map(f => ({
+        key: f.key,
+        value: values[f.key] || '',
+        description: f.label,
+        category: section.category
+      }));
+
+      await settingsService.bulkSave(settings);
+      setSuccess(`Section "${section.label}" enregistrée avec succès.`);
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (e) {
+      setError(e.message || 'Erreur lors de l\'enregistrement');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer ce paramètre?')) return;
-    try {
-      await settingsService.delete(id);
-      loadSettings();
-    } catch (error) {
-      console.error('Erreur:', error);
-    }
-  };
-
-  const getCategoryColor = (category) => {
-    const colors = {
-      general: 'primary',
-      email: 'info',
-      social: 'success',
-      seo: 'warning',
-      advanced: 'error'
-    };
-    return colors[category] || 'default';
-  };
+  const section = SECTIONS[activeTab];
 
   return (
-    <MainCard title="Paramètres du site">
-      <Button variant="contained" startIcon={<PlusOutlined />} onClick={() => setOpen(true)} sx={{ mb: 2 }}>Nouveau paramètre</Button>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Clé</TableCell>
-              <TableCell>Valeur</TableCell>
-              <TableCell>Catégorie</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? <TableRow><TableCell colSpan={5} align="center">Chargement...</TableCell></TableRow> : settings.map((setting) => (
-              <TableRow key={setting.id}>
-                <TableCell>
-                  <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <SettingOutlined />
-                    {setting.key}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {typeof setting.value === 'object' ? JSON.stringify(setting.value) : setting.value}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Chip label={setting.category || 'general'} color={getCategoryColor(setting.category)} size="small" />
-                </TableCell>
-                <TableCell>
-                  <div style={{ fontSize: '0.875rem', color: '#666', maxWidth: 250 }}>
-                    {setting.description || '-'}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <IconButton onClick={() => {
-                    setEditingId(setting.id);
-                    setFormData({
-                      ...setting,
-                      value: typeof setting.value === 'object' ? JSON.stringify(setting.value, null, 2) : setting.value
-                    });
-                    setOpen(true);
-                  }} size="small"><EditOutlined /></IconButton>
-                  <IconButton onClick={() => handleDelete(setting.id)} color="error" size="small"><DeleteOutlined /></IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+    <MainCard title={
+      <Typography variant="h4">Paramètres du site</Typography>
+    }>
+      {/* Feedback */}
+      {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
+      {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>{editingId ? 'Modifier le paramètre' : 'Créer un paramètre'}</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Clé"
-            value={formData.key}
-            onChange={(e) => setFormData({ ...formData, key: e.target.value })}
-            margin="normal"
-            required
-            disabled={!!editingId}
-            helperText="Identifiant unique du paramètre (ex: site_name, contact_email)"
-          />
-          <TextField
-            fullWidth
-            label="Valeur"
-            value={formData.value}
-            onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-            margin="normal"
-            multiline
-            rows={4}
-            required
-            helperText="Valeur du paramètre (peut être du texte ou du JSON)"
-          />
-          <TextField
-            fullWidth
-            label="Description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            margin="normal"
-            multiline
-            rows={2}
-          />
-          <TextField
-            fullWidth
-            label="Catégorie"
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            margin="normal"
-            helperText="Ex: general, email, social, seo, advanced"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Annuler</Button>
-          <Button variant="contained" onClick={handleSave}>Enregistrer</Button>
-        </DialogActions>
-      </Dialog>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems="flex-start">
+        {/* ── Navigation verticale ── */}
+        <Paper variant="outlined" sx={{ borderRadius: 1.5, minWidth: 180, flexShrink: 0 }}>
+          <Tabs
+            value={activeTab}
+            onChange={(_, v) => { setActiveTab(v); setError(''); setSuccess(''); }}
+            orientation="vertical"
+            sx={{
+              '& .MuiTab-root': {
+                alignItems: 'flex-start',
+                textAlign: 'left',
+                minHeight: 44,
+                px: 2,
+                py: 1,
+                fontSize: '0.82rem',
+                justifyContent: 'flex-start',
+                gap: 1
+              }
+            }}
+          >
+            {SECTIONS.map(s => (
+              <Tab key={s.id} icon={s.icon} label={s.label} iconPosition="start" />
+            ))}
+          </Tabs>
+        </Paper>
+
+        {/* ── Formulaire de la section active ── */}
+        <Box sx={{ flex: 1, width: '100%' }}>
+          {loading ? (
+            <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
+              <CircularProgress size={28} />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Chargement...</Typography>
+            </Stack>
+          ) : (
+            <Paper variant="outlined" sx={{ p: 3, borderRadius: 1.5 }}>
+              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 0.5 }}>
+                {section.label}
+              </Typography>
+              <Divider sx={{ mb: 2.5 }} />
+
+              <Grid container spacing={2.5}>
+                {section.fields.map(field => (
+                  <Grid item xs={12} sm={field.multiline ? 12 : 6} key={field.key}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label={field.label}
+                      placeholder={field.placeholder}
+                      type={field.type || 'text'}
+                      multiline={!!field.multiline}
+                      rows={field.rows || 1}
+                      value={values[field.key] || ''}
+                      onChange={e => handleChange(field.key, e.target.value)}
+                      required={!!field.required}
+                      InputProps={field.icon ? {
+                        startAdornment: <InputAdornment position="start">{field.icon}</InputAdornment>
+                      } : undefined}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+
+              <Stack direction="row" justifyContent="flex-end" sx={{ mt: 3 }}>
+                <Button
+                  variant="contained"
+                  startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <SaveOutlined />}
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? 'Enregistrement...' : 'Enregistrer'}
+                </Button>
+              </Stack>
+            </Paper>
+          )}
+        </Box>
+      </Stack>
     </MainCard>
   );
 }

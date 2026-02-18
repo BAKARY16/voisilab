@@ -3,21 +3,7 @@ import { pool } from '../config/database';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { asyncHandler, NotFoundError } from '../middlewares/errors';
 import logger from '../config/logger';
-
-// Helper function for creating notifications
-async function createNotificationHelper(
-  userId: string,
-  type: string,
-  title: string,
-  message: string,
-  link?: string
-): Promise<void> {
-  await pool.query(
-    `INSERT INTO notifications (user_id, type, title, message, link)
-     VALUES (?, ?, ?, ?, ?)`,
-    [userId, type, title, message, link || null]
-  );
-}
+import { createForAllAdmins } from './notificationsController';
 
 interface Equipment extends RowDataPacket {
   id: number;
@@ -205,21 +191,13 @@ export const createEquipment = asyncHandler(async (req: Request, res: Response) 
      category_color, gradient, order_index, active]
   );
 
-  // Créer une notification pour tous les admins
-  const [admins] = await pool.query<RowDataPacket[]>(
-    'SELECT id FROM users WHERE role = ?',
-    ['admin']
+  // Créer une notification pour tous les admins et superadmins
+  await createForAllAdmins(
+    'equipment',
+    'Nouvel équipement ajouté',
+    `L'équipement "${name}" (${category}) a été ajouté au catalogue`,
+    '/voisilab/equipment'
   );
-
-  for (const admin of admins) {
-    await createNotificationHelper(
-      admin.id.toString(),
-      'equipment',
-      'Nouvel équipement ajouté',
-      `L'équipement "${name}" (${category}) a été ajouté au catalogue`,
-      `/voisilab/equipment`
-    );
-  }
 
   logger.info(`Nouvel équipement créé: ${name}`);
 
@@ -264,11 +242,6 @@ export const updateEquipment = asyncHandler(async (req: Request, res: Response) 
 
   // Notification si changement de statut
   if (updateData.status) {
-    const [admins] = await pool.query<RowDataPacket[]>(
-      'SELECT id FROM users WHERE role = ?',
-      ['admin']
-    );
-
     const [equipment] = await pool.query<Equipment[]>(
       'SELECT name FROM equipment WHERE id = ?',
       [id]
@@ -280,15 +253,12 @@ export const updateEquipment = asyncHandler(async (req: Request, res: Response) 
       unavailable: 'indisponible'
     };
 
-    for (const admin of admins) {
-      await createNotificationHelper(
-        admin.id.toString(),
-        'equipment',
-        'Statut équipement modifié',
-        `${equipment[0].name} est maintenant ${statusLabels[updateData.status]}`,
-        `/voisilab/equipment`
-      );
-    }
+    await createForAllAdmins(
+      'equipment',
+      'Statut équipement modifié',
+      `${equipment[0].name} est maintenant ${statusLabels[updateData.status]}`,
+      '/voisilab/equipment'
+    );
   }
 
   logger.info(`Équipement modifié: ${id}`);
@@ -322,20 +292,12 @@ export const deleteEquipment = asyncHandler(async (req: Request, res: Response) 
   }
 
   // Notification de suppression
-  const [admins] = await pool.query<RowDataPacket[]>(
-    'SELECT id FROM users WHERE role = ?',
-    ['admin']
+  await createForAllAdmins(
+    'equipment',
+    'Équipement supprimé',
+    `L'équipement "${equipment[0].name}" a été supprimé du catalogue`,
+    '/voisilab/equipment'
   );
-
-  for (const admin of admins) {
-    await createNotificationHelper(
-      admin.id.toString(),
-      'equipment',
-      'Équipement supprimé',
-      `L'équipement "${equipment[0].name}" a été supprimé du catalogue`,
-      `/voisilab/equipment`
-    );
-  }
 
   logger.info(`Équipement supprimé: ${id}`);
 

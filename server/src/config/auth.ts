@@ -11,7 +11,7 @@ const BCRYPT_ROUNDS = 10;
 export interface TokenPayload {
   userId: string;
   email: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'superadmin';
 }
 
 /**

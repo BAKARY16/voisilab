@@ -59,10 +59,12 @@ export async function sendContactNotificationEmail(contactData: {
     logger.info(`✅ Email de notification envoyé pour le contact #${contactData.contactId} (${contactData.email})`);
     return true;
   } catch (error: any) {
-    logger.error('❌ Erreur lors de l\'envoi de l\'email de contact:', {
-      error: error.message,
+    const errStatus = error?.status;
+    const errText   = error?.text || error?.message || String(error);
+    logger.error(`\u274c Email contact non envoy\u00e9 [${errStatus || '?'}]: ${errText}`, {
       contactId: contactData.contactId,
-      email: contactData.email
+      email: contactData.email,
+      hint: errStatus === 403 ? 'Activez \'Allow non-browser\' sur dashboard.emailjs.com/admin/account' : ''
     });
     // Ne pas bloquer la création du contact si l'email échoue
     return false;
@@ -118,10 +120,12 @@ export async function sendProjectNotificationEmail(projectData: {
     logger.info(`✅ Email de notification envoyé pour le projet #${projectData.projectId} (${projectData.email})`);
     return true;
   } catch (error: any) {
-    logger.error('❌ Erreur lors de l\'envoi de l\'email de projet:', {
-      error: error.message,
+    const errStatus = error?.status;
+    const errText   = error?.text || error?.message || String(error);
+    logger.error(`\u274c Email projet non envoy\u00e9 [${errStatus || '?'}]: ${errText}`, {
       projectId: projectData.projectId,
-      email: projectData.email
+      email: projectData.email,
+      hint: errStatus === 403 ? 'Activez \'Allow non-browser\' sur dashboard.emailjs.com/admin/account' : ''
     });
     // Ne pas bloquer la création du projet si l'email échoue
     return false;

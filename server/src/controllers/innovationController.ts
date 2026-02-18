@@ -178,8 +178,8 @@ export const createInnovation = asyncHandler(async (req: Request, res: Response)
 
   logger.info(`Innovation créée: ${title} (ID: ${result.insertId})`);
 
-  // Créer notification pour tous les admins
-  const [admins] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE role = ?', ['admin']);
+  // Créer notification pour tous les admins et superadmins
+  const [admins] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE role IN (?, ?)', ['admin', 'superadmin']);
   for (const admin of admins) {
     await createNotification(
       admin.id,
@@ -225,24 +225,32 @@ export const updateInnovation = asyncHandler(async (req: Request, res: Response)
     throw new NotFoundError('Innovation non trouvée');
   }
 
-  const tagsJson = Array.isArray(tags) ? JSON.stringify(tags) : tags;
+  const tagsJson = Array.isArray(tags) ? JSON.stringify(tags) : (tags ?? existing[0].tags);
+
+  // image_url peut être explicitement vidé (null ou '') - ne pas utiliser COALESCE
+  const newImageUrl = image_url !== undefined ? (image_url || null) : existing[0].image_url;
 
   await pool.query(
     `UPDATE innovations SET 
       title = COALESCE(?, title),
       description = COALESCE(?, description),
-      category = COALESCE(?, category),
-      creator_name = COALESCE(?, creator_name),
-      creator_email = COALESCE(?, creator_email),
-      image_url = COALESCE(?, image_url),
-      tags = COALESCE(?, tags),
+      category = ?,
+      creator_name = ?,
+      creator_email = ?,
+      image_url = ?,
+      tags = ?,
       status = COALESCE(?, status),
       is_published = COALESCE(?, is_published),
       is_featured = COALESCE(?, is_featured),
       updated_at = NOW()
     WHERE id = ?`,
-    [title, description, category, creator_name, creator_email,
-     image_url, tagsJson, status, 
+    [title, description,
+     category !== undefined ? category : existing[0].category,
+     creator_name !== undefined ? creator_name : existing[0].creator_name,
+     creator_email !== undefined ? creator_email : existing[0].creator_email,
+     newImageUrl,
+     tagsJson,
+     status,
      is_published !== undefined ? (is_published ? 1 : 0) : null,
      is_featured !== undefined ? (is_featured ? 1 : 0) : null,
      id]
@@ -250,9 +258,12 @@ export const updateInnovation = asyncHandler(async (req: Request, res: Response)
 
   logger.info(`Innovation mise à jour: ${id}`);
 
+  const [updated] = await pool.query<RowDataPacket[]>('SELECT * FROM innovations WHERE id = ?', [id]);
+
   res.json({
     success: true,
-    message: 'Innovation mise à jour avec succès'
+    message: 'Innovation mise à jour avec succès',
+    data: updated[0]
   });
 });
 

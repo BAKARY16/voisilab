@@ -63,10 +63,10 @@ const MainRoutes = {
       path: 'innovations',
       element: <InnovationsPage />
     },
-    {
-      path: 'pages',
-      element: <PagesManagement />
-    },
+    // {
+    //   path: 'pages',
+    //   element: <PagesManagement />
+    // },
     {
       path: 'media',
       element: <MediaPage />

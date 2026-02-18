@@ -8,6 +8,7 @@ import { authenticate, requireAdmin } from '../middlewares/auth';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { createNotification } from '../controllers/notificationsController';
 import { sendProjectNotificationEmail } from '../utils/emailService';
+import logger from '../config/logger';
 
 const router = Router();
 
@@ -192,10 +193,10 @@ router.post(
         );
       }
 
-      // Créer une notification pour tous les admins
+      // Créer une notification pour tous les admins (admin ET superadmin)
       const [admins] = await pool.query<RowDataPacket[]>(
-        'SELECT id FROM users WHERE role = ?',
-        ['admin']
+        'SELECT id FROM users WHERE role IN (?, ?)',
+        ['admin', 'superadmin']
       );
 
       for (const admin of admins) {
@@ -204,11 +205,11 @@ router.post(
           'project',
           'Nouvelle soumission de projet',
           `${name} a soumis un projet: ${projectType}`,
-          `/voisilab/projects/${submissionId}`
+          `/voisilab/contacts`
         );
       }
 
-      // Envoyer une notification email à l'administrateur
+      // Envoyer une notification email à l'administrateur (non-bloquant)
       sendProjectNotificationEmail({
         name,
         email,
@@ -220,7 +221,7 @@ router.post(
         filesCount: filesJson.length,
         projectId: submissionId
       }).catch(err => {
-        console.error('Erreur envoi email de notification projet:', err);
+        logger.warn('⚠️  Email de notification projet non envoyé:', err?.text || err?.message || err);
       });
 
       res.status(201).json({

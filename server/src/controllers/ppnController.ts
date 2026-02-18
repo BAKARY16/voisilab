@@ -3,18 +3,7 @@ import pool from '../config/database';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import asyncHandler from 'express-async-handler';
 import { v4 as uuidv4 } from 'uuid';
-
-// Import notification helper
-const createNotification = async (userId: number, type: string, title: string, message: string, link: string) => {
-  try {
-    await pool.query(
-      `INSERT INTO notifications (user_id, type, title, message, link) VALUES (?, ?, ?, ?, ?)`,
-      [userId, type, title, message, link]
-    );
-  } catch (error) {
-    console.error('Erreur lors de la création de notification:', error);
-  }
-};
+import { createForAllAdmins } from './notificationsController';
 
 interface PPNLocation extends RowDataPacket {
   id: string;
@@ -99,21 +88,14 @@ export const createPpn = asyncHandler(async (req: Request, res: Response) => {
     [id, name, city, region, address, type, latitude, longitude, services, email, phone, manager, opening_year, status, image]
   );
 
-  // Créer une notification pour tous les admins
+  // Créer une notification pour tous les admins et superadmins
   try {
-    const [admins] = await pool.query<RowDataPacket[]>(
-      'SELECT id FROM users WHERE role = "admin"'
+    await createForAllAdmins(
+      'ppn',
+      'Nouveau PPN créé',
+      `Un nouveau point PPN "${name}" a été créé à ${city}`,
+      '/voisilab/ppn'
     );
-
-    for (const admin of admins) {
-      await createNotification(
-        admin.id,
-        'ppn',
-        'Nouveau PPN créé',
-        `Un nouveau point PPN "${name}" a été créé à ${city}`,
-        '/voisilab/ppn'
-      );
-    }
   } catch (error) {
     console.error('Erreur lors de la création des notifications:', error);
   }
@@ -176,21 +158,14 @@ export const updatePpn = asyncHandler(async (req: Request, res: Response) => {
     [name, city, region, address, type, latitude, longitude, services, email, phone, manager, opening_year, status, image, id]
   );
 
-  // Créer une notification pour tous les admins
+  // Créer une notification pour tous les admins et superadmins
   try {
-    const [admins] = await pool.query<RowDataPacket[]>(
-      'SELECT id FROM users WHERE role = "admin"'
+    await createForAllAdmins(
+      'ppn',
+      'PPN modifié',
+      `Le point PPN "${name || existing[0].name}" a été mis à jour`,
+      '/voisilab/ppn'
     );
-
-    for (const admin of admins) {
-      await createNotification(
-        admin.id,
-        'ppn',
-        'PPN modifié',
-        `Le point PPN "${name || existing[0].name}" a été mis à jour`,
-        '/voisilab/ppn'
-      );
-    }
   } catch (error) {
     console.error('Erreur lors de la création des notifications:', error);
   }
@@ -220,21 +195,14 @@ export const deletePpn = asyncHandler(async (req: Request, res: Response) => {
 
   await pool.query('DELETE FROM ppn_locations WHERE id = ?', [id]);
 
-  // Créer une notification pour tous les admins
+  // Créer une notification pour tous les admins et superadmins
   try {
-    const [admins] = await pool.query<RowDataPacket[]>(
-      'SELECT id FROM users WHERE role = "admin"'
+    await createForAllAdmins(
+      'ppn',
+      'PPN supprimé',
+      `Le point PPN "${ppnName}" a été supprimé`,
+      '/voisilab/ppn'
     );
-
-    for (const admin of admins) {
-      await createNotification(
-        admin.id,
-        'ppn',
-        'PPN supprimé',
-        `Le point PPN "${ppnName}" a été supprimé`,
-        '/voisilab/ppn'
-      );
-    }
   } catch (error) {
     console.error('Erreur lors de la création des notifications:', error);
   }

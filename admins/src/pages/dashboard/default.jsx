@@ -89,25 +89,18 @@ export default function DashboardDefault() {
     try {
       setLoading(true);
       
-      // Récupérer les données directement depuis les APIs qui fonctionnent
-      const [contactsResult, projectsResult] = await Promise.all([
-        contactsService.getAll({ limit: 50 }).catch(() => ({ data: { data: [] } })),
-        projectSubmissionsService.getAll({ limit: 50 }).catch(() => ({ data: { data: [] } }))
+      // Récupérer les données directement depuis les APIs
+      const [contactsResult, projectsResult, teamResult] = await Promise.all([
+        contactsService.getAll({ limit: 200 }).catch(() => null),
+        projectSubmissionsService.getAll({ limit: 200 }).catch(() => null),
+        teamService.getAll().catch(() => null)
       ]);
 
-      // Team: appel séparé avec gestion d'erreur robuste
-      let team = [];
-      try {
-        const teamResult = await teamService.getAll();
-        team = teamResult.data || [];
-      } catch (err) {
-        // Table team n'existe pas en production, on utilise des valeurs par défaut
-        console.warn('Team API non disponible, utilisation de valeurs par défaut');
-        team = [];
-      }
-
-      const contacts = contactsResult.data?.data || [];
-      const projects = projectsResult.data?.data || [];
+      // Le backend renvoie { success, data: [...], pagination }
+      // handleResponse retourne cet objet directement → accès via .data
+      const contacts = contactsResult?.data || [];
+      const projects = projectsResult?.data || [];
+      const team = teamResult?.data || [];
 
       // Calculer les stats manuellement
       const now = new Date();
@@ -375,7 +368,7 @@ export default function DashboardDefault() {
             </Typography>
             <Button 
               endIcon={<RightOutlined style={{ fontSize: 14 }} />}
-              onClick={() => navigate('/contacts')}
+              onClick={() => navigate('/voisilab/project-submissions')}
               sx={{ color: 'text.secondary', textTransform: 'none' }}
             >
               Voir tout
@@ -391,7 +384,7 @@ export default function DashboardDefault() {
               </Box>
             ) : (
               recent.projects.slice(0, 5).map((project) => (
-                <ActivityItem key={project.id} onClick={() => navigate('/contacts')}>
+                <ActivityItem key={project.id} onClick={() => navigate('/voisilab/project-submissions')}>
                   <StatusDot color={getStatusColor(project.status)} />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="body1" fontWeight={project.status === 'pending' ? 600 : 400} noWrap>

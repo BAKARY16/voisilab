@@ -212,6 +212,44 @@ export const ppnService = new PPNService()
 export const contactService = new ContactService()
 export const projectSubmissionService = new ProjectSubmissionService()
 
+/**
+ * Service Paramètres du site (public — pas d'auth requise)
+ * Retourne un objet clé/valeur de tous les paramètres publics.
+ */
+export interface SiteSettings {
+  site_name?: string
+  site_tagline?: string
+  contact_email?: string
+  contact_phone?: string
+  address?: string
+  footer_description?: string
+  footer_copyright?: string
+  footer_address?: string
+  footer_email?: string
+  footer_phone?: string
+  facebook_url?: string
+  instagram_url?: string
+  linkedin_url?: string
+  twitter_url?: string
+  youtube_url?: string
+  meta_title?: string
+  meta_description?: string
+  google_analytics_id?: string
+}
+
+export async function getSiteSettings(): Promise<SiteSettings> {
+  try {
+    const response = await fetch(`${API_URL}/api/settings/public`, {
+      cache: 'no-store',
+    })
+    if (!response.ok) return {}
+    const result = await response.json()
+    return result.data || {}
+  } catch {
+    return {}
+  }
+}
+
 // Export par défaut
 export default {
   team: teamService,

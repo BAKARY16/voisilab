@@ -3,7 +3,7 @@ import { pool } from '../config/database';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { asyncHandler, NotFoundError } from '../middlewares/errors';
 import logger from '../config/logger';
-import { createNotification } from './notificationsController';
+import { createForAllAdmins } from './notificationsController';
 
 /**
  * Generate slug from title
@@ -94,7 +94,7 @@ export const getAllBlogPosts = asyncHandler(async (req: Request, res: Response) 
       total,
       page: pageNum,
       limit: limitNum,
-      totalPages: Math.ceil(total / (limit as number))
+      totalPages: Math.ceil(total / limitNum)
     }
   });
 });
@@ -193,7 +193,7 @@ export const createBlogPost = asyncHandler(async (req: Request, res: Response) =
   const slug = generateSlug(title);
 
   // Check if slug exists
-  const [existing] = await pool.query('SELECT id FROM blog_posts WHERE slug = ?', [slug]);
+  const [existing] = await pool.query<RowDataPacket[]>('SELECT id FROM blog_posts WHERE slug = ?', [slug]);
   if (existing.length > 0) {
     throw new Error('Un article avec ce titre existe déjà');
   }
@@ -212,17 +212,13 @@ export const createBlogPost = asyncHandler(async (req: Request, res: Response) =
   // Get the inserted blog post
   const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM blog_posts WHERE id = ?', [result.insertId]);
 
-  // Créer une notification pour tous les admins
-  const [admins] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE role = ?', ['admin']);
-  for (const admin of admins) {
-    await createNotification(
-      admin.id,
-      'blog',
-      status === 'published' ? 'Nouvelle actualité publiée' : 'Nouveau brouillon créé',
-      `${title}`,
-      `/voisilab/blog`
-    );
-  }
+  // Créer une notification pour tous les admins et superadmins
+  await createForAllAdmins(
+    'blog',
+    status === 'published' ? 'Nouvelle actualité publiée' : 'Nouveau brouillon créé',
+    title,
+    '/voisilab/blog'
+  );
 
   logger.info(`Nouvel article de blog créé: ${title} par ${authorId}`);
 
@@ -252,7 +248,7 @@ export const updateBlogPost = asyncHandler(async (req: Request, res: Response) =
   } = req.body;
 
   // Get current post
-  const [current] = await pool.query('SELECT status, slug FROM blog_posts WHERE id = ?', [id]);
+  const [current] = await pool.query<RowDataPacket[]>('SELECT status, slug FROM blog_posts WHERE id = ?', [id]);
   if (current.length === 0) {
     throw new NotFoundError('Article non trouvé');
   }
@@ -261,7 +257,7 @@ export const updateBlogPost = asyncHandler(async (req: Request, res: Response) =
   if (title) {
     const newSlug = generateSlug(title);
     if (newSlug !== slug) {
-      const [existing] = await pool.query('SELECT id FROM blog_posts WHERE slug = ? AND id != ?', [newSlug, id]);
+      const [existing] = await pool.query<RowDataPacket[]>('SELECT id FROM blog_posts WHERE slug = ? AND id != ?', [newSlug, id]);
       if (existing.length > 0) {
         throw new Error('Un article avec ce titre existe déjà');
       }
@@ -297,20 +293,10 @@ export const updateBlogPost = asyncHandler(async (req: Request, res: Response) =
   // Get updated post
   const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM blog_posts WHERE id = ?', [id]);
 
-  // Créer une notification pour tous les admins
-  const [admins] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE role = ?', ['admin']);
+  // Créer une notification pour tous les admins et superadmins
   const notificationTitle = publishedAt ? 'Actualité publiée' : 'Actualité modifiée';
   const notificationMessage = publishedAt ? `${title || rows[0].title} a été publiée` : `${title || rows[0].title} a été modifiée`;
-  
-  for (const admin of admins) {
-    await createNotification(
-      admin.id,
-      'blog',
-      notificationTitle,
-      notificationMessage,
-      `/voisilab/blog`
-    );
-  }
+  await createForAllAdmins('blog', notificationTitle, notificationMessage, '/voisilab/blog');
 
   logger.info(`Article de blog mis à jour: ${id}`);
 
@@ -323,8 +309,8 @@ export const updateBlogPost = asyncHandler(async (req: Request, res: Response) =
 /**
  * Delete blog post
  */
-export const deleteBlogPost = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const deleteBlogPost = asyncHandler(async (_req: Request, res: Response) => {
+  const { id } = _req.params;
 
   // Récupérer le titre avant suppression
   const [post] = await pool.query<RowDataPacket[]>('SELECT title FROM blog_posts WHERE id = ?', [id]);
@@ -339,17 +325,8 @@ export const deleteBlogPost = asyncHandler(async (req: Request, res: Response) =
     throw new NotFoundError('Article non trouvé');
   }
 
-  // Créer une notification pour tous les admins
-  const [admins] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE role = ?', ['admin']);
-  for (const admin of admins) {
-    await createNotification(
-      admin.id,
-      'blog',
-      'Actualité supprimée',
-      `${postTitle} a été supprimée`,
-      `/voisilab/blog`
-    );
-  }
+  // Créer une notification pour tous les admins et superadmins
+  await createForAllAdmins('blog', 'Actualité supprimée', `${postTitle} a été supprimée`, '/voisilab/blog');
 
   logger.info(`Article de blog supprimé: ${id}`);
 

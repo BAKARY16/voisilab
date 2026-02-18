@@ -3,6 +3,7 @@ import { pool } from '../config/database';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { asyncHandler, NotFoundError } from '../middlewares/errors';
 import logger from '../config/logger';
+import { createForAllAdmins } from './notificationsController';
 
 /**
  * Convertir une date ISO 8601 en format MySQL DATETIME
@@ -24,7 +25,7 @@ const formatDateForMySQL = (isoDate: string | null | undefined): string | null =
  * Get all workshops (admin) with pagination and filters
  */
 export const getAllWorkshops = asyncHandler(async (req: Request, res: Response) => {
-  const { status, type, category, page = 1, limit = 20, search } = req.query;
+  const { status, category, page = 1, limit = 20, search } = req.query;
   const offset = (Number(page) - 1) * Number(limit);
 
   let query = 'SELECT * FROM workshops WHERE 1=1';
@@ -33,11 +34,6 @@ export const getAllWorkshops = asyncHandler(async (req: Request, res: Response) 
   if (status) {
     query += ' AND status = ?';
     params.push(status);
-  }
-
-  if (type) {
-    query += ' AND type = ?';
-    params.push(type);
   }
 
   if (category) {
@@ -55,18 +51,13 @@ export const getAllWorkshops = asyncHandler(async (req: Request, res: Response) 
 
   const [rows] = await pool.query<RowDataPacket[]>(query, params);
 
-  // Get total count
+  // Compter le total
   let countQuery = 'SELECT COUNT(*) as total FROM workshops WHERE 1=1';
   const countParams: any[] = [];
 
   if (status) {
     countQuery += ' AND status = ?';
     countParams.push(status);
-  }
-
-  if (type) {
-    countQuery += ' AND type = ?';
-    countParams.push(type);
   }
 
   if (category) {
@@ -97,19 +88,14 @@ export const getAllWorkshops = asyncHandler(async (req: Request, res: Response) 
  * Get published workshops (public)
  */
 export const getPublishedWorkshops = asyncHandler(async (req: Request, res: Response) => {
-  const { type, limit = 20 } = req.query;
+  const { limit = 20 } = req.query;
 
   let query = `
     SELECT * FROM workshops 
-    WHERE is_published = TRUE 
+    WHERE active = TRUE 
     AND status IN ('upcoming', 'ongoing')
   `;
   const params: any[] = [];
-
-  if (type && type !== 'all') {
-    query += ' AND type = ?';
-    params.push(type);
-  }
 
   query += ' ORDER BY date ASC LIMIT ?';
   params.push(Number(limit));
@@ -140,7 +126,7 @@ export const getPublicWorkshopById = asyncHandler(async (req: Request, res: Resp
   const { id } = req.params;
 
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT * FROM workshops WHERE id = ? AND is_published = TRUE',
+    'SELECT * FROM workshops WHERE id = ? AND active = TRUE',
     [id]
   );
 
@@ -169,59 +155,74 @@ export const getWorkshopById = asyncHandler(async (req: Request, res: Response) 
   res.json({ data: rows[0] });
 });
 
+// Normalise le champ level vers les valeurs ENUM de la table
+const normalizeLevel = (l: string | undefined): string => {
+  const map: Record<string, string> = {
+    'Débutant': 'debutant', 'débutant': 'debutant', 'debutant': 'debutant',
+    'Intermédiaire': 'intermediaire', 'intermédiaire': 'intermediaire', 'intermediaire': 'intermediaire',
+    'Avancé': 'avance', 'avancé': 'avance', 'avance': 'avance',
+    'Tous niveaux': 'debutant', 'tous_niveaux': 'debutant'
+  };
+  return map[l ?? ''] ?? l ?? 'debutant';
+};
+
+// Génère un slug unique à partir du titre
+const generateSlug = (title: string): string => {
+  return title.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '').trim()
+    .replace(/\s+/g, '-').replace(/-+/g, '-')
+    + '-' + Date.now();
+};
+
 /**
  * Create workshop
  */
 export const createWorkshop = asyncHandler(async (req: Request, res: Response) => {
   const {
     title,
-    description,
-    type = 'formation',
+    description = '',
     date,
-    time,
-    duration,
-    location,
-    max_participants = 10,
-    level = 'Débutant',
-    image_url,
+    location   = '',
+    capacity   = 20,
+    level,
+    image,
     category,
-    price = 0,
+    price      = 0,
     instructor,
-    prerequisites = [],
-    what_you_learn = [],
-    status = 'upcoming',
-    is_published = false
+    status     = 'upcoming',
+    active     = false,
+    // Aliases tolérés depuis l'ancien frontend
+    is_published,
+    max_participants,
+    image_url
   } = req.body;
 
-  // Convertir la date ISO en format MySQL
-  const mysqlDate = formatDateForMySQL(date);
+  const slug        = generateSlug(title);
+  const finalActive = active !== undefined ? active : (is_published ?? false);
+  const finalCap    = capacity !== undefined ? capacity : (max_participants ?? 20);
+  const finalImage  = image ?? image_url ?? null;
+  const mysqlDate   = formatDateForMySQL(date) ||
+    new Date().toISOString().slice(0, 19).replace('T', ' ');
 
   const [result] = await pool.query<ResultSetHeader>(
-    `INSERT INTO workshops (
-      title, description, type, date, time, duration, location, 
-      max_participants, current_participants, level, image_url, 
-      category, price, instructor, prerequisites, what_you_learn, 
-      status, is_published, is_read
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE)`,
+    `INSERT INTO workshops
+      (title, slug, description, date, location, capacity, price, image, instructor, level, category, status, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      title, description, type, mysqlDate, time, duration, location,
-      max_participants, level, image_url, category, price, instructor,
-      JSON.stringify(prerequisites), JSON.stringify(what_you_learn),
-      status, is_published
+      title, slug, description, mysqlDate, location,
+      Number(finalCap), Number(price), finalImage, instructor || null,
+      normalizeLevel(level), category || null, status, finalActive ? 1 : 0
     ]
   );
 
-  // Create notification for new workshop
+  // Créer une notification pour tous les admins et superadmins
   try {
-    await pool.query(
-      `INSERT INTO notifications (type, title, message, link, is_read, data) 
-       VALUES ('workshop', ?, ?, ?, FALSE, ?)`,
-      [
-        `Nouvel atelier: ${title}`,
-        `Un nouvel atelier "${title}" a été créé`,
-        `/voisilab/workshops/${result.insertId}`,
-        JSON.stringify({ workshop_id: result.insertId, type })
-      ]
+    await createForAllAdmins(
+      'workshop',
+      `Nouvel atelier: ${title}`,
+      `Un nouvel atelier "${title}" a été créé`,
+      `/voisilab/workshops`
     );
   } catch (e) {
     logger.warn('Could not create notification for workshop');
@@ -246,25 +247,7 @@ export const createWorkshop = asyncHandler(async (req: Request, res: Response) =
  */
 export const updateWorkshop = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const {
-    title,
-    description,
-    type,
-    date,
-    time,
-    duration,
-    location,
-    max_participants,
-    level,
-    image_url,
-    category,
-    price,
-    instructor,
-    prerequisites,
-    what_you_learn,
-    status,
-    is_published
-  } = req.body;
+  const body = req.body;
 
   // Check if workshop exists
   const [existing] = await pool.query<RowDataPacket[]>(
@@ -276,27 +259,27 @@ export const updateWorkshop = asyncHandler(async (req: Request, res: Response) =
     throw new NotFoundError('Atelier non trouvé');
   }
 
-  // Build dynamic update query
+  // Build dynamic update query — uniquement les colonnes existantes
   const updates: string[] = [];
-  const params: any[] = [];
+  const params: any[]     = [];
 
-  if (title !== undefined) { updates.push('title = ?'); params.push(title); }
-  if (description !== undefined) { updates.push('description = ?'); params.push(description); }
-  if (type !== undefined) { updates.push('type = ?'); params.push(type); }
-  if (date !== undefined) { updates.push('date = ?'); params.push(formatDateForMySQL(date)); }
-  if (time !== undefined) { updates.push('time = ?'); params.push(time); }
-  if (duration !== undefined) { updates.push('duration = ?'); params.push(duration); }
-  if (location !== undefined) { updates.push('location = ?'); params.push(location); }
-  if (max_participants !== undefined) { updates.push('max_participants = ?'); params.push(max_participants); }
-  if (level !== undefined) { updates.push('level = ?'); params.push(level); }
-  if (image_url !== undefined) { updates.push('image_url = ?'); params.push(image_url); }
-  if (category !== undefined) { updates.push('category = ?'); params.push(category); }
-  if (price !== undefined) { updates.push('price = ?'); params.push(price); }
-  if (instructor !== undefined) { updates.push('instructor = ?'); params.push(instructor); }
-  if (prerequisites !== undefined) { updates.push('prerequisites = ?'); params.push(JSON.stringify(prerequisites)); }
-  if (what_you_learn !== undefined) { updates.push('what_you_learn = ?'); params.push(JSON.stringify(what_you_learn)); }
-  if (status !== undefined) { updates.push('status = ?'); params.push(status); }
-  if (is_published !== undefined) { updates.push('is_published = ?'); params.push(is_published); }
+  if (body.title       !== undefined) { updates.push('title = ?');       params.push(body.title); }
+  if (body.description !== undefined) { updates.push('description = ?'); params.push(body.description); }
+  if (body.date        !== undefined) { updates.push('date = ?');        params.push(formatDateForMySQL(body.date)); }
+  if (body.location    !== undefined) { updates.push('location = ?');    params.push(body.location); }
+  if (body.category    !== undefined) { updates.push('category = ?');    params.push(body.category); }
+  if (body.price       !== undefined) { updates.push('price = ?');       params.push(Number(body.price)); }
+  if (body.instructor  !== undefined) { updates.push('instructor = ?');  params.push(body.instructor); }
+  if (body.status      !== undefined) { updates.push('status = ?');      params.push(body.status); }
+  if (body.image       !== undefined) { updates.push('image = ?');       params.push(body.image); }
+  // Gestion double nom: capacity / max_participants
+  const cap = body.capacity ?? body.max_participants;
+  if (cap !== undefined) { updates.push('capacity = ?'); params.push(Number(cap)); }
+  // Gestion double nom: active / is_published
+  const pub = body.active ?? body.is_published;
+  if (pub !== undefined) { updates.push('active = ?'); params.push(pub ? 1 : 0); }
+  // level : normalisation vers ENUM DB
+  if (body.level !== undefined) { updates.push('level = ?'); params.push(normalizeLevel(body.level)); }
 
   if (updates.length === 0) {
     return res.status(400).json({ error: 'Aucune modification fournie' });
@@ -381,7 +364,7 @@ export const registerForWorkshop = asyncHandler(async (req: Request, res: Respon
 
   const workshopData = workshop[0];
   
-  if (workshopData.current_participants >= workshopData.max_participants) {
+  if (workshopData.registered >= workshopData.capacity) {
     return res.status(400).json({ error: 'Cet atelier est complet' });
   }
 
@@ -402,23 +385,19 @@ export const registerForWorkshop = asyncHandler(async (req: Request, res: Respon
     [id, name, email, phone, message]
   );
 
-  // Update current participants count
+  // Incrémenter le compteur d'inscrits
   await pool.query(
-    'UPDATE workshops SET current_participants = current_participants + 1 WHERE id = ?',
+    'UPDATE workshops SET registered = registered + 1 WHERE id = ?',
     [id]
   );
 
-  // Create notification
+  // Créer une notification pour tous les admins et superadmins
   try {
-    await pool.query(
-      `INSERT INTO notifications (type, title, message, link, is_read, data)
-       VALUES ('workshop_registration', ?, ?, ?, FALSE, ?)`,
-      [
-        `Nouvelle inscription: ${workshopData.title}`,
-        `${name} s'est inscrit à l'atelier "${workshopData.title}"`,
-        `/voisilab/workshops/${id}/registrations`,
-        JSON.stringify({ workshop_id: id, registration_id: result.insertId, name, email })
-      ]
+    await createForAllAdmins(
+      'workshop',
+      `Nouvelle inscription: ${workshopData.title}`,
+      `${name} s'est inscrit à l'atelier "${workshopData.title}"`,
+      `/voisilab/workshops`
     );
   } catch (e) {
     logger.warn('Could not create notification for registration');

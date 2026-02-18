@@ -93,16 +93,27 @@ export const createService = asyncHandler(async (req: Request, res: Response) =>
 
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO services (
-      title, description, icon, features, price_info,
-      image_url, order_index, active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [title, description, icon, JSON.stringify(features || []), price_info, image_url, order_index, active]
+      title, name, description, icon, features, price_info,
+      image_url, image, order_index, active
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      title,
+      title, // name = title
+      description,
+      icon,
+      JSON.stringify(features || []),
+      price_info || null,
+      image_url || null,
+      image_url || null, // image = image_url
+      parseInt(String(order_index)) || 0,
+      active ? 1 : 0
+    ]
   );
 
   // Récupérer le service créé
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT * FROM services WHERE title = ? ORDER BY created_at DESC LIMIT 1',
-    [title]
+    'SELECT * FROM services WHERE id = ?',
+    [(result as ResultSetHeader).insertId]
   );
 
   logger.info(`Nouveau service créé: ${title}`);
@@ -118,29 +129,36 @@ export const createService = asyncHandler(async (req: Request, res: Response) =>
  */
 export const updateService = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const {
-    title,
-    description,
-    icon,
-    features,
-    price_info,
-    image_url,
-    order_index,
-    active
-  } = req.body;
 
+  const updates: string[] = [];
+  const values: any[] = [];
+
+  const body = req.body;
+
+  // Mapper les champs frontend vers les colonnes BDD
+  if (body.title !== undefined) {
+    updates.push('title = ?', 'name = ?');
+    values.push(body.title, body.title);
+  }
+  if (body.description !== undefined) { updates.push('description = ?'); values.push(body.description || null); }
+  if (body.icon !== undefined) { updates.push('icon = ?'); values.push(body.icon || null); }
+  if (body.features !== undefined) { updates.push('features = ?'); values.push(JSON.stringify(body.features || [])); }
+  if (body.price_info !== undefined) { updates.push('price_info = ?'); values.push(body.price_info || null); }
+  if (body.image_url !== undefined) {
+    updates.push('image_url = ?', 'image = ?');
+    values.push(body.image_url || null, body.image_url || null);
+  }
+  if (body.order_index !== undefined) { updates.push('order_index = ?'); values.push(parseInt(String(body.order_index)) || 0); }
+  if (body.active !== undefined) { updates.push('active = ?'); values.push(body.active ? 1 : 0); }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ success: false, message: 'Aucune donnée à mettre à jour' });
+  }
+
+  values.push(id);
   const [result] = await pool.query<ResultSetHeader>(
-    `UPDATE services SET
-      title = COALESCE(?, title),
-      description = COALESCE(?, description),
-      icon = COALESCE(?, icon),
-      features = COALESCE(?, features),
-      price_info = COALESCE(?, price_info),
-      image_url = COALESCE(?, image_url),
-      order_index = COALESCE(?, order_index),
-      active = COALESCE(?, active)
-    WHERE id = ?`,
-    [title, description, icon, features ? JSON.stringify(features) : null, price_info, image_url, order_index, active, id]
+    `UPDATE services SET ${updates.join(', ')} WHERE id = ?`,
+    values
   );
 
   if (result.affectedRows === 0) {

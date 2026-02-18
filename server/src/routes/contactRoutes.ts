@@ -4,6 +4,8 @@ import pool from '../config/database';
 import { authenticate, requireAdmin } from '../middlewares/auth';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { createNotification } from '../controllers/notificationsController';
+import { sendContactNotificationEmail } from '../utils/emailService';
+import logger from '../config/logger';
 
 const router = Router();
 
@@ -63,10 +65,10 @@ router.post(
 
       console.log('Message inséré avec succès, ID:', result.insertId);
 
-      // Créer une notification pour tous les admins
+      // Créer une notification pour tous les admins (admin ET superadmin)
       const [admins] = await pool.query<RowDataPacket[]>(
-        'SELECT id FROM users WHERE role = ?',
-        ['admin']
+        'SELECT id FROM users WHERE role IN (?, ?)',
+        ['admin', 'superadmin']
       );
 
       for (const admin of admins) {
@@ -74,10 +76,22 @@ router.post(
           admin.id.toString(),
           'contact',
           'Nouveau message de contact',
-          `${firstname} ${lastname} a envoyé un message: ${subject}`,
-          `/voisilab/contacts/${result.insertId}`
+          `${firstname} ${lastname} a envoyé un message : ${subject}`,
+          `/contacts`
         );
       }
+
+      // Envoyer la notification EmailJS (non-bloquant)
+      sendContactNotificationEmail({
+        name: `${firstname} ${lastname}`,
+        email,
+        phone,
+        subject,
+        message,
+        contactId: result.insertId
+      }).catch(err => {
+        logger.warn('⚠️  Email de notification contact non envoyé:', err?.text || err?.message || err);
+      });
 
       res.status(201).json({
         success: true,

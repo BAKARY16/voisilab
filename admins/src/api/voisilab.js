@@ -1,5 +1,5 @@
 // API Configuration
-const API_URL = 'https://api.fablab.voisilab.online';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3500';
 
 
 // Migration from localStorage to sessionStorage (cleanup at startup)
@@ -505,8 +505,51 @@ export const usersService = new ApiClient('users');
 // Pages Service (for dynamic pages management)
 export const pagesService = new ApiClient('pages');
 
-// Settings Service
-export const settingsService = new ApiClient('settings');
+// Settings Service — utilise `key` comme identifiant (pas `id`)
+export const settingsService = {
+  // Récupère tous les paramètres (admin)
+  async getAll(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    const url = queryString ? `${API_URL}/api/settings?${queryString}` : `${API_URL}/api/settings`;
+    const response = await fetch(url, { headers: getAuthHeaders() });
+    return handleResponse(response);
+  },
+
+  // Récupère les paramètres publics (sans auth, pour le front)
+  async getPublic() {
+    const response = await fetch(`${API_URL}/api/settings/public`);
+    return handleResponse(response);
+  },
+
+  // Créer ou mettre à jour un seul paramètre (upsert)
+  async upsert(key, value, description = '', category = 'general') {
+    const response = await fetch(`${API_URL}/api/settings`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ key, value, description, category })
+    });
+    return handleResponse(response);
+  },
+
+  // Mettre à jour plusieurs paramètres en une seule requête
+  async bulkSave(settings) {
+    const response = await fetch(`${API_URL}/api/settings/bulk`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ settings })
+    });
+    return handleResponse(response);
+  },
+
+  // Supprimer un paramètre par sa clé
+  async delete(key) {
+    const response = await fetch(`${API_URL}/api/settings/${key}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+};
 
 // Stats Service
 export const statsService = {

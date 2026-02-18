@@ -23,24 +23,24 @@ const router = Router();
 // Validation rules
 const createWorkshopValidation = [
   body('title').trim().notEmpty().withMessage('Titre requis'),
-  body('description').optional().trim(),
-  body('date').optional().isISO8601().withMessage('Date invalide'),
-  body('location').optional().trim(),
-  body('max_participants').optional().toInt().isInt({ min: 1 }).withMessage('Nombre de participants doit être positif'),
-  body('price').optional().toFloat(),
-  body('type').optional().isIn(['formation', 'atelier', 'evenement']).withMessage('Type invalide'),
-  body('level').optional().isIn(['Débutant', 'Intermédiaire', 'Avancé', 'Tous niveaux']).withMessage('Niveau invalide'),
-  body('status').optional().isIn(['upcoming', 'ongoing', 'completed', 'cancelled']).withMessage('Statut invalide')
+  body('description').optional({ nullable: true }).trim(),
+  body('date').optional({ nullable: true }).isISO8601().withMessage('Date invalide'),
+  body('location').optional({ nullable: true }).trim(),
+  body('capacity').optional({ nullable: true }).toInt().isInt({ min: 1 }).withMessage('Nombre de places doit être positif'),
+  body('price').optional({ nullable: true }).toFloat(),
+  body('level').optional({ nullable: true }).isIn(['debutant', 'intermediaire', 'avance', 'Débutant', 'Intermédiaire', 'Avancé', 'Tous niveaux']).withMessage('Niveau invalide'),
+  body('status').optional({ nullable: true }).isIn(['upcoming', 'ongoing', 'completed', 'cancelled']).withMessage('Statut invalide'),
+  body('active').optional({ nullable: true }).isBoolean()
 ];
 
 const updateWorkshopValidation = [
-  body('title').optional().trim().notEmpty().withMessage('Titre ne peut pas être vide'),
-  body('date').optional().isISO8601().withMessage('Date invalide'),
-  body('max_participants').optional().toInt().isInt({ min: 1 }).withMessage('Nombre de participants doit être positif'),
-  body('price').optional().toFloat(),
-  body('type').optional().isIn(['formation', 'atelier', 'evenement']).withMessage('Type invalide'),
-  body('level').optional().isIn(['Débutant', 'Intermédiaire', 'Avancé', 'Tous niveaux']).withMessage('Niveau invalide'),
-  body('status').optional().isIn(['upcoming', 'ongoing', 'completed', 'cancelled']).withMessage('Statut invalide')
+  body('title').optional({ nullable: true }).trim().notEmpty().withMessage('Titre ne peut pas être vide'),
+  body('date').optional({ nullable: true }).isISO8601().withMessage('Date invalide'),
+  body('capacity').optional({ nullable: true }).toInt().isInt({ min: 1 }).withMessage('Nombre de places doit être positif'),
+  body('price').optional({ nullable: true }).toFloat(),
+  body('level').optional({ nullable: true }).isIn(['debutant', 'intermediaire', 'avance', 'Débutant', 'Intermédiaire', 'Avancé', 'Tous niveaux']).withMessage('Niveau invalide'),
+  body('status').optional({ nullable: true }).isIn(['upcoming', 'ongoing', 'completed', 'cancelled']).withMessage('Statut invalide'),
+  body('active').optional({ nullable: true }).isBoolean()
 ];
 
 const registerWorkshopValidation = [

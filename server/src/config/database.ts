@@ -15,7 +15,8 @@ const pool = mysql.createPool({
   connectionLimit: 20,
   queueLimit: 0,
   enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
+  keepAliveInitialDelay: 10000, // ping toutes les 10s pour éviter ECONNRESET
+  connectTimeout: 20000,
 });
 
 // Test initial de connexion (non-bloquant)

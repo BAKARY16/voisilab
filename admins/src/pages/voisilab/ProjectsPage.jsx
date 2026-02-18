@@ -3,22 +3,47 @@ import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   IconButton, Chip, Paper, Select, MenuItem, FormControl, InputLabel,
-  Typography, Grid, Divider, Tabs, Tab, Menu, CircularProgress
+  Typography, Grid, Divider, Tabs, Tab, Menu, CircularProgress, Stack, Avatar
 } from '@mui/material';
 import {
   DeleteOutlined, EyeOutlined, DownloadOutlined, CloseOutlined,
-  CheckOutlined, MoreOutlined, ReloadOutlined
+  CheckOutlined, MoreOutlined, ReloadOutlined,
+  UserOutlined, MailOutlined, PhoneOutlined,
+  ProjectOutlined, DollarOutlined, ScheduleOutlined,
+  PaperClipOutlined, EditOutlined
 } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
 import { projectSubmissionsService } from 'api/voisilab';
 
 const STATUS_LABELS = {
-  pending: 'En attente',
+  pending:   'En attente',
   reviewing: 'En cours',
-  approved: 'Approuvé',
-  rejected: 'Rejeté',
-  archived: 'Archivé'
+  approved:  'Approuvé',
+  rejected:  'Rejeté',
+  archived:  'Archivé'
 };
+
+const STATUS_COLORS = {
+  pending:   'warning',
+  reviewing: 'info',
+  approved:  'success',
+  rejected:  'error',
+  archived:  'default'
+};
+
+// Ligne d'info compacte avec icône
+function InfoRow({ icon, label, value }) {
+  if (!value) return null;
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 0.75 }}>
+      <Box sx={{ color: 'text.disabled', mt: 0.1, fontSize: '14px' }}>{icon}</Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="caption" color="text.secondary" display="block">{label}</Typography>
+        <Typography variant="body2">{value}</Typography>
+      </Box>
+    </Box>
+  );
+}
 
 function ProjectDetailDialog({ submission, open, onClose, onStatusChange, onDownloadFile }) {
   const [newStatus, setNewStatus] = useState('');
@@ -45,66 +70,144 @@ function ProjectDetailDialog({ submission, open, onClose, onStatusChange, onDown
   };
 
   const files = submission.files || [];
+  const initials = submission.name
+    ? submission.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+    : '?';
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-        <Typography variant="h6">Projet #{submission.id}</Typography>
-        <IconButton onClick={onClose} size="small"><CloseOutlined /></IconButton>
+      {/* En-tête */}
+      <DialogTitle sx={{ p: 0 }}>
+        <Box sx={{ px: 3, py: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'primary.lighter', color: 'primary.main', fontWeight: 600, fontSize: '0.85rem' }}>
+              {initials}
+            </Avatar>
+            <Box>
+              <Typography variant="h6" lineHeight={1.2}>{submission.name}</Typography>
+              <Typography variant="caption" color="text.secondary">Dossier {submission.id}</Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Chip
+              label={STATUS_LABELS[submission.status] || submission.status}
+              color={STATUS_COLORS[submission.status] || 'default'}
+              size="small"
+              variant="outlined"
+            />
+            <IconButton onClick={onClose} size="small"><CloseOutlined /></IconButton>
+          </Box>
+        </Box>
       </DialogTitle>
-      <DialogContent dividers>
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <Typography variant="caption" color="text.secondary">Porteur</Typography>
-            <Typography variant="body1">{submission.name}</Typography>
-          </Grid>
-          <Grid item xs={6}>
-            <Typography variant="caption" color="text.secondary">Email</Typography>
-            <Typography variant="body2">{submission.email}</Typography>
-          </Grid>
-          <Grid item xs={6}>
-            <Typography variant="caption" color="text.secondary">Téléphone</Typography>
-            <Typography variant="body2">{submission.phone}</Typography>
-          </Grid>
-          <Grid item xs={6}>
-            <Typography variant="caption" color="text.secondary">Type</Typography>
-            <Typography variant="body2">{submission.project_type}</Typography>
-          </Grid>
-          <Grid item xs={6}>
-            <Typography variant="caption" color="text.secondary">Budget</Typography>
-            <Typography variant="body2">{submission.budget || '-'}</Typography>
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant="caption" color="text.secondary">Description</Typography>
-            <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
-              {submission.description}
-            </Typography>
-          </Grid>
 
-          {files.length > 0 && (
-            <Grid item xs={12}>
-              <Divider sx={{ my: 1 }} />
-              <Typography variant="caption" color="text.secondary">Fichiers ({files.length})</Typography>
-              <Box sx={{ mt: 1 }}>
+      <DialogContent sx={{ p: 0 }}>
+        {/* Section Contact */}
+        <Box sx={{ px: 3, py: 2, bgcolor: 'grey.50' }}>
+          <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: 1 }}>
+            Contact
+          </Typography>
+          <Box sx={{ mt: 1 }}>
+            <InfoRow icon={<MailOutlined />}   label="Email"     value={submission.email} />
+            <InfoRow icon={<PhoneOutlined />}  label="Téléphone" value={submission.phone} />
+          </Box>
+        </Box>
+
+        <Divider />
+
+        {/* Section Projet */}
+        <Box sx={{ px: 3, py: 2 }}>
+          <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: 1 }}>
+            Projet
+          </Typography>
+          <Box sx={{ mt: 1 }}>
+            <InfoRow icon={<ProjectOutlined />}  label="Type de projet" value={submission.project_type} />
+            <InfoRow icon={<DollarOutlined />}   label="Budget"         value={submission.budget} />
+            <InfoRow icon={<ScheduleOutlined />} label="Délai souhaité" value={submission.timeline} />
+          </Box>
+        </Box>
+
+        <Divider />
+
+        {/* Description */}
+        <Box sx={{ px: 3, py: 2 }}>
+          <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: 1 }}>
+            Description
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              mt: 1,
+              whiteSpace: 'pre-wrap',
+              bgcolor: 'grey.50',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1,
+              p: 1.5,
+              maxHeight: 140,
+              overflowY: 'auto',
+              lineHeight: 1.7
+            }}
+          >
+            {submission.description}
+          </Typography>
+        </Box>
+
+        {/* Fichiers joints */}
+        {files.length > 0 && (
+          <>
+            <Divider />
+            <Box sx={{ px: 3, py: 2 }}>
+              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: 1 }}>
+                <PaperClipOutlined style={{ marginRight: 4 }} />
+                Fichiers joints ({files.length})
+              </Typography>
+              <Stack spacing={0.5} sx={{ mt: 1 }}>
                 {files.map((file, index) => (
-                  <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                    <Typography variant="body2">{file.originalName}</Typography>
-                    <Button size="small" onClick={() => onDownloadFile(submission.id, file)}>
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      px: 1.5, py: 1,
+                      border: '1px solid', borderColor: 'divider', borderRadius: 1,
+                      bgcolor: 'background.paper'
+                    }}
+                  >
+                    <Typography variant="body2" noWrap sx={{ flex: 1, mr: 1 }}>
+                      {file.originalName}
+                    </Typography>
+                    <Button
+                      size="small"
+                      startIcon={<DownloadOutlined />}
+                      onClick={() => onDownloadFile(submission.id, file)}
+                      sx={{ flexShrink: 0 }}
+                    >
                       Télécharger
                     </Button>
                   </Box>
                 ))}
-              </Box>
-            </Grid>
-          )}
+              </Stack>
+            </Box>
+          </>
+        )}
 
-          <Grid item xs={12}>
-            <Divider sx={{ my: 1 }} />
-            <Typography variant="caption" color="text.secondary">Mettre à jour le statut</Typography>
-            <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-              <Select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
+        <Divider />
+
+        {/* Gestion du statut */}
+        <Box sx={{ px: 3, py: 2 }}>
+          <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: 1 }}>
+            <EditOutlined style={{ marginRight: 4 }} />
+            Décision
+          </Typography>
+          <Stack spacing={1.5} sx={{ mt: 1.5 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Statut</InputLabel>
+              <Select
+                label="Statut"
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value)}
+              >
                 <MenuItem value="pending">En attente</MenuItem>
-                <MenuItem value="reviewing">En cours</MenuItem>
+                <MenuItem value="reviewing">En cours de revue</MenuItem>
                 <MenuItem value="approved">Approuvé</MenuItem>
                 <MenuItem value="rejected">Rejeté</MenuItem>
                 <MenuItem value="archived">Archivé</MenuItem>
@@ -114,24 +217,26 @@ function ProjectDetailDialog({ submission, open, onClose, onStatusChange, onDown
               fullWidth
               multiline
               rows={2}
-              placeholder="Notes..."
+              label="Notes internes"
+              placeholder="Commentaire sur la décision..."
               value={reviewNotes}
               onChange={(e) => setReviewNotes(e.target.value)}
               size="small"
-              sx={{ mt: 1 }}
             />
-          </Grid>
-        </Grid>
+          </Stack>
+        </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Fermer</Button>
+
+      <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Button onClick={onClose} variant="outlined" size="small">Fermer</Button>
         <Button
           variant="contained"
           onClick={handleStatusUpdate}
           disabled={updating}
           disableElevation
+          size="small"
         >
-          {updating ? 'Enregistrement...' : 'Enregistrer'}
+          {updating ? 'Enregistrement...' : 'Enregistrer la décision'}
         </Button>
       </DialogActions>
     </Dialog>
@@ -277,6 +382,7 @@ export default function ProjectsPage() {
                   <TableCell>
                     <Chip
                       label={STATUS_LABELS[item.status] || item.status}
+                      color={STATUS_COLORS[item.status] || 'default'}
                       size="small"
                       variant="outlined"
                     />

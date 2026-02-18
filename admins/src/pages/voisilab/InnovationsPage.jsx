@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -51,7 +51,7 @@ import {
   CloseCircleOutlined
 } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
-import { innovationsService, mediaService } from 'api/voisilab';
+import { innovationsService } from 'api/voisilab';
 
 const API_URL = 'http://localhost:3500';
 
@@ -105,7 +105,7 @@ export default function InnovationsPage() {
     loadInnovations();
     
     const interval = setInterval(() => {
-      innovationsService.getAll()
+      innovationsService.getAll({ limit: 200 })
         .then(result => setInnovations(result.data || result || []))
         .catch(() => {});
     }, 30000);
@@ -116,7 +116,7 @@ export default function InnovationsPage() {
   const loadInnovations = async () => {
     try {
       setLoading(true);
-      const result = await innovationsService.getAll();
+      const result = await innovationsService.getAll({ limit: 200 });
       setInnovations(result.data || result || []);
     } catch (error) {
       console.error('Erreur:', error);
@@ -338,7 +338,7 @@ export default function InnovationsPage() {
       const result = await response.json();
       const imageUrl = result.url || result.path || result.filename;
       
-      setFormData({ ...formData, image_url: imageUrl });
+      setFormData(prev => ({ ...prev, image_url: imageUrl }));
       setPreviewImage(imageUrl.startsWith('http') ? imageUrl : `${API_URL}${imageUrl}`);
       
     } catch (error) {
@@ -803,8 +803,7 @@ export default function InnovationsPage() {
                 value={formData.image_url}
                 onChange={(e) => {
                   const url = e.target.value;
-                  setFormData({ ...formData, image_url: url });
-                  // Définir la prévisualisation seulement si l'URL est valide
+                  setFormData(prev => ({ ...prev, image_url: url }));
                   if (url && url.startsWith('http')) {
                     setPreviewImage(url);
                   } else if (url) {

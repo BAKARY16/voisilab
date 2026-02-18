@@ -88,9 +88,9 @@ router.post('/',
 
     try {
       const [result] = await pool.query<ResultSetHeader>(
-        `INSERT INTO team_members (name, role, bio, avatar_url, email, linkedin_url, twitter_url, order_index, active) 
+        `INSERT INTO team_members (name, role, bio, image, email, linkedin, twitter, order_index, active) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [name, role, bio, avatar_url, email, linkedin_url, twitter_url, order_index, active ? 1 : 0]
+        [name, role, bio || null, avatar_url || null, email || null, linkedin_url || null, twitter_url || null, parseInt(String(order_index)) || 0, active ? 1 : 0]
       );
 
       const [newMember] = await pool.query<TeamMember[]>(
@@ -109,17 +109,35 @@ router.post('/',
 // Update team member
 router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
-    const allowedFields = ['name', 'role', 'bio', 'avatar_url', 'email', 'linkedin_url', 'twitter_url', 'order_index', 'active'];
+    // Map des noms frontend → noms réels colonnes BDD
+    const fieldMap: Record<string, string> = {
+      name: 'name',
+      role: 'role',
+      bio: 'bio',
+      avatar_url: 'image',      // frontend envoie avatar_url → colonne image
+      image: 'image',
+      email: 'email',
+      linkedin_url: 'linkedin', // frontend envoie linkedin_url → colonne linkedin
+      linkedin: 'linkedin',
+      twitter_url: 'twitter',   // frontend envoie twitter_url → colonne twitter
+      twitter: 'twitter',
+      order_index: 'order_index',
+      active: 'active'
+    };
+
     const updates: string[] = [];
     const values: any[] = [];
+    const seen = new Set<string>();
 
-    allowedFields.forEach(field => {
-      if (req.body[field] !== undefined) {
-        updates.push(`${field} = ?`);
-        if (field === 'active') {
+    Object.keys(req.body).forEach(field => {
+      const col = fieldMap[field];
+      if (col && !seen.has(col) && req.body[field] !== undefined) {
+        seen.add(col);
+        updates.push(`${col} = ?`);
+        if (col === 'active') {
           values.push(req.body[field] ? 1 : 0);
         } else {
-          values.push(req.body[field]);
+          values.push(req.body[field] || null);
         }
       }
     });

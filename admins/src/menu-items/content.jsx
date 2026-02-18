@@ -37,14 +37,14 @@ const content = {
       icon: icons.BulbOutlined,
       breadcrumbs: true
     },
-    {
-      id: 'pages',
-      title: 'Pages',
-      type: 'item',
-      url: '/pages',
-      icon: icons.FileOutlined,
-      breadcrumbs: true
-    },
+    // {
+    //   id: 'pages',
+    //   title: 'Pages',
+    //   type: 'item',
+    //   url: '/pages',
+    //   icon: icons.FileOutlined,
+    //   breadcrumbs: true
+    // },
     {
       id: 'media',
       title: 'Médias',

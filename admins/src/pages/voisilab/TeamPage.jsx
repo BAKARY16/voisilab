@@ -81,6 +81,11 @@ export default function TeamPage() {
     return `${API_URL}${url}`;
   };
 
+  // Normalise un membre pour unifier avatar_url / image
+  const getAvatar = (member) => member.avatar_url || member.image || '';
+  const getLinkedin = (member) => member.linkedin_url || member.linkedin || '';
+  const getTwitter = (member) => member.twitter_url || member.twitter || '';
+
   const handleOpenMenu = (event, member) => {
     setMenuAnchor(event.currentTarget);
     setSelectedMember(member);
@@ -94,19 +99,20 @@ export default function TeamPage() {
   const handleEdit = () => {
     if (selectedMember) {
       setEditingId(selectedMember.id);
+      const avatarUrl = getAvatar(selectedMember);
       setFormData({
         name: selectedMember.name || '',
         role: selectedMember.role || '',
         bio: selectedMember.bio || '',
-        avatar_url: selectedMember.avatar_url || '',
+        avatar_url: avatarUrl,
         email: selectedMember.email || '',
-        linkedin_url: selectedMember.linkedin_url || '',
-        twitter_url: selectedMember.twitter_url || '',
+        linkedin_url: getLinkedin(selectedMember),
+        twitter_url: getTwitter(selectedMember),
         order_index: selectedMember.order_index || 0,
         active: selectedMember.active !== false
       });
-      setPreviewImage(selectedMember.avatar_url ? getImageUrl(selectedMember.avatar_url) : '');
-      setImageTab(selectedMember.avatar_url?.startsWith('http') ? 1 : 0);
+      setPreviewImage(avatarUrl ? getImageUrl(avatarUrl) : '');
+      setImageTab(avatarUrl?.startsWith('http') ? 1 : 0);
       setOpen(true);
     }
     handleCloseMenu();
@@ -313,7 +319,7 @@ export default function TeamPage() {
               <TableRow key={member.id} hover>
                 <TableCell>
                   <Avatar
-                    src={member.avatar_url ? getImageUrl(member.avatar_url) : undefined}
+                    src={member.avatar_url || member.image ? getImageUrl(getAvatar(member)) : undefined}
                     sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}
                   >
                     {member.name?.charAt(0)}
@@ -347,17 +353,17 @@ export default function TeamPage() {
                         <MailOutlined style={{ fontSize: 16 }} />
                       </IconButton>
                     )}
-                    {member.linkedin_url && (
-                      <IconButton size="small" href={member.linkedin_url} target="_blank">
+                    {(member.linkedin_url || member.linkedin) && (
+                      <IconButton size="small" href={getLinkedin(member)} target="_blank">
                         <LinkedinOutlined style={{ fontSize: 16 }} />
                       </IconButton>
                     )}
-                    {member.twitter_url && (
-                      <IconButton size="small" href={member.twitter_url} target="_blank">
+                    {(member.twitter_url || member.twitter) && (
+                      <IconButton size="small" href={getTwitter(member)} target="_blank">
                         <TwitterOutlined style={{ fontSize: 16 }} />
                       </IconButton>
                     )}
-                    {!member.email && !member.linkedin_url && !member.twitter_url && (
+                    {!member.email && !member.linkedin_url && !member.linkedin && !member.twitter_url && !member.twitter && (
                       <Typography variant="caption" color="text.secondary">-</Typography>
                     )}
                   </Stack>

@@ -16,16 +16,17 @@ router.use(authenticate);
 // GET /api/notifications - Récupérer les notifications
 router.get('/', getNotifications);
 
-// PUT /api/notifications/:id/read - Marquer comme lue
-router.put('/:id/read', markAsRead);
-
+// Routes spécifiques AVANT les routes paramétrées (:id)
 // PUT /api/notifications/mark-all-read - Marquer toutes comme lues
 router.put('/mark-all-read', markAllAsRead);
 
+// PUT /api/notifications/:id/read - Marquer comme lue
+router.put('/:id/read', markAsRead);
+
+// DELETE /api/notifications/read - Supprimer toutes les lues (doit être AVANT /:id)
+router.delete('/read', deleteReadNotifications);
+
 // DELETE /api/notifications/:id - Supprimer une notification
 router.delete('/:id', deleteNotification);
-
-// DELETE /api/notifications/read - Supprimer toutes les lues
-router.delete('/read', deleteReadNotifications);
 
 export default router;

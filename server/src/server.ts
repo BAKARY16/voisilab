@@ -46,7 +46,8 @@ const corsOptions = {
           // Production
           'https://fablab.voisilab.online',
           'https://admin.fablab.voisilab.online',
-          'https://www.fablab.voisilab.online'
+          'https://www.fablab.voisilab.online',
+          'https:api.voisilab.online'
         ];
     
     // Autoriser requêtes sans origin (Postman, mobile apps) + toutes les origines autorisées
@@ -99,8 +100,11 @@ if (process.env.NODE_ENV === 'production') {
   app.use(morgan('dev'));
 }
 
-// Serve uploaded files (public only - confidential are protected)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve uploaded files - avec Cross-Origin-Resource-Policy pour autoriser le chargement cross-origin (admin sur port différent)
+app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, '../uploads')));
 
 // Bloquer accès direct aux fichiers confidentiels
 app.use('/uploads/confidential', (req: Request, res: Response) => {

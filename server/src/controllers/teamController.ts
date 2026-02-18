@@ -92,18 +92,26 @@ export const createTeamMember = asyncHandler(async (req: Request, res: Response)
     active = true
   } = req.body;
 
+  if (!name || !role) {
+    return res.status(400).json({ error: 'Le nom et le rôle sont requis' });
+  }
+
+  // Convertir active en entier 0/1 pour MySQL
+  const activeInt = active === false || active === 0 || active === '0' ? 0 : 1;
+
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO team_members (
-      name, role, bio, avatar_url, email, linkedin_url,
-      twitter_url, order_index, active
+      name, role, bio, image, email, linkedin,
+      twitter, order_index, active
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [name, role, bio, avatar_url, email, linkedin_url, twitter_url, order_index, active]
+    [name, role, bio || null, avatar_url || null, email || null, linkedin_url || null,
+     twitter_url || null, parseInt(order_index) || 0, activeInt]
   );
 
-  // Récupérer le membre créé
+  // Récupérer le membre créé par son ID (pas email qui peut être vide)
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT * FROM team_members WHERE email = ?',
-    [email]
+    'SELECT * FROM team_members WHERE id = ?',
+    [result.insertId]
   );
 
   logger.info(`Nouveau membre de l'équipe créé: ${name}`);
@@ -131,19 +139,45 @@ export const updateTeamMember = asyncHandler(async (req: Request, res: Response)
     active
   } = req.body;
 
+  // Vérifier que le membre existe
+  const [existing] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM team_members WHERE id = ?',
+    [id]
+  );
+
+  if (existing.length === 0) {
+    throw new NotFoundError('Membre non trouvé');
+  }
+
+  // Convertir active en entier 0/1 pour MySQL (COALESCE ne fonctionne pas avec booléens JS)
+  const activeInt = active !== undefined
+    ? (active === false || active === 0 || active === '0' ? 0 : 1)
+    : existing[0].active;
+
   const [result] = await pool.query<ResultSetHeader>(
     `UPDATE team_members SET
       name = COALESCE(?, name),
       role = COALESCE(?, role),
-      bio = COALESCE(?, bio),
-      avatar_url = COALESCE(?, avatar_url),
-      email = COALESCE(?, email),
-      linkedin_url = COALESCE(?, linkedin_url),
-      twitter_url = COALESCE(?, twitter_url),
+      bio = ?,
+      image = ?,
+      email = ?,
+      linkedin = ?,
+      twitter = ?,
       order_index = COALESCE(?, order_index),
-      active = COALESCE(?, active)
+      active = ?
     WHERE id = ?`,
-    [name, role, bio, avatar_url, email, linkedin_url, twitter_url, order_index, active, id]
+    [
+      name || null,
+      role || null,
+      bio !== undefined ? (bio || null) : existing[0].bio,
+      avatar_url !== undefined ? (avatar_url || null) : existing[0].image,
+      email !== undefined ? (email || null) : existing[0].email,
+      linkedin_url !== undefined ? (linkedin_url || null) : existing[0].linkedin,
+      twitter_url !== undefined ? (twitter_url || null) : existing[0].twitter,
+      order_index !== undefined ? (parseInt(order_index) || 0) : null,
+      activeInt,
+      id
+    ]
   );
 
   if (result.affectedRows === 0) {
