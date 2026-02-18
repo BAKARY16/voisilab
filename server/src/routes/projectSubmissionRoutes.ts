@@ -7,6 +7,7 @@ import pool from '../config/database';
 import { authenticate, requireAdmin } from '../middlewares/auth';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { createNotification } from '../controllers/notificationsController';
+import { sendProjectNotificationEmail } from '../utils/emailService';
 
 const router = Router();
 
@@ -206,6 +207,21 @@ router.post(
           `/voisilab/projects/${submissionId}`
         );
       }
+
+      // Envoyer une notification email à l'administrateur
+      sendProjectNotificationEmail({
+        name,
+        email,
+        phone,
+        projectType,
+        budget,
+        timeline,
+        description,
+        filesCount: filesJson.length,
+        projectId: submissionId
+      }).catch(err => {
+        console.error('Erreur envoi email de notification projet:', err);
+      });
 
       res.status(201).json({
         success: true,

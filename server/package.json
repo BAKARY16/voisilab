@@ -6,12 +6,16 @@
   "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:local": "cp .env.local .env && tsx watch src/server.ts",
+    "dev:prod": "cp .env.production .env && tsx watch src/server.ts",
     "build": "rm -rf dist && tsc",
     "build:win": "if exist dist rmdir /s /q dist && tsc",
     "start": "node dist/server.js",
     "start:dev": "tsx src/server.ts",
     "migrate": "node dist/scripts/migrate.js",
-    "seed": "node dist/scripts/seed.js"
+    "seed": "node dist/scripts/seed.js",
+    "env:local": "copy .env.local .env",
+    "env:prod": "copy .env.production .env"
   },
   "keywords": [
     "fablab",
@@ -23,6 +27,7 @@
   "author": "VoisiLab Team",
   "license": "MIT",
   "dependencies": {
+    "@emailjs/nodejs": "^5.0.2",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",

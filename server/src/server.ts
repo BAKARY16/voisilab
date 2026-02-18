@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import path from 'path';
 import pool from './config/database';
 import logger from './config/logger';
+import { validateEmailConfig } from './utils/emailService';
 import authRoutes from './routes/authRoutes';
 import teamRoutes from './routes/teamRoutes';
 import serviceRoutes from './routes/serviceRoutes';
@@ -30,36 +31,36 @@ const app = express();
 // Middleware de sécurité
 app.use(helmet());
 
-// CORS - Configuration simplifiée et permissive
-const isDevelopment = process.env.NODE_ENV === 'development';
-
-// En développement : autoriser TOUT
-// En production : utiliser la liste d'origines autorisées
-const corsOptions = isDevelopment ? {
-  origin: true, // Autoriser toutes les origines en dev
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: '*',
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  optionsSuccessStatus: 204
-} : {
+// CORS - Configuration permissive pour LOCAL + PRODUCTION
+// Accepte TOUJOURS localhost + domaines de production
+const corsOptions = {
   origin: (origin, callback) => {
+    // Liste complète : localhost + production (toujours autorisés)
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
       ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
       : [
+          // Localhost (développement)
+          'http://localhost:3501',
+          'http://localhost:3502',
+          'http://localhost:3500',
+          // Production
           'https://fablab.voisilab.online',
           'https://admin.fablab.voisilab.online',
-          'https://www.fablab.voisilab.online',
-          'http://localhost:3501',
-          'http://localhost:3502'
+          'https://www.fablab.voisilab.online'
         ];
     
-    // Autoriser requêtes sans origin (mobile, Postman) + origines autorisées
+    // Autoriser requêtes sans origin (Postman, mobile apps) + toutes les origines autorisées
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      logger.warn(`CORS bloqué: ${origin}`);
-      callback(null, false); // Retourner false au lieu d'erreur
+      // Log mais autorise quand même en développement
+      if (process.env.NODE_ENV === 'development') {
+        logger.info(`CORS autorisé (dev): ${origin}`);
+        callback(null, true);
+      } else {
+        logger.warn(`CORS bloqué (prod): ${origin}`);
+        callback(null, false);
+      }
     }
   },
   credentials: true,
@@ -69,10 +70,8 @@ const corsOptions = isDevelopment ? {
   optionsSuccessStatus: 204
 };
 
-logger.info(`CORS: ${isDevelopment ? 'Mode permissif (dev)' : 'Liste blanche (prod)'}`);
-if (!isDevelopment && process.env.ALLOWED_ORIGINS) {
-  logger.info(`Origines autorisées: ${process.env.ALLOWED_ORIGINS}`);
-}
+logger.info(` CORS configuré - Mode: ${process.env.NODE_ENV || 'development'}`);
+logger.info(`Origines autorisées: localhost + production`);
 
 app.use(cors(corsOptions));
 
@@ -195,6 +194,9 @@ app.listen(PORT, () => {
   logger.info(` Mode: ${process.env.NODE_ENV || 'development'}`);
   logger.info(` Frontend: ${process.env.FRONTEND_URL || 'http://localhost:3501'}`);
   logger.info(` Admin: ${process.env.ADMIN_URL || 'http://localhost:3502'}`);
+  
+  // Valider la configuration EmailJS
+  validateEmailConfig();
 });
 
 export default app;

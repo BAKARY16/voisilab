@@ -13,6 +13,9 @@ build/
 .env
 .env.local
 .env.*.local
+# Mais on commit .env.production et .env.example pour référence
+!.env.production
+!.env.example
 
 # Logs
 logs/
