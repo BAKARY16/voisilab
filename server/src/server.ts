@@ -49,7 +49,9 @@ const corsOptions = isDevelopment ? {
       : [
           'https://fablab.voisilab.online',
           'https://admin.fablab.voisilab.online',
-          'https://www.fablab.voisilab.online'
+          'https://www.fablab.voisilab.online',
+          'http://localhost:3501',
+          'http://localhost:3502'
         ];
     
     // Autoriser requêtes sans origin (mobile, Postman) + origines autorisées
@@ -189,10 +191,10 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 const PORT = process.env.PORT || 3500;
 
 app.listen(PORT, () => {
-  logger.info(`🚀 Serveur VoisiLab démarré sur le port ${PORT}`);
-  logger.info(`📱 Mode: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`🌐 Frontend: ${process.env.FRONTEND_URL || 'http://localhost:3501'}`);
-  logger.info(`🔧 Admin: ${process.env.ADMIN_URL || 'http://localhost:3502'}`);
+  logger.info(` Serveur VoisiLab démarré sur le port ${PORT}`);
+  logger.info(` Mode: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(` Frontend: ${process.env.FRONTEND_URL || 'http://localhost:3501'}`);
+  logger.info(` Admin: ${process.env.ADMIN_URL || 'http://localhost:3502'}`);
 });
 
 export default app;

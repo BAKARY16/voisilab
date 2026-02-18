@@ -32,15 +32,30 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 };
 
 /**
- * Middleware pour vérifier le rôle administrateur
+ * Middleware pour vérifier le rôle administrateur (admin ou superadmin)
  */
 export const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Authentification requise' });
   }
 
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
     return res.status(403).json({ error: 'Accès réservé aux administrateurs' });
+  }
+
+  next();
+};
+
+/**
+ * Middleware pour vérifier le rôle SuperAdmin uniquement
+ */
+export const requireSuperAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentification requise' });
+  }
+
+  if (req.user.role !== 'superadmin') {
+    return res.status(403).json({ error: 'Accès réservé aux SuperAdmins uniquement' });
   }
 
   next();
