@@ -94,7 +94,7 @@ export const createPpn = asyncHandler(async (req: Request, res: Response) => {
       'ppn',
       'Nouveau PPN créé',
       `Un nouveau point PPN "${name}" a été créé à ${city}`,
-      '/voisilab/ppn'
+      '/ppn'
     );
   } catch (error) {
     console.error('Erreur lors de la création des notifications:', error);
@@ -164,7 +164,7 @@ export const updatePpn = asyncHandler(async (req: Request, res: Response) => {
       'ppn',
       'PPN modifié',
       `Le point PPN "${name || existing[0].name}" a été mis à jour`,
-      '/voisilab/ppn'
+      '/ppn'
     );
   } catch (error) {
     console.error('Erreur lors de la création des notifications:', error);
@@ -201,7 +201,7 @@ export const deletePpn = asyncHandler(async (req: Request, res: Response) => {
       'ppn',
       'PPN supprimé',
       `Le point PPN "${ppnName}" a été supprimé`,
-      '/voisilab/ppn'
+      '/ppn'
     );
   } catch (error) {
     console.error('Erreur lors de la création des notifications:', error);

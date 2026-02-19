@@ -186,7 +186,7 @@ export const createInnovation = asyncHandler(async (req: Request, res: Response)
       'innovation',
       'Nouvelle innovation créée',
       `L'innovation "${title}" a été ajoutée`,
-      `/voisilab/innovations`
+      `/innovations`
     );
   }
 

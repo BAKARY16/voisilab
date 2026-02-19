@@ -196,7 +196,7 @@ export const createEquipment = asyncHandler(async (req: Request, res: Response) 
     'equipment',
     'Nouvel équipement ajouté',
     `L'équipement "${name}" (${category}) a été ajouté au catalogue`,
-    '/voisilab/equipment'
+    '/equipment'
   );
 
   logger.info(`Nouvel équipement créé: ${name}`);
@@ -257,7 +257,7 @@ export const updateEquipment = asyncHandler(async (req: Request, res: Response) 
       'equipment',
       'Statut équipement modifié',
       `${equipment[0].name} est maintenant ${statusLabels[updateData.status]}`,
-      '/voisilab/equipment'
+      '/equipment'
     );
   }
 
@@ -296,7 +296,7 @@ export const deleteEquipment = asyncHandler(async (req: Request, res: Response) 
     'equipment',
     'Équipement supprimé',
     `L'équipement "${equipment[0].name}" a été supprimé du catalogue`,
-    '/voisilab/equipment'
+    '/equipment'
   );
 
   logger.info(`Équipement supprimé: ${id}`);

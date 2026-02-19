@@ -217,7 +217,7 @@ export const createBlogPost = asyncHandler(async (req: Request, res: Response) =
     'blog',
     status === 'published' ? 'Nouvelle actualité publiée' : 'Nouveau brouillon créé',
     title,
-    '/voisilab/blog'
+    '/blog'
   );
 
   logger.info(`Nouvel article de blog créé: ${title} par ${authorId}`);
@@ -296,7 +296,7 @@ export const updateBlogPost = asyncHandler(async (req: Request, res: Response) =
   // Créer une notification pour tous les admins et superadmins
   const notificationTitle = publishedAt ? 'Actualité publiée' : 'Actualité modifiée';
   const notificationMessage = publishedAt ? `${title || rows[0].title} a été publiée` : `${title || rows[0].title} a été modifiée`;
-  await createForAllAdmins('blog', notificationTitle, notificationMessage, '/voisilab/blog');
+  await createForAllAdmins('blog', notificationTitle, notificationMessage, '/blog');
 
   logger.info(`Article de blog mis à jour: ${id}`);
 
@@ -326,7 +326,7 @@ export const deleteBlogPost = asyncHandler(async (_req: Request, res: Response) 
   }
 
   // Créer une notification pour tous les admins et superadmins
-  await createForAllAdmins('blog', 'Actualité supprimée', `${postTitle} a été supprimée`, '/voisilab/blog');
+  await createForAllAdmins('blog', 'Actualité supprimée', `${postTitle} a été supprimée`, '/blog');
 
   logger.info(`Article de blog supprimé: ${id}`);
 

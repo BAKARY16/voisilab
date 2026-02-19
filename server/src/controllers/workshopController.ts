@@ -222,7 +222,7 @@ export const createWorkshop = asyncHandler(async (req: Request, res: Response) =
       'workshop',
       `Nouvel atelier: ${title}`,
       `Un nouvel atelier "${title}" a été créé`,
-      `/voisilab/workshops`
+      `/workshops`
     );
   } catch (e) {
     logger.warn('Could not create notification for workshop');
@@ -397,7 +397,7 @@ export const registerForWorkshop = asyncHandler(async (req: Request, res: Respon
       'workshop',
       `Nouvelle inscription: ${workshopData.title}`,
       `${name} s'est inscrit à l'atelier "${workshopData.title}"`,
-      `/voisilab/workshops`
+      `/workshops`
     );
   } catch (e) {
     logger.warn('Could not create notification for registration');

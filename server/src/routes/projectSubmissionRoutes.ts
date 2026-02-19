@@ -205,7 +205,7 @@ router.post(
           'project',
           'Nouvelle soumission de projet',
           `${name} a soumis un projet: ${projectType}`,
-          `/voisilab/contacts`
+          `/contacts`
         );
       }
 
@@ -388,7 +388,7 @@ router.get(
         return res.status(404).json({ success: false, message: 'Fichier non trouvé' });
       }
 
-      const filePath = path.join(__dirname, '../../../', file.path);
+      const filePath = path.join(process.cwd(), file.path);
 
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ success: false, message: 'Fichier introuvable sur le serveur' });
@@ -425,7 +425,7 @@ router.delete('/:id', authenticate, requireAdmin, param('id').isInt(), async (re
     if (files && Array.isArray(files)) {
       files.forEach((file: any) => {
         try {
-          const filePath = path.join(__dirname, '../../../', file.path);
+          const filePath = path.join(process.cwd(), file.path);
           if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
           }
