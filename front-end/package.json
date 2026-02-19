@@ -3,16 +3,16 @@
   "name": "voisilab-frontend",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@10.30.0",
   "engines": {
     "node": ">=18.0.0",
-    "pnpm": ">=10.0.0"
+    "npm": ">=9.0.0"
   },
   "scripts": {
     "build": "next build",
     "dev": "next dev -p 3501",
     "lint": "eslint .",
     "start": "cross-env PORT=3501 node .next/standalone/server.js",
+    "postbuild": "xcopy /E /I /Y public .next\\standalone\\public && xcopy /E /I /Y .next\\static .next\\standalone\\.next\\static",
     "clean": "rm -rf .next",
     "clean:win": "if exist .next rmdir /s /q .next"
   },

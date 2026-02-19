@@ -1,14 +1,13 @@
 # Configuration Node.js
 FROM node:20-alpine AS base
-RUN corepack enable pnpm
 
 # Installation des dépendances seulement quand nécessaire
 FROM base AS deps
 WORKDIR /app
 
 # Copier les fichiers de dépendances
-COPY package.json pnpm-lock.yaml .npmrc ./
-RUN pnpm install --frozen-lockfile
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci
 
 # Build de l'application
 FROM base AS builder
@@ -30,7 +29,7 @@ ENV NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=$NEXT_PUBLIC_EMAILJS_TEMPLATE_ID
 ENV NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=$NEXT_PUBLIC_EMAILJS_PUBLIC_KEY
 
 # Build Next.js
-RUN pnpm run build
+RUN npm run build
 
 # Image de production
 FROM base AS runner
