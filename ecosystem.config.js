@@ -16,8 +16,7 @@ module.exports = {
     {
       name: 'voisilab-frontend',
       cwd: './front-end',
-      script: 'node_modules/.bin/next',
-      args: 'start -p 3501',
+      script: '.next/standalone/server.js',
       instances: 1,
       autorestart: true,
       watch: false,
