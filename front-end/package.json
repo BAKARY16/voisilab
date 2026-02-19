@@ -11,7 +11,7 @@
     "build": "next build",
     "dev": "next dev -p 3501",
     "lint": "eslint .",
-    "start": "cross-env PORT=3501 node .next/standalone/server.js",
+    "start": "next start -p 3501",
     "postbuild": "xcopy /E /I /Y public .next\\standalone\\public && xcopy /E /I /Y .next\\static .next\\standalone\\.next\\static",
     "clean": "rm -rf .next",
     "clean:win": "if exist .next rmdir /s /q .next"
