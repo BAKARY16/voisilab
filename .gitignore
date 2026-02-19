@@ -81,3 +81,5 @@ server/logs/
 !server/logs/.gitkeep
 
 package.json
+**/.npm-cache/
+

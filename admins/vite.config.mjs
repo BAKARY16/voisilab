@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
       open: true,
       port: PORT,
       host: true,
+      allowedHosts: ['admin.fablab.voisilab.online'],
       proxy: {
         '/uploads': {
           target: 'http://localhost:3500',
@@ -23,7 +24,8 @@ export default defineConfig(({ mode }) => {
     },
     preview: {
       open: true,
-      host: true
+      host: true,
+      allowedHosts: ['admin.fablab.voisilab.online'],
     },
     define: {
       global: 'window'

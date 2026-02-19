@@ -47,3 +47,5 @@ coverage/
 *.tmp
 tmp/
 temp/
+.npm-cache/
+
