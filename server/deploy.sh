@@ -16,15 +16,20 @@ if [ ! -f "package.json" ]; then
 fi
 
 # Étape 1: Récupérer les dernières modifications
-echo "📥 1/5 - Récupération des modifications Git..."
+echo "📥 1/6 - Récupération des modifications Git..."
 git pull
 
-# Étape 2: Installer les dépendances
-echo "📦 2/5 - Installation des dépendances..."
+# Étape 2: Copier l'environnement de production
+echo "⚙️  2/6 - Configuration de l'environnement..."
+cp .env.production .env
+echo "   .env.production → .env ✅"
+
+# Étape 3: Installer les dépendances
+echo "📦 3/6 - Installation des dépendances..."
 npm install
 
-# Étape 3: Build TypeScript
-echo "🔨 3/5 - Compilation TypeScript..."
+# Étape 4: Build TypeScript
+echo "🔨 4/6 - Compilation TypeScript..."
 rm -rf dist
 npm run build
 
@@ -37,8 +42,8 @@ fi
 echo "✅ Build réussi! Fichiers créés:"
 ls -lh dist/server.js
 
-# Étape 4: Redémarrer PM2
-echo "🔄 4/5 - Redémarrage du serveur..."
+# Étape 5: Redémarrer PM2
+echo "🔄 5/6 - Redémarrage du serveur..."
 if pm2 describe voisilab-api &>/dev/null; then
   echo "   Arrêt de l'instance existante..."
   pm2 stop voisilab-api
@@ -49,8 +54,8 @@ echo "   Démarrage de la nouvelle instance..."
 pm2 start npm --name "voisilab-api" -- start
 pm2 save
 
-# Étape 5: Vérifier le statut
-echo "📊 5/5 - Vérification du statut..."
+# Étape 6: Vérifier le statut
+echo "📊 6/6 - Vérification du statut..."
 sleep 2
 pm2 status voisilab-api
 
