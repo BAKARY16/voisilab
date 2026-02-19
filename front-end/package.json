@@ -3,9 +3,10 @@
   "name": "voisilab-frontend",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.30.0",
   "engines": {
     "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "pnpm": ">=10.0.0"
   },
   "scripts": {
     "build": "next build",
