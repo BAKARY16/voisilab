@@ -412,32 +412,23 @@ export const registerForWorkshop = asyncHandler(async (req: Request, res: Respon
 });
 
 /**
- * Get unread workshops count (for admin notifications)
+ * Get unread workshops count
+ * Note: workshops table n'a pas de colonne is_read — retourne 0
  */
 export const getUnreadCount = asyncHandler(async (req: Request, res: Response) => {
-  const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT COUNT(*) as count FROM workshops WHERE is_read = FALSE'
-  );
-
-  res.json({ count: rows[0].count });
+  res.json({ count: 0 });
 });
 
 /**
- * Mark workshop as read
+ * Mark workshop as read (no-op — table sans colonne is_read)
  */
 export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  await pool.query('UPDATE workshops SET is_read = TRUE WHERE id = ?', [id]);
-
   res.json({ message: 'Marqué comme lu' });
 });
 
 /**
- * Mark all workshops as read
+ * Mark all workshops as read (no-op — table sans colonne is_read)
  */
 export const markAllAsRead = asyncHandler(async (req: Request, res: Response) => {
-  await pool.query('UPDATE workshops SET is_read = TRUE WHERE is_read = FALSE');
-
   res.json({ message: 'Tous les ateliers marqués comme lus' });
 });

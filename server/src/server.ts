@@ -47,7 +47,7 @@ const corsOptions = {
           'https://fablab.voisilab.online',
           'https://admin.fablab.voisilab.online',
           'https://www.fablab.voisilab.online',
-          'https:api.voisilab.online'
+          'https://api.fablab.voisilab.online'
         ];
     
     // Autoriser requêtes sans origin (Postman, mobile apps) + toutes les origines autorisées

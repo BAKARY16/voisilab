@@ -47,7 +47,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   const token = generateToken({
     userId: user.id as string,
     email: user.email as string,
-    role: user.role as 'user' | 'admin'
+    role: user.role as 'user' | 'admin' | 'superadmin'
   });
 
   logger.info(`Nouvel utilisateur créé: ${user.email}`);
@@ -108,7 +108,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const token = generateToken({
     userId: user.id as string,
     email: user.email as string,
-    role: user.role as 'user' | 'admin'
+    role: user.role as 'user' | 'admin' | 'superadmin'
   });
 
   logger.info(`Connexion réussie: ${user.email}`);
@@ -167,7 +167,7 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
   const token = generateToken({
     userId: user.id as string,
     email: user.email as string,
-    role: user.role as 'user' | 'admin'
+    role: user.role as 'user' | 'admin' | 'superadmin'
   });
 
   res.json({
