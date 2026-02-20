@@ -19,6 +19,8 @@ import { UserOutlined, LockOutlined, SaveOutlined, CameraOutlined, CloseOutlined
 import MainCard from 'components/MainCard';
 import { authService } from 'api/voisilab';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3500';
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState({
     full_name: '',
@@ -127,7 +129,7 @@ export default function ProfilePage() {
       formData.append('file', file);
 
       const token = sessionStorage.getItem('token');
-      const response = await fetch('http://localhost:3500/api/upload/avatar', {
+      const response = await fetch(`${API_URL}/api/upload/avatar`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -140,7 +142,7 @@ export default function ProfilePage() {
       }
 
       const data = await response.json();
-      const avatarUrl = `http://localhost:5000${data.url}`;
+      const avatarUrl = data.url?.startsWith('http') ? data.url : `${API_URL}${data.url}`;
       
       setProfile({ ...profile, avatar_url: avatarUrl });
       setSuccess('Photo de profil téléchargée avec succès');
