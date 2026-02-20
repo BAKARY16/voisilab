@@ -4,6 +4,9 @@ import { Outlet } from 'react-router-dom';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Toolbar from '@mui/material/Toolbar';
 import Box from '@mui/material/Box';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
 
 // project imports
 import Drawer from './Drawer';
@@ -13,12 +16,14 @@ import Loader from 'components/Loader';
 import Breadcrumbs from 'components/@extended/Breadcrumbs';
 
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
+import useInactivityLogout from 'hooks/useInactivityLogout';
 
 // ==============================|| MAIN LAYOUT ||============================== //
 
 export default function DashboardLayout() {
   const { menuMasterLoading } = useGetMenuMaster();
   const downXL = useMediaQuery((theme) => theme.breakpoints.down('xl'));
+  const { showWarning, secondsLeft, resetTimer } = useInactivityLogout();
 
   // set media wise responsive drawer
   useEffect(() => {
@@ -48,6 +53,26 @@ export default function DashboardLayout() {
           <Footer />
         </Box>
       </Box>
+
+      {/* Avertissement d'inactivité */}
+      <Snackbar
+        open={showWarning}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{ top: { xs: 16, sm: 24 } }}
+      >
+        <Alert
+          severity="warning"
+          variant="filled"
+          sx={{ width: '100%', alignItems: 'center' }}
+          action={
+            <Button color="inherit" size="small" variant="outlined" onClick={resetTimer} sx={{ ml: 1, fontWeight: 700 }}>
+              Je suis là
+            </Button>
+          }
+        >
+          Inactivité détectée — déconnexion automatique dans <strong>&nbsp;{secondsLeft}s</strong>
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
