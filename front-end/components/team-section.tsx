@@ -7,6 +7,20 @@ import { Linkedin, Mail } from "lucide-react"
 import { useEffect, useState } from "react"
 import { teamService } from "@/lib/api"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.fablab.voisilab.online'
+
+const getTeamImageUrl = (imagePath: string | undefined | null): string => {
+  if (!imagePath) return '/placeholder.svg'
+  if (imagePath.startsWith('https://api.fablab.voisilab.online')) return imagePath
+  if (imagePath.includes('localhost')) {
+    const match = imagePath.match(/(\/uploads\/.+)/)
+    return match ? `${API_URL}${match[1]}` : '/placeholder.svg'
+  }
+  if (imagePath.startsWith('http')) return imagePath
+  if (imagePath.startsWith('/uploads/')) return `${API_URL}${imagePath}`
+  return imagePath
+}
+
 export function TeamSection() {
   const [teamMembers, setTeamMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -111,7 +125,7 @@ export function TeamSection() {
               >
                 <div className="relative h-64 lg:h-72 overflow-hidden">
                   <img
-                    src={member.photo_url || member.image || "/placeholder.svg"}
+                    src={getTeamImageUrl(member.image || member.photo_url)}
                     alt={member.full_name || member.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />

@@ -145,8 +145,8 @@ export function EquipmentSection() {
 
   const stats = [
     { icon: Wrench, value: "15+", label: "Machines disponibles", description: "Impression 3D, découpe, usinage..." },
-    { icon: Users, value: "200+", label: "Makers formés", description: "Une communauté active et créative" },
-    { icon: Clock, value: "6j/7", label: "Accès libre", description: "Du lundi au samedi inclus" },
+    { icon: Users, value: "+50", label: "personnes formés", description: "Une communauté active et créative" },
+    { icon: Clock, value: "5j/7", label: "Accès libre", description: "Du lundi au vendredi" },
     { icon: GraduationCap, value: "100%", label: "Formation incluse", description: "Accompagnement personnalisé" },
   ]
 
@@ -186,7 +186,7 @@ export function EquipmentSection() {
     {
       icon: Shield,
       title: "Sécurité garantie",
-      description: "Tous nos équipements sont maintenus et contrôlés régulièrement. Les EPI sont fournis et obligatoires.",
+      description: "Tous nos équipements sont maintenus et contrôlés régulièrement. Les équipements de protection individuelle sont fournis et obligatoires.",
     },
     {
       icon: Zap,
@@ -282,9 +282,7 @@ export function EquipmentSection() {
               </h1>
 
               <p className="text-lg lg:text-xl text-gray-200 mb-10 leading-relaxed max-w-2xl mx-auto">
-                Accédez à des équipements professionnels pour concrétiser tous vos projets de fabrication numérique,
-                de l'impression 3D à l'usinage CNC.
-              </p>
+                Accédez à des équipements professionnels pour concrétiser tous vos projets de fabrication numérique.              </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button
@@ -306,7 +304,7 @@ export function EquipmentSection() {
                   className="text-black border-white/30 hover:bg-white/10 backdrop-blur-sm"
                   asChild
                 >
-                  <Link href="/ateliers">Voir les formations</Link>
+                  <Link href="/ateliers">Voir les ateliers</Link>
                 </Button>
               </div>
             </div>
@@ -490,7 +488,7 @@ export function EquipmentSection() {
 
                         {/* Bouton */}
                         <Link href={`/materiels/${item.id}`} className="mt-6 flex flex-1 items-center transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 delay-350">
-                          <Button size="lg" variant="outline" className="w-full group">
+                          <Button size="lg" variant="outline" className="w-full cursor-pointer group">
                             <span className="relative z-10 flex items-center justify-center gap-2">
                               En savoir plus
                               <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
@@ -603,7 +601,7 @@ export function EquipmentSection() {
             <div className="text-center mt-10 fade-in-up">
               <p className="text-muted-foreground mb-4">Vous ne trouvez pas la réponse à votre question ?</p>
               <Button variant="outline" asChild>
-                <Link href="/contact">
+                <Link href="/about#contact-section">
                   <span className="flex items-center gap-2">
                     Contactez-nous
                     <ArrowRight size={16} />

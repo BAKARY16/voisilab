@@ -50,7 +50,8 @@ import {
     Cloud,
     Database,
     Shield,
-    Headphones
+    Headphones,
+    MapPin
 } from "lucide-react"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
 
@@ -61,7 +62,7 @@ const heroSlides = [
     { image: "/banner2.jpg", alt: "3D printing in action" },
 ]
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
+const API_URL = 'https://api.fablab.voisilab.online'
 
 export function HomePageContent() {
     useScrollAnimation()
@@ -231,11 +232,12 @@ export function HomePageContent() {
             name: member.name || member.full_name,
             role: member.role,
             bio: member.bio,
-            image: member.avatar_url || member.photo_url,
-            image_url: member.avatar_url || member.photo_url,
+            // La colonne DB s'appelle "image" (pas avatar_url ni photo_url)
+            image: member.image || member.avatar_url || member.photo_url,
+            image_url: member.image || member.avatar_url || member.photo_url,
             email: member.email,
-            linkedin: member.linkedin_url,
-            twitter: member.twitter_url
+            linkedin: member.linkedin || member.linkedin_url,
+            twitter: member.twitter || member.twitter_url
         }))
     }
 
@@ -257,9 +259,9 @@ export function HomePageContent() {
                     }
                     setLoadingTeam(false)
                 })
-                .catch((err) => { 
+                .catch((err) => {
                     console.error('❌ Team fetch error:', err)
-                    setLoadingTeam(false) 
+                    setLoadingTeam(false)
                 })
         }
 
@@ -415,41 +417,7 @@ export function HomePageContent() {
         "CustomerServiceOutlined": Headphones
     }
 
-    // Services par défaut si l'API ne retourne rien
-    const defaultServices = [
-        {
-            icon: Printer,
-            title: "Impression 2D/3D",
-            description: "Prototypage rapide et production de pièces personnalisées en FDM et résine.",
-            features: ["Prototypage", "Petites séries", "Matériaux variés"],
-            gradient: "from-blue-500/10 to-cyan-500/10",
-            image_url: "https://mecaluxfr.cdnwm.com/blog/img/fabrication-additive-production.1.1.jpg?imwidth=320&imdensity=1"
-        },
-        {
-            icon: CodeXml,
-            title: "Architecture & Dev Digital",
-            description: "Conception et déploiement de solutions logicielles performantes, optimisées pour vos besoins métiers.",
-            features: ["Conception d'applications Web & Mobile", "Audit & Architecture", "Cloud & API"],
-            gradient: "from-purple-500/10 to-pink-500/10",
-            image_url: "https://media.vertuoz.fr/uploads/Article_Quels_sont_les_avantages_d_un_developpement_informatique_sur_mesure_66c3ed4303.jpeg"
-        },
-        {
-            icon: Bot,
-            title: "Robotique",
-            description: "Conception et programmation de robots pour des applications variées.",
-            features: ["Robots éducatifs", "Automatisation", "Projets sur mesure"],
-            gradient: "from-yellow-500/10 to-orange-500/10",
-            image_url: "https://www.aq-tech.fr/fr/wp-content/uploads/sites/5/2022/12/Diff%C3%A9rents-types-de-prototype-700x700.jpg"
-        },
-        {
-            icon: Code,
-            title: "Électronique & IoT",
-            description: "Développement de solutions connectées avec Arduino, Raspberry Pi et ESP32.",
-            features: ["Circuits imprimés", "Objets connectés", "Domotique"],
-            gradient: "from-orange-500/10 to-red-500/10",
-            image_url: "https://www.business-solutions-atlantic-france.com/wp-content/webp-express/webp-images/uploads/2019/04/electronique_professionnelle-1160x652.png.webp"
-        },
-    ]
+    // Services — toutes chargées depuis l'API (voir database/seed-data.sql)
 
     // Fonction pour transformer les services de l'API
     const transformService = (service: any) => {
@@ -464,14 +432,13 @@ export function HomePageContent() {
             icon: serviceIconMap[service.icon] || Wrench,
             features: features || [],
             gradient: "from-primary/10 to-accent/10",
-            image_url: service.image_url ? (service.image_url.startsWith('http') ? service.image_url : `${API_URL}${service.image_url}`) : null
+            // La colonne DB s'appelle "image" (pas image_url)
+            image_url: service.image || service.image_url || null
         }
     }
 
-    // Services à afficher (API si disponible, sinon par défaut)
-    const displayServices = services.length > 0 
-        ? services.map(transformService) 
-        : defaultServices
+    // Services à afficher — uniquement depuis l'API
+    const displayServices = services.map(transformService)
 
     // Icon mapping pour les catégories d'équipement
     const categoryIcons: Record<string, any> = {
@@ -533,26 +500,25 @@ export function HomePageContent() {
         }
     }
 
-    // Helper pour construire l'URL complète des images
-    // Les chemins /uploads/* sont proxifiés via next.config.mjs rewrites
+    // Helper pour construire l'URL complète des images depuis l'API
     const getImageUrl = (imagePath: string | undefined | null): string => {
         if (!imagePath) return '/placeholder.svg'
-        // Retourner le chemin tel quel - le proxy Next.js gère /uploads/*
+        // URL déjà complète vers l'API en ligne → retourner telle quelle
+        if (imagePath.startsWith('https://api.fablab.voisilab.online')) return imagePath
+        // URL localhost → extraire le chemin /uploads/ et préfixer par API_URL
+        if (imagePath.includes('localhost')) {
+            const match = imagePath.match(/(\/uploads\/.+)/)
+            return match ? `${API_URL}${match[1]}` : '/placeholder.svg'
+        }
+        // URL externe déjà complète (autres domaines)
+        if (imagePath.startsWith('http')) return imagePath
+        // Chemin relatif /uploads/... → préfixer avec l'URL de l'API (tous sous-dossiers)
+        if (imagePath.startsWith('/uploads/')) return `${API_URL}${imagePath}`
         return imagePath
     }
 
-    const team = [
-        { name: "Hermane Nguessan Junior", role: "Developpeur Full-stack", bio: "Jeune talent en developpement web et applications.", image: "/uploads/team/devs1.jpg", email: "hermane.nguessan@uvci.edu.ci", linkedin: "https://www.linkedin.com/in/hermane-junior-nguessan-2a9a05324" },
-        { name: "Dallo Mardochee Desire", role: "Developpeur Full-stack", bio: "Jeune talent en developpement full-stack.", image: "/uploads/team/dev2.jpg", email: "gbalou.dallo@uvci.edu.ci", linkedin: "" },
-        { name: "Sinon Bakary", role: "Developpeur Front-end et Data Scientist", bio: "Jeune talent en developpement front-end.", image: "/uploads/team/dev3.png", email: "bakary.sinon@uvci.edu.ci", linkedin: "https://www.linkedin.com/in/bakary-sinon-29799a275/" },
-        { name: "Gautier Oulai Mombo", role: "Chef equipe et Project Manager", bio: "Architecte de projets et leader de talents.", image: "/uploads/team/gautier.png", email: "gautier.mombo@uvci.edu.ci", linkedin: "https://www.linkedin.com/in/gautier-oulai-mombo-3b37a2292/" },
-        { name: "Evih Elia Elienai Berenice", role: "Chef equipe et Project Manager", bio: "Developpeur Front-End specialise.", image: "/uploads/team/elia.jpeg", email: "elia.evih@uvci.edu.ci", linkedin: "https://www.linkedin.com/in/elia-evih-a93015352" },
-        { name: "Ble Blango Flavien", role: "Modelisateur 3D et VFX Artiste", bio: "Specialiste en modelisation 3D et effets visuels.", image: "/uploads/team/ble.png", email: "ble.flavien@uvci.edu.ci", linkedin: "" },
-        { name: "Sai Jovencia Emmanuella", role: "Modelisation 3D et Impression", bio: "Je developpe mes competences en design 3D.", image: "/uploads/team/sai.jpeg", email: "sai.jovencia@uvci.edu.ci", linkedin: "" },
-
-    ]
-
-    // const news_old = [  // Donn?es charg?es depuis l'API
+    // Données équipe — toutes chargées depuis l'API (voir database/seed-data.sql)
+    // const news_old = [  // Données chargées depuis l'API
     // ]
 
 
@@ -734,7 +700,7 @@ export function HomePageContent() {
                                         <div className="relative h-48 overflow-hidden bg-muted">
                                             {service.image_url ? (
                                                 <Image
-                                                    src={service.image_url}
+                                                    src={getImageUrl(service.image_url)}
                                                     alt={service.title || 'Service'}
                                                     fill
                                                     className="object-cover group-hover:scale-110 transition-transform duration-700"
@@ -812,12 +778,12 @@ export function HomePageContent() {
                                 <p className="text-sm text-muted-foreground mb-4">
                                     Des prix compétitifs pour tous types de projets, du particulier à l'entreprise
                                 </p>
-                                <Button variant="outline" size="sm" asChild>
+                                {/* <Button variant="outline" size="sm" asChild>
                                     <Link href="/tarifs">
                                         Voir les tarifs
                                         <ArrowRight className="ml-2" size={16} />
                                     </Link>
-                                </Button>
+                                </Button> */}
                             </CardContent>
                         </Card>
 
@@ -829,7 +795,7 @@ export function HomePageContent() {
                                 </div>
                                 <h4 className="text-lg font-bold text-foreground mb-2">Devis gratuit</h4>
                                 <p className="text-sm text-muted-foreground mb-4">
-                                    Obtenez un devis personnalisé sous 48h pour votre projet
+                                    Obtenez un devis personnalisé pour votre projet
                                 </p>
                                 <Button variant="outline" size="sm" asChild>
                                     <Link href="/projet">
@@ -851,7 +817,7 @@ export function HomePageContent() {
                                     Notre équipe vous guide à chaque étape de votre projet
                                 </p>
                                 <Button variant="outline" size="sm" asChild>
-                                    <Link href="/contact">
+                                    <Link href="/about#contact-section">
                                         Nous contacter
                                         <Phone className="ml-2" size={16} />
                                     </Link>
@@ -863,7 +829,7 @@ export function HomePageContent() {
 
                     {/* Bandeau CTA final */}
                     <div className="max-w-4xl mx-auto mt-16 fade-in-up" style={{ animationDelay: '500ms' }}>
-                        <Card className=" bg-gradient-to-r from-primary/5 via-background to-accent/5 overflow-hidden">
+                        <Card className="overflow-hidden">
                             <CardContent className="p-8 lg:p-12">
                                 <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
                                     <div className="text-center lg:text-left flex-1">
@@ -917,7 +883,7 @@ export function HomePageContent() {
                                         {/* Image de fond toujours visible */}
                                         <div className="absolute inset-0 z-0">
                                             <Image
-                                                src={item.image_url || "/logolab.png"}
+                                                src={getImageUrl(item.image_url) || "/logolab.png"}
                                                 alt={item.name}
                                                 fill
                                                 className="object-cover group-hover:scale-105 transition-transform duration-700"
@@ -1021,7 +987,9 @@ export function HomePageContent() {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto mb-12">
                             {recentWorkshops.map((item, index) => {
-                                const spotsRemaining = item.max_participants - (item.current_participants || 0)
+                                const maxParticipants = item.capacity ?? item.max_participants ?? 0
+                                const currentParticipants = item.registered ?? item.current_participants ?? 0
+                                const spotsRemaining = maxParticipants - currentParticipants
                                 return (
                                     <div key={item.id || index} className="" style={{ animationDelay: `${index * 100}ms` }}>
                                         <Link href={`/ateliers/${item.id}`} className="block h-full">
@@ -1038,11 +1006,6 @@ export function HomePageContent() {
                                                             Plus que {spotsRemaining} place{spotsRemaining > 1 ? 's' : ''} !
                                                         </Badge>
                                                     )}
-                                                    {spotsRemaining <= 0 && (
-                                                        <Badge className="mb-3 bg-destructive text-destructive-foreground font-semibold">
-                                                            Complet
-                                                        </Badge>
-                                                    )}
                                                     <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">{item.title}</h3>
                                                     <p className="text-sm text-muted-foreground leading-relaxed mb-6 line-clamp-2">{item.description}</p>
                                                     <div className="space-y-3 mb-6">
@@ -1052,12 +1015,16 @@ export function HomePageContent() {
                                                         </div>
                                                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                                                             <Clock size={18} className="text-primary flex-shrink-0" />
-                                                            <span className="text-sm text-foreground font-medium">{item.time} ({item.duration})</span>
+                                                            <span className="text-sm text-foreground font-medium">
+                                                                {new Date(item.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
                                                         </div>
-                                                        {/* <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                                                            <Users size={18} className="text-primary flex-shrink-0" />
-                                                            <span className="text-sm text-foreground font-medium">{item.current_participants || 0}/{item.max_participants} inscrits</span>
-                                                        </div> */}
+                                                        {item.location && (
+                                                            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                                                                <MapPin size={18} className="text-primary flex-shrink-0" />
+                                                                <span className="text-sm text-foreground font-medium">{item.location}</span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <Button className="w-full cursor-pointer group relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
                                                         <span className="relative z-10 flex items-center justify-center gap-2">
@@ -1111,7 +1078,7 @@ export function HomePageContent() {
                     </div>
 
                     {/* Filtres de catégories */}
-                    <div className="flex flex-wrap justify-center gap-3 mb-12 fade-in-up">
+                    {/* <div className="flex flex-wrap justify-center gap-3 mb-12 fade-in-up">
                         {['Tous', 'Santé', 'Agriculture', 'Design', 'Robotique', 'Éco-design', 'Musique'].map((category, index) => (
                             <Button
                                 key={index}
@@ -1123,13 +1090,11 @@ export function HomePageContent() {
                                 {category}
                             </Button>
                         ))}
-                    </div>
+                    </div> */}
 
                     {/* Grid des projets - Nouveau design */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto mb-12">
-                        {recentInnovations.filter((innovation) =>
-                            selectedCategory === 'Tous' || innovation.category === selectedCategory
-                        ).map((innovation, index) => (
+                        {recentInnovations.map((innovation, index) => (
                             <div
                                 key={index}
                                 className="group"
@@ -1142,23 +1107,23 @@ export function HomePageContent() {
                                         {innovation.image_url ? (
                                             <>
                                                 <Image
-                                                    src={innovation.image_url}
+                                                    src={getImageUrl(innovation.image_url)}
                                                     alt={innovation.title}
                                                     fill
                                                     className="object-cover group-hover:scale-110 transition-transform duration-700"
                                                 />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60" />
+                                                {/* <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60" /> */}
                                             </>
                                         ) : (
                                             // Placeholder avec gradient si pas d'image
                                             <div className="absolute inset-0 flex items-center justify-center">
-                                                <div className="text-6xl opacity-20">??</div>
+                                                <div className="text-6xl opacity-20"></div>
                                             </div>
                                         )}
 
                                         {/* Badge catégorie flottant */}
                                         <div className="absolute top-4 left-4">
-                                            <Badge className={`${getCategoryColor(innovation.category)} backdrop-blur-md border-2 font-semibold shadow-lg`}>
+                                            <Badge className={`backdrop-blur-md border-2 font-semibold shadow-lg`}>
                                                 {innovation.category}
                                             </Badge>
                                         </div>
@@ -1192,18 +1157,10 @@ export function HomePageContent() {
                                     <CardContent className="p-6">
                                         {/* Header avec avatar créateur */}
                                         <div className="flex items-center gap-3 mb-4">
-                                            {/* {innovation.creator_name && (
-                                                <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
-                                                    {innovation.creator_name.charAt(0).toUpperCase()}
-                                                </div>
-                                            )} */}
                                             <div className="flex-1">
                                                 <h3 className="font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                                                     {innovation.title}
                                                 </h3>
-                                                {/* {innovation.creator_name && (
-                                                    <p className="text-xs text-muted-foreground">Par {innovation.creator_name}</p>
-                                                )} */}
                                             </div>
                                         </div>
 
@@ -1363,8 +1320,13 @@ export function HomePageContent() {
                             animationPlayState: isSliderPaused ? 'paused' : 'running',
                         }}
                     >
-                        {/* Double les éléments pour l'effet infini - utilise données API */}
-                        {(teamMembers.length > 0 ? [...teamMembers, ...teamMembers] : [...team, ...team]).map((member, index) => (
+                        {/* Double les éléments pour l'effet infini — données uniquement depuis l'API */}
+                        {loadingTeam ? (
+                            <div className="flex items-center justify-center w-full py-12">
+                                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : null}
+                        {[...teamMembers, ...teamMembers].map((member, index) => (
                             <div key={index} className="flex-shrink-0 w-[280px]">
                                 <Card className="overflow-hidden border-2 border-border hover:border-primary/50 transition-all duration-300 group h-full">
                                     <div className="relative h-64 overflow-hidden bg-muted">
@@ -1496,6 +1458,41 @@ export function HomePageContent() {
                 </div>
             </section>
 
+            <section className="py-20 lg:py-32 bg-muted/30 relative">
+            <div className="max-w-5xl mx-auto">
+                <Card className="border-2 border-border overflow-hidden">
+                    <div className="relative aspect-video bg-muted">
+                        <iframe
+                            width="100%"
+                            height="100%"
+                            src="https://www.youtube.com/embed/oCZJ-RQFRi8"
+                            title="Visite Virtuelle Voisilab"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="w-full h-full"
+                        />
+                    </div>
+                    <CardContent className="p-6 bg-muted/30">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div>
+                                <h3 className="font-bold text-foreground mb-1">Venez nous rendre visite</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Abidjan Cocody Deux-Plateaux, rue K4 - Du lundi au samedi
+                                </p>
+                            </div>
+                            <Button asChild>
+                                <Link href="https://maps.google.com/maps?q=Abidjan+Cocody+Deux-Plateaux+rue+K4" target="_blank">
+                                    <MapPin className="mr-2" size={18} />
+                                    Voir sur la carte
+                                </Link>
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+            </section>
+
             {/* Project Request Section */}
             <section id="projet" className="py-20 lg:py-32 relative">
                 <div className="container mx-auto px-4 lg:px-8">
@@ -1540,15 +1537,15 @@ export function HomePageContent() {
                                         </div>
                                         <div>
                                             <Label htmlFor="projectType" className="text-foreground mb-2 block">Type de projet *</Label>
-                                            <input 
-                                                id="projectType" 
-                                                name="projectType" 
-                                                type="text" 
-                                                required 
-                                                value={formData.projectType} 
-                                                onChange={handleChange} 
-                                                className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground transition-all duration-300 hover:border-primary/50" 
-                                                placeholder="Ex: Impression 3D, Découpe laser, Électronique..." 
+                                            <input
+                                                id="projectType"
+                                                name="projectType"
+                                                type="text"
+                                                required
+                                                value={formData.projectType}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground transition-all duration-300 hover:border-primary/50"
+                                                placeholder="Ex: Impression 3D, Découpe laser, Électronique..."
                                             />
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

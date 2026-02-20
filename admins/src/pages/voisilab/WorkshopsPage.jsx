@@ -42,6 +42,7 @@ const defaultFormData = {
   price:       0,
   instructor:  '',
   category:    '',
+  type:        '',
   status:      'upcoming',
   active:      false
 };
@@ -140,6 +141,15 @@ function WorkshopDialog({ open, onClose, onSave, editingId, formData, setFormDat
               value={formData.category} onChange={update('category')}
               size="small" placeholder="Ex : Fabrication numérique"
             />
+            <FormControl fullWidth size="small">
+              <InputLabel>Type d'activité</InputLabel>
+              <Select value={formData.type || ''} label="Type d'activité" onChange={update('type')}>
+                <MenuItem value=""><em>Non défini (auto)</em></MenuItem>
+                <MenuItem value="formation">Formation machine</MenuItem>
+                <MenuItem value="atelier">Atelier créatif</MenuItem>
+                <MenuItem value="evenement">Événement</MenuItem>
+              </Select>
+            </FormControl>
           </Stack>
         </Box>
 
@@ -305,6 +315,7 @@ export default function WorkshopsPage() {
       price:       workshop.price || 0,
       instructor:  workshop.instructor || '',
       category:    workshop.category || '',
+      type:        workshop.type || '',
       status:      workshop.status || 'upcoming',
       active:      Boolean(workshop.active)
     });

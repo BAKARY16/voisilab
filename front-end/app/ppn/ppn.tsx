@@ -350,11 +350,27 @@ export function PPN() {
 
   return (
     <section className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
+       <div className="absolute inset-0">
+          <video
+            src="/video.mp4"
+            autoPlay
+            loop
+            muted
+            className="object-cover w-full h-full"
+            onEnded={(e) => {
+              const video = e.target as HTMLVideoElement
+              video.currentTime = 0
+              video.play()
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black/80"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20"></div>
+        </div>
       {/* Decorative Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      {/* <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
-      </div>
+      </div> */}
 
       <div className="relative z-10 pt-8 pb-20">
         {/* Breadcrumb */}
@@ -371,7 +387,7 @@ export function PPN() {
               <Network className="w-4 h-4 mr-2" />
               UVCI - Innovation Territoriale
             </Badge> */}
-            <h1 className="text-4xl lg:text-6xl xl:text-7xl font-black text-foreground mb-6 tracking-tight uppercase">
+            <h1 className="text-4xl lg:text-6xl xl:text-7xl font-black text-white mb-6 tracking-tight uppercase">
               Points de Présence
               <span className="block mt-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-primary">
                 Numérique
@@ -747,7 +763,7 @@ export function PPN() {
         {/* CTA Final */}
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-4xl mx-auto fade-in-up">
-            <Card className="border-2 border-primary/30 shadow-2xl overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10">
+            <Card className="shadow overflow-hidden ">
               <CardContent className="p-10 lg:p-16 text-center">
                 <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Sparkles className="text-primary" size={40} />

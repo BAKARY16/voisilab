@@ -1,5 +1,5 @@
 // Service API centralisé pour le front-end VoisiLab
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
+const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 /**
  * Fonction utilitaire pour gérer les réponses API

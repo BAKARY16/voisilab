@@ -88,19 +88,30 @@ export const getAllWorkshops = asyncHandler(async (req: Request, res: Response) 
  * Get published workshops (public)
  */
 export const getPublishedWorkshops = asyncHandler(async (req: Request, res: Response) => {
-  const { limit = 20 } = req.query;
+  const { limit = 50, include_completed = 'true' } = req.query;
 
-  let query = `
-    SELECT * FROM workshops 
+  const statusFilter = include_completed === 'false'
+    ? `status IN ('upcoming', 'ongoing')`
+    : `status IN ('upcoming', 'ongoing', 'completed')`;
+
+  const query = `
+    SELECT *,
+      capacity        AS max_participants,
+      registered      AS current_participants
+    FROM workshops 
     WHERE active = TRUE 
-    AND status IN ('upcoming', 'ongoing')
+    AND ${statusFilter}
+    ORDER BY 
+      CASE status
+        WHEN 'upcoming' THEN 0
+        WHEN 'ongoing' THEN 1
+        WHEN 'completed' THEN 2
+      END ASC,
+      date DESC
+    LIMIT ?
   `;
-  const params: any[] = [];
 
-  query += ' ORDER BY date ASC LIMIT ?';
-  params.push(Number(limit));
-
-  const [rows] = await pool.query<RowDataPacket[]>(query, params);
+  const [rows] = await pool.query<RowDataPacket[]>(query, [Number(limit)]);
 
   res.json({ data: rows });
 });
@@ -188,6 +199,7 @@ export const createWorkshop = asyncHandler(async (req: Request, res: Response) =
     level,
     image,
     category,
+    type,
     price      = 0,
     instructor,
     status     = 'upcoming',
@@ -207,12 +219,12 @@ export const createWorkshop = asyncHandler(async (req: Request, res: Response) =
 
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO workshops
-      (title, slug, description, date, location, capacity, price, image, instructor, level, category, status, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (title, slug, description, date, location, capacity, price, image, instructor, level, category, type, status, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       title, slug, description, mysqlDate, location,
       Number(finalCap), Number(price), finalImage, instructor || null,
-      normalizeLevel(level), category || null, status, finalActive ? 1 : 0
+      normalizeLevel(level), category || null, type || null, status, finalActive ? 1 : 0
     ]
   );
 
@@ -268,6 +280,7 @@ export const updateWorkshop = asyncHandler(async (req: Request, res: Response) =
   if (body.date        !== undefined) { updates.push('date = ?');        params.push(formatDateForMySQL(body.date)); }
   if (body.location    !== undefined) { updates.push('location = ?');    params.push(body.location); }
   if (body.category    !== undefined) { updates.push('category = ?');    params.push(body.category); }
+  if (body.type        !== undefined) { updates.push('type = ?');        params.push(body.type || null); }
   if (body.price       !== undefined) { updates.push('price = ?');       params.push(Number(body.price)); }
   if (body.instructor  !== undefined) { updates.push('instructor = ?');  params.push(body.instructor); }
   if (body.status      !== undefined) { updates.push('status = ?');      params.push(body.status); }

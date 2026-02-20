@@ -139,7 +139,7 @@ export function WorkshopsSection() {
         </div>
 
         {/* Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
+        {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {currentData.items.map((item, index) => (
             <Card
               key={index}
@@ -180,7 +180,7 @@ export function WorkshopsSection() {
               </CardContent>
             </Card>
           ))}
-        </div>
+        </div> */}
 
         {/* Newsletter */}
         <div className="mt-16 max-w-3xl mx-auto">

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Calendar, ArrowRight, Search, Filter, AlertCircle } from "lucide-react"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
+import { Bell, Mail } from "lucide-react"
 
 interface BlogPost {
     id: string
@@ -285,6 +286,22 @@ export function ActualitesContent() {
                                 ))}
                             </div>
                         )}
+                    </div>
+                </div>
+            </section>
+
+            <section className="py-16 bg-muted/40 border-t border-border">
+                <div className="container mx-auto px-4 lg:px-8">
+                    <div className="max-w-2xl mx-auto text-center">
+                        <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-5">
+                            <Bell className="text-primary" size={26} />
+                        </div>
+                        <h3 className="text-2xl font-bold text-foreground mb-2">
+                            Ne manquez aucune actualité
+                        </h3>
+                        <p className="text-muted-foreground mb-8">
+                            Inscrivez-vous et soyez les premiers informés de nos événements, formations et nouveautés.
+                        </p>
                     </div>
                 </div>
             </section>

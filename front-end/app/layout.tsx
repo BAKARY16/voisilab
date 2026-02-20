@@ -38,11 +38,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "logolab.png", sizes: "32x32", type: "image/png" },
-      { url: "logolab.png", sizes: "16x16", type: "image/png" },
+      { url: "/logolab.png", sizes: "32x32", type: "image/png" },
+      { url: "/logolab.png", sizes: "16x16", type: "image/png" },
     ],
-    apple: "logolab.png",
-    shortcut: "logolab.png",
+    apple: "/logolab.png",
+    shortcut: "/logolab.png",
   },
 }
 

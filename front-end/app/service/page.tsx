@@ -250,7 +250,7 @@ export default function ServicePage() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button
                   size="lg"
-                  className="group relative overflow-hidden bg-gradient-to-r from-primary to-accent hover:shadow-2xl transition-all duration-300"
+                  className="group relative cursor-pointer overflow-hidden bg-gradient-to-r from-primary to-accent hover:shadow-2xl transition-all duration-300"
                   onClick={() => document.getElementById('devis')?.scrollIntoView({ behavior: 'smooth' })}
                 >
                   <span className="relative z-10 flex items-center gap-2">
@@ -261,7 +261,7 @@ export default function ServicePage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="text-white border-white/30 hover:bg-white/10 backdrop-blur-sm"
+                  className="text-black border-white/30 hover:bg-white/10 backdrop-blur-sm"
                   asChild
                 >
                   <Link href="/projet">Soumettre un projet</Link>
@@ -366,7 +366,7 @@ export default function ServicePage() {
                         {/* Actions */}
                         <div className="flex flex-wrap items-center gap-3 pt-4 border-t">
                           <Button size="sm" asChild>
-                            <Link href="/projet">
+                            <Link href="/#devis" onClick={(e) => {e.preventDefault(); document.getElementById('devis')?.scrollIntoView({ behavior: 'smooth' })}}>
                               Demander un devis
                               <ArrowRight className="w-4 h-4 ml-2" />
                             </Link>
@@ -571,7 +571,7 @@ export default function ServicePage() {
       <section className="py-20 lg:py-28">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-4xl mx-auto fade-in-up">
-            <Card className="border-2 border-primary/30 shadow-lg overflow-hidden">
+            <Card className="overflow-hidden">
               <CardContent className="p-10 lg:p-16 text-center">
                 <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Rocket className="text-primary" size={40} />

@@ -227,7 +227,7 @@ export function AboutContact() {
   },
 ]
   const benefits = [
-    "Réponse garantie sous 48h",
+    "Réponse garantie sous 48h ouvrable",
     "Équipe dédiée à votre écoute",
     "Accompagnement personnalisé",
     "Support technique disponible",
@@ -653,7 +653,7 @@ export function AboutContact() {
                     Envoyez-nous un message
                   </h2>
                   <p className="text-muted-foreground">
-                    Notre équipe vous répondra sous 24h
+                    Notre équipe vous répondra dans les meilleurs délais
                   </p>
                 </div>
 
@@ -862,11 +862,11 @@ export function AboutContact() {
                     <div className="space-y-3">
                       <div className="flex justify-between p-3 bg-muted/50 rounded-lg">
                         <span className="text-sm font-medium text-muted-foreground">Lun - Ven</span>
-                        <span className="text-sm font-bold">9h - 18h</span>
+                        <span className="text-sm font-bold">9h - 17h</span>
                       </div>
-                      <div className="flex justify-between p-3 bg-muted/50 rounded-lg">
+                      <div className="flex justify-between p-3 bg-destructive/10 rounded-lg">
                         <span className="text-sm font-medium text-muted-foreground">Samedi</span>
-                        <span className="text-sm font-bold">10h - 16h</span>
+                        <span className="text-sm font-bold text-destructive">Fermé</span>
                       </div>
                       <div className="flex justify-between p-3 bg-destructive/10 rounded-lg">
                         <span className="text-sm font-medium text-muted-foreground">Dimanche</span>
@@ -885,7 +885,7 @@ export function AboutContact() {
       <section className="py-20 lg:py-32 relative">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-4xl mx-auto fade-in-up">
-            <Card className="border-2 border-primary/30 shadow-l overflow-hidden ">
+            <Card className="shadow-l overflow-hidden ">
               <CardContent className="p-10 lg:p-16 text-center">
                 <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Rocket className="text-primary" size={40} />
@@ -903,7 +903,7 @@ export function AboutContact() {
                       <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
                     </Link>
                   </Button>
-                  <Button size="lg" variant="outline" onClick={() => {
+                  <Button size="lg" className="cursor-pointer" variant="outline" onClick={() => {
                     document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' })
                   }}>
                     <MessageSquare className="mr-2" size={20} />

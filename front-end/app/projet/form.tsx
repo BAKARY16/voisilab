@@ -63,11 +63,11 @@ export function SendPage() {
     // Gestion des fichiers
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || [])
-        
+
         // Vérifier la taille totale
         const totalSize = files.reduce((acc, file) => acc + file.size, 0)
         const maxSize = 10 * 1024 * 1024 // 10 MB par fichier
-        
+
         const validFiles = files.filter(file => {
             if (file.size > maxSize) {
                 alert(`Le fichier ${file.name} dépasse 10 MB`)
@@ -136,7 +136,7 @@ export function SendPage() {
             const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
             console.log('🔍 API_URL utilisée:', API_URL)
             console.log('🔍 URL complète:', `${API_URL}/api/project-submissions/submit`)
-            
+
             const response = await fetch(`${API_URL}/api/project-submissions/submit`, {
                 method: 'POST',
                 body: formData,
@@ -185,7 +185,7 @@ export function SendPage() {
         },
         {
             title: "Étude de faisabilité",
-            description: "Notre équipe analyse votre demande en 24-48h.",
+            description: "Notre équipe analyse votre demande dans les meilleurs délais.",
             icon: Target,
             gradient: "from-purple-500/10 to-pink-500/10",
             iconColor: "text-purple-600 dark:text-purple-400"
@@ -222,7 +222,7 @@ export function SendPage() {
     ]
 
     const benefits = [
-        "Réponse garantie sous 48h",
+        "Réponse garantie sous 48h ouvrable",
         "Équipe d'experts à votre écoute",
         "Accompagnement personnalisé",
         "Devis transparent et détaillé",
@@ -231,8 +231,8 @@ export function SendPage() {
     ]
 
     const openingHours = [
-        { day: "Lundi - Vendredi", hours: "9h00 - 18h00" },
-        { day: "Samedi", hours: "10h00 - 16h00" },
+        { day: "Lundi - Vendredi", hours: "9h00 - 17h00" },
+        { day: "Samedi", hours: "Fermé", closed: true },
         { day: "Dimanche", hours: "Fermé", closed: true },
     ]
 
@@ -291,26 +291,11 @@ export function SendPage() {
                                 Partagez votre vision avec nous et transformons-la en réalité.
                             </p>
 
-                            {/* Security badges */}
-                            <div className="flex flex-wrap justify-center gap-4 mb-8">
-                                {securityFeatures.map((feature, index) => {
-                                    const Icon = feature.icon
-                                    return (
-                                        <div
-                                            key={index}
-                                            className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10"
-                                        >
-                                            <Icon className="text-green-400" size={16} />
-                                            <span className="text-sm text-gray-200">{feature.text}</span>
-                                        </div>
-                                    )
-                                })}
-                            </div>
 
                             {/* Stats Grid */}
                             <div className="grid grid-cols-3 gap-4 lg:gap-6 max-w-2xl mx-auto">
                                 <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-all">
-                                    <div className="text-3xl lg:text-4xl font-bold text-white mb-1">150+</div>
+                                    <div className="text-3xl lg:text-4xl font-bold text-white mb-1">102+</div>
                                     <div className="text-sm text-gray-300">Projets réalisés</div>
                                 </div>
                                 <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-all">
@@ -339,7 +324,7 @@ export function SendPage() {
                     />
 
                     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 max-w-7xl mx-auto">
-                        
+
                         {/* Form Section */}
                         <div className="lg:col-span-3 space-y-6">
                             <Card className="border border-border shadow-sm">
@@ -413,10 +398,9 @@ export function SendPage() {
                                                         {...register("name")}
                                                         id="name"
                                                         type="text"
-                                                        className={`w-full px-4 py-2.5 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${
-                                                            errors.name ? 'border-red-500' : 'border-border'
-                                                        }`}
-                                                        placeholder="Jean Dupont"
+                                                        className={`w-full px-4 py-2.5 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${errors.name ? 'border-red-500' : 'border-border'
+                                                            }`}
+                                                        placeholder="Jean Kouassi"
                                                     />
                                                     {errors.name && (
                                                         <p className="text-sm text-red-500 flex items-center gap-1">
@@ -438,9 +422,8 @@ export function SendPage() {
                                                                 {...register("email")}
                                                                 id="email"
                                                                 type="email"
-                                                                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${
-                                                                    errors.email ? 'border-red-500' : 'border-border'
-                                                                }`}
+                                                                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${errors.email ? 'border-red-500' : 'border-border'
+                                                                    }`}
                                                                 placeholder="jean@example.com"
                                                             />
                                                         </div>
@@ -462,9 +445,8 @@ export function SendPage() {
                                                                 {...register("phone")}
                                                                 id="phone"
                                                                 type="tel"
-                                                                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${
-                                                                    errors.phone ? 'border-red-500' : 'border-border'
-                                                                }`}
+                                                                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${errors.phone ? 'border-red-500' : 'border-border'
+                                                                    }`}
                                                                 placeholder="+225 05 00 00 00 00"
                                                             />
                                                         </div>
@@ -486,9 +468,8 @@ export function SendPage() {
                                                         {...register("projectType")}
                                                         id="projectType"
                                                         type="text"
-                                                        className={`w-full px-4 py-2.5 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${
-                                                            errors.projectType ? 'border-red-500' : 'border-border'
-                                                        }`}
+                                                        className={`w-full px-4 py-2.5 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${errors.projectType ? 'border-red-500' : 'border-border'
+                                                            }`}
                                                         placeholder="Ex: Impression 3D, Prototypage, IoT, Développement web..."
                                                     />
                                                     {errors.projectType && (
@@ -544,9 +525,8 @@ export function SendPage() {
                                                         {...register("description")}
                                                         id="description"
                                                         rows={5}
-                                                        className={`w-full px-4 py-2.5 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none transition-colors ${
-                                                            errors.description ? 'border-red-500' : 'border-border'
-                                                        }`}
+                                                        className={`w-full px-4 py-2.5 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none transition-colors ${errors.description ? 'border-red-500' : 'border-border'
+                                                            }`}
                                                         placeholder="Décrivez votre projet en détail (minimum 20 caractères)..."
                                                     />
                                                     {errors.description && (
@@ -560,7 +540,7 @@ export function SendPage() {
                                                 {/* File Upload - REMPLACER LA SECTION EXISTANTE */}
                                                 <div className="space-y-2">
                                                     <Label className="text-sm font-medium">Fichiers (optionnel)</Label>
-                                                    
+
                                                     <input
                                                         type="file"
                                                         id="file-upload"
@@ -569,7 +549,7 @@ export function SendPage() {
                                                         onChange={handleFileChange}
                                                         className="hidden"
                                                     />
-                                                    
+
                                                     <label
                                                         htmlFor="file-upload"
                                                         className="block border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 hover:bg-muted/20 transition-all cursor-pointer group"
@@ -644,7 +624,7 @@ export function SendPage() {
                                                     </div>
                                                     {/* Barre de progression */}
                                                     {uploadProgress > 0 && (
-                                                        <div 
+                                                        <div
                                                             className="absolute bottom-0 left-0 h-1 bg-primary-foreground/30 transition-all duration-300"
                                                             style={{ width: `${uploadProgress}%` }}
                                                         />
@@ -654,6 +634,20 @@ export function SendPage() {
                                         </>
                                     )}
                                 </CardContent>
+                                <div className="flex flex-wrap justify-center gap-4 mb-8">
+                                    {securityFeatures.map((feature, index) => {
+                                        const Icon = feature.icon
+                                        return (
+                                            <div
+                                                key={index}
+                                                className="flex items-center gap-2 px-2 py-1 bg-primary rounded-lg border border-white/10"
+                                            >
+                                                <Icon className="text-green-400" size={16} />
+                                                <span className="text-sm text-gray-200">{feature.text}</span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
                             </Card>
 
                             {/* Opening Hours Card */}
@@ -791,12 +785,12 @@ export function SendPage() {
                                             </div>
                                         </a>
                                     </div>
-                                    <Button variant="outline" className="w-full mt-4 text-sm" asChild>
+                                    {/* <Button variant="outline" className="w-full mt-4 text-sm" asChild>
                                         <Link href="/contact">
                                             Contactez-nous directement
                                             <ArrowRight size={14} className="ml-2" />
                                         </Link>
-                                    </Button>
+                                    </Button> */}
                                 </CardContent>
                             </Card>
                         </div>
