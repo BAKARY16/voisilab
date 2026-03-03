@@ -4,7 +4,7 @@ import { User, LogOut, Settings } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth"
 import { SignInDialog } from "../auth/signin"
-import Link from "next/link"
+import { NavLink } from "@/components/nav-link"
 
 export function AuthButtonMobile() {
   const { user, isAuthenticated, logout } = useAuth()
@@ -32,20 +32,20 @@ export function AuthButtonMobile() {
         </div>
       </div>
       <div className="space-y-1 px-2">
-        <Link
+        <NavLink
           href="/profile"
           className="flex items-center gap-2 px-4 py-2 text-sm rounded-md hover:bg-muted transition-colors"
         >
           <User className="w-4 h-4" />
           Mon profil
-        </Link>
-        <Link
+        </NavLink>
+        <NavLink
           href="/profile/settings"
           className="flex items-center gap-2 px-4 py-2 text-sm rounded-md hover:bg-muted transition-colors"
         >
           <Settings className="w-4 h-4" />
           Paramètres
-        </Link>
+        </NavLink>
         <button
           onClick={logout}
           className="flex items-center gap-2 px-4 py-2 text-sm rounded-md hover:bg-red-50 dark:hover:bg-red-950 text-red-600 transition-colors w-full"

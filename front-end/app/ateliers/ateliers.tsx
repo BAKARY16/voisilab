@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import Link from "next/link"
+import { NavLink } from "@/components/nav-link"
 import PageBreadcrumb from "@/components/PageBreadCrumb"
 import {
   Calendar,
@@ -27,12 +28,22 @@ import {
 import { useState, useEffect } from "react"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
 
+// ── Utilitaires ──────────────────────────────────────────────────────────────
+
+/** Supprime les balises HTML pour l'affichage tronqué (cartes) */
+const stripHtml = (html: string) =>
+  (html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\n/g, ' ')
+
+/** Convertit le texte brut + balises HTML en HTML prêt à afficher */
+const toSafeHtml = (text: string): string =>
+  (text || '').replace(/\n/g, '<br />')
+
 interface Workshop {
   id: number
   title: string
   description: string
   category: string
-  type: 'formation' | 'atelier' | 'evenement' | null
+  type: 'formation' | 'atelier' | 'evenement' | 'ceremonie' | 'autre' | null
   date: string
   end_date: string | null
   max_participants: number
@@ -103,10 +114,15 @@ export function WorkshopsSection() {
     return () => clearInterval(interval)
   }, [])
 
-  const resolveType = (w: Workshop): 'formation' | 'atelier' | 'evenement' => {
-    if (w.type) return w.type
+  const resolveType = (w: Workshop): 'formation' | 'atelier' | 'evenement' | 'ceremonie' | 'autre' => {
+    if (w.type === 'ceremonie') return 'ceremonie'
+    if (w.type === 'autre')     return 'autre'
+    if (w.type === 'formation') return 'formation'
+    if (w.type === 'atelier')   return 'atelier'
+    if (w.type === 'evenement') return 'evenement'
     const cat = (w.category || '').toLowerCase()
     if (cat.includes('formation') || cat.includes('machine')) return 'formation'
+    if (cat.includes('cérémonie') || cat.includes('ceremonie') || cat.includes('cere')) return 'ceremonie'
     if (cat.includes('événement') || cat.includes('evenement') || cat.includes('hackathon')) return 'evenement'
     return 'atelier'
   }
@@ -121,15 +137,19 @@ export function WorkshopsSection() {
   const getTypeIcon = (type: string | null) => {
     switch (type) {
       case 'formation': return GraduationCap
-      case 'atelier': return Wrench
+      case 'atelier':   return Wrench
       case 'evenement': return Zap
-      default: return BookOpen
+      case 'ceremonie': return Trophy
+      case 'autre':     return BookOpen
+      default:          return BookOpen
     }
   }
   const getTypeLabel = (w: Workshop) => {
     const t = resolveType(w)
     if (t === 'formation') return 'Formation'
     if (t === 'evenement') return 'Événement'
+    if (t === 'ceremonie') return 'Cérémonie'
+    if (t === 'autre')     return 'Autre'
     return 'Atelier'
   }
   const getSpotsRemaining = (w: Workshop) => w.max_participants - w.current_participants
@@ -191,7 +211,7 @@ export function WorkshopsSection() {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="text-black border-white/30 hover:bg-white/10 backdrop-blur-sm" asChild>
-                <Link href="/about">Nous contacter</Link>
+                <NavLink href="/about">Nous contacter</NavLink>
               </Button>
             </div>
           </div>
@@ -253,7 +273,7 @@ export function WorkshopsSection() {
         </div>
       </section>
 
-      {/* ── Activités par section ── */}
+      {/* ── Activités classées par type ── */}
       <section id="ateliers" className="py-16 lg:py-24">
         <div className="container mx-auto px-4 lg:px-8">
           <SectionHeader title="Nos activités" subtitle="Formations, ateliers créatifs et événements organisés par le FabLab UVCI" />
@@ -272,12 +292,43 @@ export function WorkshopsSection() {
               <p className="text-sm text-muted-foreground">De nouvelles activités seront bientôt publiées.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-7xl mx-auto">
-              {workshops.map((item, i) => (
-                <WorkshopCard key={item.id} item={item} index={i}
-                  resolveType={resolveType} getTypeIcon={getTypeIcon} getTypeLabel={getTypeLabel}
-                  getLevelColor={getLevelColor} getSpotsRemaining={getSpotsRemaining} />
-              ))}
+            <div className="space-y-20 max-w-7xl mx-auto">
+              {([
+                { type: 'atelier',   label: 'Ateliers créatifs',  icon: Wrench,        iconBg: 'bg-purple-500/10', iconColor: 'text-purple-600', divider: 'bg-purple-200' },
+                { type: 'evenement', label: 'Événements',          icon: Zap,           iconBg: 'bg-orange-500/10', iconColor: 'text-orange-600', divider: 'bg-orange-200' },
+                { type: 'formation', label: 'Formations',          icon: GraduationCap, iconBg: 'bg-blue-500/10',   iconColor: 'text-blue-600',   divider: 'bg-blue-200'   },
+                { type: 'ceremonie', label: 'Cérémonies',          icon: Trophy,        iconBg: 'bg-yellow-500/10', iconColor: 'text-yellow-600', divider: 'bg-yellow-200' },
+                { type: 'autre',     label: 'Autres activités',    icon: BookOpen,      iconBg: 'bg-gray-500/10',   iconColor: 'text-gray-600',   divider: 'bg-gray-200'   },
+              ] as const).map((section) => {
+                const SIcon = section.icon
+                const items = workshops.filter(w => resolveType(w) === section.type)
+                if (items.length === 0) return null
+                return (
+                  <div key={section.type}>
+                    {/* En-tête de section */}
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className={`w-11 h-11 ${section.iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                        <SIcon className={section.iconColor} size={22} />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-foreground leading-tight">{section.label}</h2>
+                        <p className="text-sm text-muted-foreground">{items.length} activité{items.length > 1 ? 's' : ''}</p>
+                      </div>
+                      <div className={`flex-1 h-px ${section.divider} ml-2`} />
+                    </div>
+                    {/* Grille */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {items.map((item, i) => (
+                        <WorkshopCard
+                          key={item.id} item={item} index={i}
+                          resolveType={resolveType} getTypeIcon={getTypeIcon} getTypeLabel={getTypeLabel}
+                          getLevelColor={getLevelColor} getSpotsRemaining={getSpotsRemaining}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -324,7 +375,7 @@ export function WorkshopsSection() {
 /* ── Carte active ─────────────────────────────────────────── */
 function WorkshopCard({ item, index, resolveType, getTypeIcon, getTypeLabel, getLevelColor, getSpotsRemaining }: {
   item: Workshop; index: number
-  resolveType: (w: Workshop) => 'formation' | 'atelier' | 'evenement'
+  resolveType: (w: Workshop) => 'formation' | 'atelier' | 'evenement' | 'ceremonie' | 'autre'
   getTypeIcon: (t: string | null) => React.ElementType
   getTypeLabel: (w: Workshop) => string
   getLevelColor: (l: string) => string
@@ -334,7 +385,7 @@ function WorkshopCard({ item, index, resolveType, getTypeIcon, getTypeLabel, get
   const spots = getSpotsRemaining(item)
   return (
     <div className="" style={{ animationDelay: `${Math.min(index * 80, 400)}ms` }}>
-      <Link href={`/ateliers/${item.id}`} className="block h-full">
+      <NavLink href={`/ateliers/${item.id}`} className="block h-full">
         <Card className="overflow-hidden border border-border hover:border-primary/40 hover:shadow-xl transition-all duration-300 group h-full cursor-pointer flex flex-col">
           <div className="relative h-52 overflow-hidden flex-shrink-0">
             <Image src={item.image || item.image_url || "/logolab.png"} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -367,7 +418,7 @@ function WorkshopCard({ item, index, resolveType, getTypeIcon, getTypeLabel, get
           </div>
           <CardContent className="p-5 flex flex-col flex-1">
             <h3 className="text-base font-semibold text-foreground mb-1.5 group-hover:text-primary transition-colors line-clamp-2 leading-snug">{item.title}</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed mb-4 line-clamp-2 flex-1">{item.description}</p>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-4 line-clamp-2 flex-1">{stripHtml(item.description)}</p>
             <div className="space-y-1.5 mb-4 text-xs text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Clock size={13} className="text-primary flex-shrink-0" />
@@ -385,7 +436,7 @@ function WorkshopCard({ item, index, resolveType, getTypeIcon, getTypeLabel, get
             </Button>
           </CardContent>
         </Card>
-      </Link>
+      </NavLink>
     </div>
   )
 }
@@ -393,14 +444,14 @@ function WorkshopCard({ item, index, resolveType, getTypeIcon, getTypeLabel, get
 /* ── Carte passée ─────────────────────────────────────────── */
 function PastCard({ item, index, resolveType, getTypeIcon, getTypeLabel }: {
   item: Workshop; index: number
-  resolveType: (w: Workshop) => 'formation' | 'atelier' | 'evenement'
+  resolveType: (w: Workshop) => 'formation' | 'atelier' | 'evenement' | 'ceremonie' | 'autre'
   getTypeIcon: (t: string | null) => React.ElementType
   getTypeLabel: (w: Workshop) => string
 }) {
   const TypeIcon = getTypeIcon(resolveType(item))
   return (
     <div className="" style={{ animationDelay: `${Math.min(index * 60, 300)}ms` }}>
-      <Link href={`/ateliers/${item.id}`} className="block h-full">
+      <NavLink href={`/ateliers/${item.id}`} className="block h-full">
         <Card className="overflow-hidden border border-border hover:border-primary/30 hover:shadow-md transition-all duration-300 group h-full cursor-pointer flex flex-col opacity-80 hover:opacity-100">
           <div className="relative h-40 overflow-hidden flex-shrink-0">
             <Image src={item.image || item.image_url || '/logolab.png'} alt={item.title} fill className="object-cover grayscale-[40%] group-hover:grayscale-0 transition-all duration-300 group-hover:scale-105" />
@@ -423,7 +474,7 @@ function PastCard({ item, index, resolveType, getTypeIcon, getTypeLabel }: {
             )}
           </CardContent>
         </Card>
-      </Link>
+      </NavLink>
     </div>
   )
 }

@@ -1,8 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useLoading } from "./page-transition"
+import { useRouter, usePathname } from "next/navigation"
+import { useLoading } from "@/contexts/loading-context"
 
 interface NavLinkProps {
   href: string
@@ -13,19 +13,20 @@ interface NavLinkProps {
 
 export function NavLink({ href, children, className, onClick }: NavLinkProps) {
   const router = useRouter()
-  const { setIsLoading } = useLoading()
+  const pathname = usePathname()
+  const { startLoading } = useLoading()
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    // Ancres (#section) ou même page → comportement natif sans loading
+    if (href.startsWith('#') || pathname === href) return
+
     e.preventDefault()
-    
-    // Déclencher le loading
-    setIsLoading(true)
-    
-    // Appeler onClick si fourni (pour fermer le menu mobile)
+    startLoading()
     onClick?.()
-    
-    // Naviguer vers la page
-    router.push(href)
+
+    setTimeout(() => {
+      router.push(href)
+    }, 100)
   }
 
   return (

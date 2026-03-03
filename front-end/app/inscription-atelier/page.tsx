@@ -1,600 +1,628 @@
-"use client"
+﻿"use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
-  ArrowRight,
-  Calendar,
-  Clock,
-  Users,
-  CheckCircle2,
-  Send,
-  GraduationCap,
-  Award,
-  Target,
-  Sparkles,
-  ChevronLeft,
-  Printer,
-  Scissors,
-  CodeXml,
+  ArrowRight, Calendar, Clock, MapPin, Users, CheckCircle2,
+  Send, GraduationCap, Award, ChevronLeft, Wrench, Zap,
+  BookOpen, Trophy, Loader2, AlertCircle, Euro, Search, X,
+  SlidersHorizontal,
 } from "lucide-react"
 import Link from "next/link"
+import { NavLink } from "@/components/nav-link"
 import Image from "next/image"
+import PageBreadcrumb from "@/components/PageBreadCrumb"
 
-const workshops = [
-  {
-    id: "impression-3d",
-    title: "Initiation Impression 3D",
-    date: "15 Mars 2024",
-    time: "14h00 - 17h00",
-    duration: "3 heures",
-    participants: "8/10",
-    level: "Débutant",
-    description: "Apprenez les bases de l'impression 3D, de la modélisation à l'impression de votre premier objet.",
-    price: "Gratuit",
-    priceValue: 0,
-    spots: 2,
-    gradient: "from-blue-500/10 to-cyan-500/10",
-    levelColor: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
-    icon: Printer,
-    image: "/banner1.jpg",
-    program: [
-      "Introduction à l'impression 3D FDM",
-      "Découverte du logiciel de modélisation",
-      "Préparation du fichier 3D (slicing)",
-      "Lancement de votre première impression",
-      "Finitions et post-traitement",
-    ],
-    prerequisites: "Aucun prérequis nécessaire",
-    instructor: "Sarah Martin",
-    instructorBio: "Experte en impression 3D avec 5 ans d'expérience",
-  },
-  {
-    id: "laser-avance",
-    title: "Découpeuse Laser Avancée",
-    date: "22 Mars 2024",
-    time: "10h00 - 13h00",
-    duration: "3 heures",
-    participants: "5/8",
-    level: "Intermédiaire",
-    description: "Maîtrisez les techniques avancées de découpe et gravure laser sur différents matériaux.",
-    price: "10 000 FCFA",
-    priceValue: 10000,
-    spots: 3,
-    gradient: "from-purple-500/10 to-pink-500/10",
-    levelColor: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20",
-    icon: Scissors,
-    image: "/banner2.jpg",
-    program: [
-      "Paramètres avancés de découpe/gravure",
-      "Techniques de gravure photo",
-      "Optimisation des fichiers vectoriels",
-      "Multi-matériaux (bois, acrylique, cuir)",
-      "Projet personnalisé",
-    ],
-    prerequisites: "Connaissances de base en design graphique",
-    instructor: "Lucas Bernard",
-    instructorBio: "Designer et formateur laser depuis 7 ans",
-  },
-  {
-    id: "arduino-electronique",
-    title: "Arduino & Électronique",
-    date: "29 Mars 2024",
-    time: "14h00 - 18h00",
-    duration: "4 heures",
-    participants: "6/12",
-    level: "Débutant",
-    description: "Introduction à la programmation Arduino et création de circuits électroniques simples.",
-    price: "8 000 FCFA",
-    priceValue: 8000,
-    spots: 6,
-    gradient: "from-green-500/10 to-emerald-500/10",
-    levelColor: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
-    icon: CodeXml,
-    image: "/banner1.jpg",
-    program: [
-      "Introduction à Arduino et l'électronique",
-      "Premier programme : LED clignotante",
-      "Capteurs (température, lumière, distance)",
-      "Actionneurs (servomoteurs, buzzers)",
-      "Projet final : Station météo connectée",
-    ],
-    prerequisites: "Aucun prérequis, ordinateur portable recommandé",
-    instructor: "Alex Touré",
-    instructorBio: "Ingénieur électronique et maker passionné",
-  },
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.fablab.voisilab.online"
+
+/* ─── Types ─────────────────────────────────────────────────────────────── */
+interface Workshop {
+  id: number
+  title: string
+  description: string
+  type: string | null
+  date: string
+  end_date: string | null
+  max_participants: number
+  current_participants: number
+  capacity: number
+  registered: number
+  price: number
+  image: string | null
+  image_url: string | null
+  instructor: string | null
+  location: string | null
+  status: string
+}
+
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
+const TYPES = [
+  { key: "tous",       label: "Tous",       icon: SlidersHorizontal },
+  { key: "formation",  label: "Formations", icon: GraduationCap },
+  { key: "atelier",    label: "Ateliers",   icon: Wrench },
+  { key: "evenement",  label: "Événements", icon: Zap },
+  { key: "ceremonie",  label: "Cérémonies", icon: Trophy },
+  { key: "autre",      label: "Autres",     icon: BookOpen },
 ]
 
-export default function InscriptionAtelierPage() {
-  const [selectedWorkshop, setSelectedWorkshop] = useState<string | null>(null)
-  const [submitted, setSubmitted] = useState(false)
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    level: "",
-    motivation: "",
-    newsletter: false,
+const getTypeInfo = (type: string | null) => {
+  switch (type) {
+    case "formation": return { icon: GraduationCap, label: "Formation" }
+    case "atelier":   return { icon: Wrench,        label: "Atelier" }
+    case "evenement": return { icon: Zap,           label: "Événement" }
+    case "ceremonie": return { icon: Trophy,        label: "Cérémonie" }
+    default:          return { icon: BookOpen,      label: "Activité" }
+  }
+}
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return "—"
+  return new Date(dateStr).toLocaleDateString("fr-FR", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
   })
+}
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const target = e.target
-    const value = target.type === "checkbox" ? (target as HTMLInputElement).checked : target.value
-    setFormData({ ...formData, [target.name]: value })
-  }
+const formatDateShort = (dateStr: string) => {
+  if (!dateStr) return "—"
+  return new Date(dateStr).toLocaleDateString("fr-FR", {
+    day: "numeric", month: "short", year: "numeric",
+  })
+}
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("Inscription submitted:", { ...formData, workshop: selectedWorkshop })
-    setSubmitted(true)
-    setTimeout(() => {
-      setSubmitted(false)
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        level: "",
-        motivation: "",
-        newsletter: false,
+const formatTime = (dateStr: string) => {
+  if (!dateStr) return null
+  return new Date(dateStr).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+}
+
+const spotsLeft = (w: Workshop) =>
+  (w.capacity ?? w.max_participants ?? 0) - (w.current_participants ?? w.registered ?? 0)
+
+const formatPrice = (price: number) =>
+  price === 0 ? "Gratuit" : `${price.toLocaleString("fr-FR")} FCFA`
+
+const stripHtml = (html: string) =>
+  (html || "").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ")
+
+/* ─── Skeleton ───────────────────────────────────────────────────────────── */
+const WorkshopSkeleton = () => (
+  <div className="space-y-2">
+    {[1, 2, 3].map(i => (
+      <div key={i} className="p-3 rounded-lg border border-border animate-pulse">
+        <div className="flex gap-3">
+          <div className="w-11 h-11 rounded-md bg-muted flex-shrink-0" />
+          <div className="flex-1 space-y-2 py-1">
+            <div className="h-3.5 bg-muted rounded w-3/4" />
+            <div className="h-3 bg-muted rounded w-1/2" />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+)
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE
+═══════════════════════════════════════════════════════════════════════════ */
+export default function InscriptionAtelierPage() {
+  const [workshops, setWorkshops]     = useState<Workshop[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState<string | null>(null)
+  const [selectedId, setSelectedId]   = useState<number | null>(null)
+  const [submitting, setSubmitting]   = useState(false)
+  const [submitted, setSubmitted]     = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [search, setSearch]           = useState("")
+  const [filterType, setFilterType]   = useState("tous")
+  const [formData, setFormData]       = useState({ name: "", email: "", phone: "", message: "" })
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/workshops/published`)
+      .then(r => r.json())
+      .then(data => { setWorkshops(data.data || []); setLoading(false) })
+      .catch(() => { setError("Impossible de charger les ateliers."); setLoading(false) })
+  }, [])
+
+  const filteredWorkshops = useMemo(() => {
+    return workshops
+      .filter(w => {
+        const matchType = filterType === "tous" || w.type === filterType ||
+          (filterType === "autre" && !["formation", "atelier", "evenement", "ceremonie"].includes(w.type ?? ""))
+        const q = search.toLowerCase()
+        const matchSearch = !q ||
+          w.title.toLowerCase().includes(q) ||
+          (w.instructor ?? "").toLowerCase().includes(q) ||
+          (w.location ?? "").toLowerCase().includes(q)
+        return matchType && matchSearch
       })
-      setSelectedWorkshop(null)
-    }, 5000)
+      .sort((a, b) => b.id - a.id)
+  }, [workshops, filterType, search])
+
+  const countByType = useMemo(() => {
+    const counts: Record<string, number> = { tous: workshops.length }
+    workshops.forEach(w => {
+      const k = ["formation", "atelier", "evenement", "ceremonie"].includes(w.type ?? "") ? w.type! : "autre"
+      counts[k] = (counts[k] || 0) + 1
+    })
+    return counts
+  }, [workshops])
+
+  const current   = workshops.find(w => w.id === selectedId) ?? null
+  const remaining = current ? spotsLeft(current) : 0
+  const isFull    = remaining <= 0
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
+
+  const handleSelect = (id: number) => {
+    setSelectedId(id)
+    setSubmitted(false)
+    setSubmitError(null)
   }
 
-  const currentWorkshop = workshops.find((w) => w.id === selectedWorkshop)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!current) return
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      const res = await fetch(`${API_URL}/api/workshops/${current.id}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name:    formData.name.trim(),
+          email:   formData.email.trim(),
+          phone:   formData.phone.trim(),
+          message: formData.message.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Erreur lors de l'inscription")
+
+      const nameParts = formData.name.trim().split(" ")
+      fetch(`${API_URL}/api/contacts/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstname: nameParts[0] ?? "",
+          lastname:  nameParts.slice(1).join(" ") || "—",
+          email:     formData.email.trim(),
+          phone:     formData.phone.trim(),
+          subject:   `Inscription atelier — ${current.title}`,
+          message:   `Inscription à l'atelier : ${current.title}\nDate : ${formatDate(current.date)}${current.location ? `\nLieu : ${current.location}` : ""}\nPrix : ${formatPrice(current.price)}${formData.message.trim() ? `\n\nMessage : ${formData.message.trim()}` : ""}`,
+        }),
+      }).catch(() => {})
+
+      setSubmitted(true)
+      setFormData({ name: "", email: "", phone: "", message: "" })
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : "Une erreur est survenue")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleBack = () => { setSubmitted(false); setSelectedId(null) }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
-      <div className="absolute inset-0 top-0">
-        <video
-          src="/video.mp4"
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 object-cover w-full h-full"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-background/80"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/15 to-accent/15"></div>
-      </div>
-      {/* Decorative Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
-      </div>
+    <div className="min-h-screen bg-background">
 
-      {/* Header */}
-      <section className="relative py-20 lg:py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-
-        <div className="container mx-auto px-4 lg:px-8 relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
-            <Badge className="mb-6 px-5 py-2 bg-primary/10 text-primary border-none font-medium">
-              🎓 Inscription
-            </Badge>
-            <h1 className="text-4xl lg:text-6xl font-bold text-foreground mb-6">
-              Inscrivez-vous à un{" "}
-              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                atelier
-              </span>
+      {/* Hero */}
+      <section className="relative pt-16 pb-0 lg:pt-28 overflow-hidden">
+        <div className="absolute inset-0">
+          <video src="/video.mp4" autoPlay loop muted playsInline
+            className="absolute inset-0 object-cover w-full h-full" />
+          <div className="absolute inset-0 bg-black/70" />
+        </div>
+        <div className="relative z-10 container mx-auto px-4 lg:px-8">
+          <div className="flex justify-center mb-8 ">
+            <PageBreadcrumb pageTitle="Inscription" />
+          </div>
+          <div className="max-w-2xl mx-auto text-center pb-20 ">
+            <h1 className="text-4xl lg:text-5xl font-black text-white leading-tight mb-4 tracking-tight">
+              S&apos;inscrire à un événement
             </h1>
-            <p className="text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Développez vos compétences en fabrication numérique avec nos formations
-              pratiques encadrées par des experts.
+            <p className="text-base text-white/70 leading-relaxed max-w-xl mx-auto">
+              Formations, ateliers, événements — trouvez et rejoignez l&apos;activité qui correspond à vos besoins.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
-      <section className="py-12 lg:py-20 relative">
+      {/* Main */}
+      <section className="py-12 lg:py-20">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
-        {/* Sidebar - Liste des ateliers */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="sticky top-24">
-            <Card className="border-2 border-border">
-          <CardContent className="p-6">
-            <h2 className="text-xl font-bold text-foreground mb-4">Ateliers disponibles</h2>
-            <div className="space-y-3">
-              {workshops.map((workshop) => {
-            const Icon = workshop.icon
-            return (
-              <button
-                key={workshop.id}
-                onClick={() => setSelectedWorkshop(workshop.id)}
-                className={`w-full p-4 rounded-xl border-2 transition-all duration-300 text-left ${
-              selectedWorkshop === workshop.id
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50 hover:bg-muted/50"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                selectedWorkshop === workshop.id ? "bg-primary/20" : "bg-muted"
-              }`}>
-                <Icon className={selectedWorkshop === workshop.id ? "text-primary" : "text-muted-foreground"} size={20} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground text-sm mb-1 line-clamp-2">
-                  {workshop.title}
-                </h3>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Calendar size={12} />
-                  <span>{workshop.date}</span>
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <Badge className={workshop.levelColor} variant="outline">
-                {workshop.level}
-                  </Badge>
-                  <span className="text-sm font-bold text-primary">{workshop.price}</span>
-                </div>
-              </div>
-                </div>
-              </button>
-            )
-              })}
-            </div>
-          </CardContent>
-            </Card>
 
-            {/* Info card */}
-            <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-            <Sparkles className="text-primary" size={20} />
-              </div>
-              <h3 className="font-semibold text-foreground">Pourquoi nous ?</h3>
-            </div>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2">
-            <CheckCircle2 className="text-primary flex-shrink-0" size={16} />
-            Formateurs experts
-              </li>
-              <li className="flex items-center gap-2">
-            <CheckCircle2 className="text-primary flex-shrink-0" size={16} />
-            Équipements professionnels
-              </li>
-              <li className="flex items-center gap-2">
-            <CheckCircle2 className="text-primary flex-shrink-0" size={16} />
-            Groupes limités (max 12)
-              </li>
-              <li className="flex items-center gap-2">
-            <CheckCircle2 className="text-primary flex-shrink-0" size={16} />
-            Certificat de participation
-              </li>
-            </ul>
-          </CardContent>
-            </Card>
-          </div>
-        </div>
+            {/* Sidebar */}
+            <div className="lg:col-span-5 xl:col-span-4">
+              <div className="sticky top-24 space-y-4">
 
-        {/* Main content - Détails + Formulaire */}
-        <div className="lg:col-span-8 space-y-8">
-          {!selectedWorkshop && (
-            <Card className="border-2 border-dashed border-border">
-          <CardContent className="p-12 text-center">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <Target className="text-muted-foreground" size={32} />
-            </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">
-              Sélectionnez un atelier
-            </h3>
-            <p className="text-muted-foreground">
-              Choisissez un atelier dans la liste pour voir les détails et vous inscrire
-            </p>
-          </CardContent>
-            </Card>
-          )}
+                {/* Recherche */}
+                <div className="relative">
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Rechercher un atelier, formateur…"
+                    className="w-full pl-9 pr-9 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                  {search && (
+                    <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
 
-          {currentWorkshop && (
-            <>
-          {/* Détails de l'atelier */}
-          <Card className="border-2 border-border overflow-hidden">
-            <div className={`h-2 bg-gradient-to-r ${currentWorkshop.gradient.replace('/10', '')}`} />
-            <CardContent className="p-8">
-              <div className="flex items-start justify-between mb-6">
-            <div className="flex-1">
-              <h2 className="text-3xl font-bold text-foreground mb-3">
-                {currentWorkshop.title}
-              </h2>
-              <p className="text-muted-foreground mb-4">{currentWorkshop.description}</p>
-              <div className="flex flex-wrap gap-3">
-                <Badge className={currentWorkshop.levelColor} variant="outline">
-              {currentWorkshop.level}
-                </Badge>
-                <Badge variant="outline" className="flex items-center gap-1">
-              <Calendar size={14} />
-              {currentWorkshop.date}
-                </Badge>
-                <Badge variant="outline" className="flex items-center gap-1">
-              <Clock size={14} />
-              {currentWorkshop.time}
-                </Badge>
-                <Badge variant="outline" className="flex items-center gap-1">
-              <Users size={14} />
-              {currentWorkshop.participants}
-                </Badge>
+                {/* Filtres */}
+                {!loading && workshops.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {TYPES.filter(t => t.key === "tous" || (countByType[t.key] ?? 0) > 0).map(t => {
+                      const Icon  = t.icon
+                      const count = countByType[t.key] ?? 0
+                      const active = filterType === t.key
+                      return (
+                        <button
+                          key={t.key}
+                          onClick={() => setFilterType(t.key)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-all cursor-pointer ${
+                            active
+                              ? "bg-foreground text-background border-foreground"
+                              : "bg-background text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                          }`}
+                        >
+                          <Icon size={12} />
+                          {t.label}
+                          {t.key !== "tous" && count > 0 && (
+                            <span className={`${active ? "opacity-60" : "opacity-40"}`}>{count}</span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Liste */}
+                <Card className="border border-border shadow-none">
+                  <CardContent className="p-4">
+                    {!loading && !error && (
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs text-muted-foreground">
+                          {filteredWorkshops.length} résultat{filteredWorkshops.length !== 1 ? "s" : ""}
+                        </p>
+                        {(search || filterType !== "tous") && (
+                          <button
+                            onClick={() => { setSearch(""); setFilterType("tous") }}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                          >
+                            <X size={11} /> Réinitialiser
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {loading && <WorkshopSkeleton />}
+
+                    {error && (
+                      <div className="flex items-center gap-2 text-sm text-destructive p-3 bg-destructive/5 rounded-lg border border-destructive/20">
+                        <AlertCircle size={14} />{error}
+                      </div>
+                    )}
+
+                    {!loading && !error && filteredWorkshops.length === 0 && (
+                      <div className="text-center py-10">
+                        <p className="text-sm text-muted-foreground">Aucun résultat.</p>
+                        {(search || filterType !== "tous") && (
+                          <button onClick={() => { setSearch(""); setFilterType("tous") }} className="text-xs text-primary mt-1 hover:underline">
+                            Effacer les filtres
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {!loading && !error && filteredWorkshops.length > 0 && (
+                      <div className="space-y-1.5 max-h-[58vh] overflow-y-auto pr-0.5">
+                        {filteredWorkshops.map(w => {
+                          const { icon: TypeIcon, label: typeLabel } = getTypeInfo(w.type)
+                          const spots      = spotsLeft(w)
+                          const full       = spots <= 0
+                          const imageUrl   = w.image || w.image_url
+                          const isSelected = selectedId === w.id
+
+                          return (
+                            <button
+                              key={w.id}
+                              onClick={() => !full && handleSelect(w.id)}
+                              className={`w-full p-3 rounded-lg border text-left transition-all duration-150 ${
+                                isSelected
+                                  ? "border-foreground bg-muted"
+                                  : full
+                                  ? "border-border opacity-50 cursor-not-allowed"
+                                  : "border-border hover:border-foreground/40 hover:bg-muted/50 cursor-pointer"
+                              }`}
+                            >
+                              <div className="flex gap-3 items-start">
+                                <div className="w-11 h-11 rounded-md overflow-hidden flex-shrink-0 bg-muted relative border border-border">
+                                  {imageUrl ? (
+                                    <Image src={imageUrl} alt={w.title} fill className="object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <TypeIcon size={16} className="text-muted-foreground" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-foreground text-sm line-clamp-1 leading-snug mb-1">{w.title}</p>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1.5">
+                                    <Calendar size={10} className="flex-shrink-0" />
+                                    <span className="truncate">{formatDateShort(w.date)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground border border-border rounded px-1.5 py-0.5">
+                                      <TypeIcon size={9} />{typeLabel}
+                                    </span>
+                                    {full ? (
+                                      <span className="text-xs text-destructive font-medium">Complet</span>
+                                    ) : spots <= 3 ? (
+                                      <span className="text-xs text-orange-500 font-medium">{spots} pl.</span>
+                                    ) : null}
+                                    <span className="ml-auto text-xs font-semibold text-foreground">{formatPrice(w.price)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-primary mb-1">
-                {currentWorkshop.price}
-              </div>
-              {currentWorkshop.spots <= 5 && (
-                <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/50 animate-pulse">
-              Plus que {currentWorkshop.spots} places !
-                </Badge>
+
+            {/* Zone droite */}
+            <div className="lg:col-span-7 xl:col-span-8 space-y-5">
+
+              {!current && (
+                <div className="border-2 border-dashed border-border rounded-xl p-16 text-center">
+                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3 border border-border">
+                    <SlidersHorizontal size={18} className="text-muted-foreground" />
+                  </div>
+                  <h3 className="text-base font-semibold text-foreground mb-1">Sélectionnez un événement</h3>
+                  <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                    Utilisez les filtres ou la recherche pour trouver l&apos;activité qui vous correspond.
+                  </p>
+                </div>
+              )}
+
+              {current && (
+                <>
+                  {/* Détails */}
+                  <Card className="border border-border overflow-hidden">
+                    {(current.image || current.image_url) && (
+                      <div className="relative h-48 overflow-hidden">
+                        <Image
+                          src={current.image || current.image_url || ""}
+                          alt={current.title}
+                          fill
+                          className="object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                        <div className="absolute bottom-3 left-4 flex items-center gap-2">
+                          {(() => {
+                            const { icon: TypeIcon, label } = getTypeInfo(current.type)
+                            return (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/60 backdrop-blur-sm text-white text-xs border border-white/10">
+                                <TypeIcon size={11} />{label}
+                              </span>
+                            )
+                          })()}
+                          {isFull ? (
+                            <span className="px-2.5 py-1 rounded bg-destructive/80 text-white text-xs">Complet</span>
+                          ) : remaining <= 5 ? (
+                            <span className="px-2.5 py-1 rounded bg-orange-500/80 text-white text-xs">
+                              {remaining} place{remaining > 1 ? "s" : ""} restante{remaining > 1 ? "s" : ""}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    )}
+
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
+                        <div className="flex-1 min-w-0">
+                          <h2 className="text-xl font-bold text-foreground mb-1.5">{current.title}</h2>
+                          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                            {stripHtml(current.description)}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-xl font-bold text-foreground">{formatPrice(current.price)}</p>
+                          {!isFull && remaining <= 5 && (
+                            <p className="text-xs text-orange-500 mt-0.5">{remaining} place{remaining > 1 ? "s" : ""} !</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        {[
+                          { icon: Calendar, label: "Date",   value: formatDateShort(current.date) },
+                          { icon: Clock,    label: "Heure",  value: formatTime(current.date) || "—" },
+                          { icon: MapPin,   label: "Lieu",   value: current.location || "À définir" },
+                          { icon: Users,    label: "Places", value: `${current.current_participants ?? current.registered ?? 0} / ${current.max_participants ?? current.capacity ?? "?"}` },
+                        ].map(({ icon: Icon, label, value }) => (
+                          <div key={label} className="p-3 bg-muted/50 rounded-lg text-center border border-border">
+                            <Icon size={14} className="text-muted-foreground mx-auto mb-1" />
+                            <p className="text-xs text-muted-foreground leading-none mb-1">{label}</p>
+                            <p className="text-xs font-semibold text-foreground truncate">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {current.instructor && (
+                        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border">
+                          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center flex-shrink-0 border border-border">
+                            <GraduationCap size={14} className="text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Formateur</p>
+                            <p className="text-sm font-medium text-foreground">{current.instructor}</p>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Formulaire */}
+                  <Card className="border border-border">
+                    <CardContent className="p-6">
+                      {submitted ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <div className="w-14 h-14 bg-muted rounded-full flex items-center justify-center mb-4 border border-border">
+                            <CheckCircle2 size={24} className="text-foreground" />
+                          </div>
+                          <h3 className="text-xl font-bold text-foreground mb-2">Inscription enregistrée</h3>
+                          <p className="text-sm text-muted-foreground max-w-sm mb-1.5">
+                            Votre inscription à <strong>{current.title}</strong> a bien été prise en compte.
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-8">Une confirmation sera envoyée par email.</p>
+                          <Button variant="outline" size="sm" onClick={handleBack}>
+                            <ChevronLeft size={14} className="mr-1.5" />
+                            Retour aux événements
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <h3 className="text-base font-semibold text-foreground mb-5 flex items-center gap-2 pb-4 border-b border-border">
+                            <Award size={15} className="text-muted-foreground" />
+                            Formulaire d&apos;inscription
+                          </h3>
+
+                          {isFull && (
+                            <div className="flex items-center gap-2 p-3 mb-5 bg-muted text-muted-foreground rounded-lg border border-border text-sm">
+                              <AlertCircle size={14} className="flex-shrink-0" />
+                              Cet événement est complet. Les inscriptions sont fermées.
+                            </div>
+                          )}
+
+                          <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="name" className="text-sm font-medium text-foreground mb-1.5 block">Nom complet *</Label>
+                                <input
+                                  id="name" name="name" type="text" required disabled={isFull}
+                                  value={formData.name} onChange={handleChange}
+                                  placeholder="Jean Dupont"
+                                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground text-sm transition-all disabled:opacity-40"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="email" className="text-sm font-medium text-foreground mb-1.5 block">Adresse email *</Label>
+                                <input
+                                  id="email" name="email" type="email" required disabled={isFull}
+                                  value={formData.email} onChange={handleChange}
+                                  placeholder="jean@email.com"
+                                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground text-sm transition-all disabled:opacity-40"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="phone" className="text-sm font-medium text-foreground mb-1.5 block">Téléphone *</Label>
+                              <input
+                                id="phone" name="phone" type="tel" required disabled={isFull}
+                                value={formData.phone} onChange={handleChange}
+                                placeholder="+225 00 00 00 00 00"
+                                className="w-full px-3.5 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground text-sm transition-all disabled:opacity-40"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="message" className="text-sm font-medium text-foreground mb-1.5 block">
+                                Message <span className="text-muted-foreground font-normal text-xs">(optionnel)</span>
+                              </Label>
+                              <textarea
+                                id="message" name="message" disabled={isFull}
+                                value={formData.message} onChange={handleChange}
+                                rows={3}
+                                placeholder="Une question ou précision particulière ?"
+                                className="w-full px-3.5 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground text-sm resize-none transition-all disabled:opacity-40"
+                              />
+                            </div>
+
+                            {/* Récap */}
+                            <div className="p-4 bg-muted/50 rounded-lg border border-border text-sm space-y-2">
+                              <p className="font-medium text-xs uppercase tracking-wide text-muted-foreground mb-2">Récapitulatif</p>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Événement</span>
+                                <span className="font-medium text-foreground text-right max-w-[55%]">{current.title}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Date</span>
+                                <span className="font-medium text-foreground">{formatDateShort(current.date)}</span>
+                              </div>
+                              {current.location && (
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Lieu</span>
+                                  <span className="font-medium text-foreground">{current.location}</span>
+                                </div>
+                              )}
+                              <div className="flex justify-between pt-2 border-t border-border items-center">
+                                <span className="text-muted-foreground flex items-center gap-1"><Euro size={12} />Tarif</span>
+                                <span className="font-bold text-foreground">{formatPrice(current.price)}</span>
+                              </div>
+                            </div>
+
+                            {submitError && (
+                              <div className="flex items-center gap-2 p-3 bg-destructive/5 text-destructive rounded-lg border border-destructive/20 text-sm">
+                                <AlertCircle size={13} className="flex-shrink-0" />
+                                {submitError}
+                              </div>
+                            )}
+
+                            <Button type="submit" size="lg" disabled={isFull || submitting} className="w-full">
+                              {submitting
+                                ? <><Loader2 size={16} className="mr-2 animate-spin" />Envoi en cours…</>
+                                : <><Send size={16} className="mr-2" />Confirmer l&apos;inscription</>
+                              }
+                            </Button>
+
+                            <p className="text-xs text-center text-muted-foreground">
+                              En vous inscrivant, vous acceptez nos{" "}
+                              <Link href="/conditions" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                                conditions générales
+                              </Link>
+                            </p>
+                          </form>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
               )}
             </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                <Award className="text-primary" size={20} />
-                Programme
-              </h3>
-              <ul className="space-y-2">
-                {currentWorkshop.program.map((item, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="text-primary flex-shrink-0 mt-0.5" size={16} />
-                {item}
-              </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
-              <GraduationCap className="text-primary" size={20} />
-              Formateur
-                </h3>
-                <p className="text-sm font-medium text-foreground">{currentWorkshop.instructor}</p>
-                <p className="text-sm text-muted-foreground">{currentWorkshop.instructorBio}</p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-1">Prérequis</h3>
-                <p className="text-sm text-muted-foreground">{currentWorkshop.prerequisites}</p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-1">Durée</h3>
-                <p className="text-sm text-muted-foreground">{currentWorkshop.duration}</p>
-              </div>
-            </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Formulaire d'inscription */}
-          <Card className="border-2 border-primary/30">
-            <CardContent className="p-8">
-              {submitted ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle2 size={32} className="text-primary" />
-              </div>
-              <h3 className="text-2xl font-bold text-foreground mb-2">Inscription confirmée !</h3>
-              <p className="text-muted-foreground max-w-md mb-6">
-                Merci pour votre inscription à <strong>{currentWorkshop.title}</strong>.
-                Vous recevrez un email de confirmation avec tous les détails.
-              </p>
-              <Button onClick={() => setSelectedWorkshop(null)} variant="outline">
-                <ChevronLeft size={16} className="mr-2" />
-                Retour aux ateliers
-              </Button>
-            </div>
-              ) : (
-            <>
-              <h3 className="text-2xl font-bold text-foreground mb-6">
-                Formulaire d'inscription
-              </h3>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="firstName" className="text-foreground mb-2 block">
-                  Prénom *
-                </Label>
-                <input
-                  id="firstName"
-                  name="firstName"
-                  type="text"
-                  required
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground transition-all duration-300 hover:border-primary/50"
-                  placeholder="Jean"
-                />
-              </div>
-              <div>
-                <Label htmlFor="lastName" className="text-foreground mb-2 block">
-                  Nom *
-                </Label>
-                <input
-                  id="lastName"
-                  name="lastName"
-                  type="text"
-                  required
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground transition-all duration-300 hover:border-primary/50"
-                  placeholder="Dupont"
-                />
-              </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="email" className="text-foreground mb-2 block">
-                  Email *
-                </Label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground transition-all duration-300 hover:border-primary/50"
-                  placeholder="jean.dupont@email.com"
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone" className="text-foreground mb-2 block">
-                  Téléphone *
-                </Label>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground transition-all duration-300 hover:border-primary/50"
-                  placeholder="+225 00 00 00 00 00"
-                />
-              </div>
-                </div>
-
-                <div>
-              <Label htmlFor="level" className="text-foreground mb-2 block">
-                Votre niveau *
-              </Label>
-              <select
-                id="level"
-                name="level"
-                required
-                value={formData.level}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground transition-all duration-300 hover:border-primary/50"
-              >
-                <option value="">Sélectionnez votre niveau</option>
-                <option value="debutant">Débutant (aucune expérience)</option>
-                <option value="intermediaire">Intermédiaire (quelques notions)</option>
-                <option value="avance">Avancé (expérience confirmée)</option>
-              </select>
-                </div>
-
-                <div>
-              <Label htmlFor="motivation" className="text-foreground mb-2 block">
-                Motivation (optionnel)
-              </Label>
-              <textarea
-                id="motivation"
-                name="motivation"
-                value={formData.motivation}
-                onChange={handleChange}
-                rows={4}
-                className="w-full px-4 py-3 bg-background border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground resize-none transition-all duration-300 hover:border-primary/50"
-                placeholder="Pourquoi souhaitez-vous suivre cet atelier ? Quels sont vos objectifs ?"
-              />
-                </div>
-
-                <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl">
-              <input
-                id="newsletter"
-                name="newsletter"
-                type="checkbox"
-                checked={formData.newsletter}
-                onChange={handleChange}
-                className="mt-1 w-4 h-4 text-primary border-border rounded focus:ring-primary"
-              />
-              <Label htmlFor="newsletter" className="text-sm text-muted-foreground cursor-pointer">
-                J'accepte de recevoir des emails sur les prochains ateliers et événements du fablab
-              </Label>
-                </div>
-
-                {/* Récapitulatif */}
-                <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-border">
-              <h4 className="font-semibold text-foreground mb-3">Récapitulatif</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Atelier :</span>
-                  <span className="font-medium text-foreground">{currentWorkshop.title}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Date :</span>
-                  <span className="font-medium text-foreground">{currentWorkshop.date}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Horaire :</span>
-                  <span className="font-medium text-foreground">{currentWorkshop.time}</span>
-                </div>
-                <div className="flex justify-between pt-2 border-t border-border">
-                  <span className="text-muted-foreground">Tarif :</span>
-                  <span className="font-bold text-primary text-lg">{currentWorkshop.price}</span>
-                </div>
-              </div>
-                </div>
-
-                <Button
-              type="submit"
-              size="lg"
-              className="w-full group relative overflow-hidden bg-gradient-to-r from-primary to-accent hover:shadow-2xl transition-all duration-300"
-                >
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                <Send size={20} />
-                Confirmer l'inscription
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-accent to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </Button>
-
-                <p className="text-xs text-center text-muted-foreground">
-              En vous inscrivant, vous acceptez nos{" "}
-              <Link href="/conditions" className="text-primary hover:underline">
-                conditions générales
-              </Link>
-                </p>
-              </form>
-            </>
-              )}
-            </CardContent>
-          </Card>
-            </>
-          )}
-        </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 lg:py-32 bg-muted/30">
-        <div className="container mx-auto px-4 lg:px-8">
-          <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5 max-w-4xl mx-auto">
-        <CardContent className="p-12 text-center">
-          <h2 className="text-3xl font-bold text-foreground mb-4">
-            Une question sur nos ateliers ?
-          </h2>
-          <p className="text-muted-foreground mb-8">
-            Notre équipe est disponible pour vous renseigner et vous aider à choisir la formation adaptée
+      {/* CTA */}
+      <section className="py-14 border-t border-border">
+        <div className="container mx-auto px-4 lg:px-8 max-w-3xl text-center">
+          <h2 className="text-xl font-bold text-foreground mb-2">Une question sur nos ateliers ?</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Notre équipe est disponible pour vous renseigner et vous aider à choisir la formation adaptée.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" asChild>
-          <Link href="/contact">
-            Nous contacter
-            <ArrowRight className="ml-2" size={20} />
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button asChild>
+              <NavLink href="/contact">Nous contacter <ArrowRight className="ml-2" size={16} /></NavLink>
             </Button>
-            <Button size="lg" variant="outline" asChild>
-          <Link href="/ateliers">
-            Voir tous les ateliers
-          </Link>
+            <Button variant="outline" asChild>
+              <NavLink href="/ateliers">Voir tous les ateliers</NavLink>
             </Button>
           </div>
-        </CardContent>
-          </Card>
         </div>
       </section>
     </div>

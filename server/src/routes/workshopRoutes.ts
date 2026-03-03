@@ -10,7 +10,10 @@ import {
   updateWorkshop,
   deleteWorkshop,
   getWorkshopRegistrations,
+  getAllRegistrationsAdmin,
   registerForWorkshop,
+  updateRegistrationStatus,
+  deleteRegistration,
   getUnreadCount,
   markAsRead,
   markAllAsRead
@@ -59,6 +62,9 @@ router.post('/:id/register', registerWorkshopValidation, handleValidationErrors,
 // Admin routes
 router.get('/unread/count', authenticate, requireAdmin, getUnreadCount);
 router.post('/mark-all-read', authenticate, requireAdmin, markAllAsRead);
+router.get('/registrations/all', authenticate, requireAdmin, getAllRegistrationsAdmin);
+router.put('/registrations/:regId', authenticate, requireAdmin, updateRegistrationStatus);
+router.delete('/registrations/:regId', authenticate, requireAdmin, deleteRegistration);
 router.get('/', authenticate, requireAdmin, getAllWorkshops);
 router.get('/:id', authenticate, requireAdmin, getWorkshopById);
 router.post('/:id/read', authenticate, requireAdmin, markAsRead);

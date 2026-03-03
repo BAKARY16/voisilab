@@ -24,7 +24,12 @@ interface BlogPost {
     author_name?: string
     views?: number
     created_at: string
+    cta_label?: string
+    cta_url?: string
 }
+
+const toSafeHtml = (text: string): string =>
+    (text || '').replace(/\n/g, '<br />')
 
 export function ActualiteDetailContent({ slug }: { slug: string }) {
     useScrollAnimation()
@@ -35,7 +40,7 @@ export function ActualiteDetailContent({ slug }: { slug: string }) {
 
     useEffect(() => {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
-        
+
         const fetchArticle = async () => {
             try {
                 setLoading(true)
@@ -131,58 +136,26 @@ export function ActualiteDetailContent({ slug }: { slug: string }) {
 
                 <div className="relative z-10">
                     <div className="container mx-auto px-4 lg:px-8">
-                        <div className="flex items-center justify-center mb-8 fade-in-up">
-                            <PageBreadcrumb pageTitle="Soumettre un projet" />
+                        <div className="flex items-center justify-center">
+                            <PageBreadcrumb pageTitle={article.title} />
                         </div>
 
-                        <div className="max-w-4xl mx-auto text-center fade-in-up">
-                            <Badge className="mb-6 px-4 py-2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20" variant="outline">
-                                <Rocket className="w-4 h-4 mr-2" />
-                                Concrétisez vos idées
-                            </Badge>
-
-                            <h1 className="text-4xl lg:text-6xl xl:text-7xl font-black text-white leading-tight mb-6 tracking-tight">
-                                <span className="block">Donnez vie à</span>
-                                <span className="block bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-                                    votre projet
-                                </span>
+                        <div className="max-w-3xl mx-auto text-center mt-12">
+                            <h1 className="text-3xl lg:text-5xl font-bold text-white leading-tight mb-6">
+                                {article.title}
                             </h1>
 
-                            <p className="text-lg lg:text-xl text-gray-200 mb-10 leading-relaxed max-w-2xl mx-auto">
-                                Notre équipe d'experts est prête à vous accompagner de l'idée à la réalisation.
-                                Partagez votre vision avec nous et transformons-la en réalité.
-                            </p>
-
-                            {/* Security badges */}
-                            <div className="flex flex-wrap justify-center gap-4 mb-8">
-                                {/* {securityFeatures.map((feature, index) => {
-                                            const Icon = feature.icon
-                                            return (
-                                                <div
-                                                    key={index}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10"
-                                                >
-                                                    <Icon className="text-green-400" size={16} />
-                                                    <span className="text-sm text-gray-200">{feature.text}</span>
-                                                </div>
-                                            )
-                                        })} */}
-                            </div>
-
-                            {/* Stats Grid */}
-                            <div className="grid grid-cols-3 gap-4 lg:gap-6 max-w-2xl mx-auto">
-                                <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-all">
-                                    <div className="text-3xl lg:text-4xl font-bold text-white mb-1">150+</div>
-                                    <div className="text-sm text-gray-300">Projets réalisés</div>
-                                </div>
-                                <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-all">
-                                    <div className="text-3xl lg:text-4xl font-bold text-white mb-1">48h</div>
-                                    <div className="text-sm text-gray-300">Temps de réponse</div>
-                                </div>
-                                <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-all">
-                                    <div className="text-3xl lg:text-4xl font-bold text-white mb-1">98%</div>
-                                    <div className="text-sm text-gray-300">Satisfaction</div>
-                                </div>
+                            <div className="flex items-center justify-center gap-4 text-gray-300 text-sm">
+                                <span className="text-white/20">•</span>
+                                <span className="flex items-center gap-1">
+                                    <Calendar size={16} />
+                                    {formatDate(article.published_at)}
+                                </span>
+                                <span className="text-white/20">•</span>
+                                {/* <span className="flex items-center gap-1">
+                                    <User size={16} />
+                                    {article.author_name || 'Équipe Voisilab'}
+                                </span> */}
                             </div>
                         </div>
                     </div>
@@ -209,9 +182,10 @@ export function ActualiteDetailContent({ slug }: { slug: string }) {
                         </h1>
 
                         {article.excerpt && (
-                            <p className="text-lg text-muted-foreground leading-relaxed">
-                                {article.excerpt}
-                            </p>
+                            <div
+                                className="text-lg text-muted-foreground leading-relaxed prose prose-sm max-w-none [&_strong]:font-bold [&_strong]:text-foreground"
+                                dangerouslySetInnerHTML={{ __html: toSafeHtml(article.excerpt) }}
+                            />
                         )}
                     </div>
 
@@ -264,9 +238,8 @@ export function ActualiteDetailContent({ slug }: { slug: string }) {
                         </div>
                     </div>
 
-                    {/* Contenu principal */}
                     <div
-                        className="prose prose-lg max-w-none
+                        className="prose prose-lg max-w-none text-justify
                             prose-headings:text-foreground prose-headings:font-bold prose-headings:mb-4 prose-headings:mt-8
                             prose-p:text-foreground prose-p:leading-relaxed prose-p:mb-6
                             prose-a:text-primary prose-a:underline hover:prose-a:text-primary/80
@@ -276,8 +249,23 @@ export function ActualiteDetailContent({ slug }: { slug: string }) {
                             prose-img:rounded-lg prose-img:my-8
                             prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:italic
                             dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: article.content }}
+                        dangerouslySetInnerHTML={{ __html: toSafeHtml(article.content) }}
                     />
+
+                    {/* Bouton CTA personnalisé */}
+                    {article.cta_label?.trim() && article.cta_url?.trim() && (
+                        <div className="mt-12 flex justify-center">
+                            <a
+                                href={article.cta_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground font-semibold rounded-xl shadow-lg hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 text-base"
+                            >
+                                <Share2 size={18} />
+                                {article.cta_label}
+                            </a>
+                        </div>
+                    )}
 
                     {/* Navigation */}
                     <div className="mt-16 pt-8 border-t border-border">

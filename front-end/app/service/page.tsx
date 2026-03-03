@@ -26,6 +26,7 @@ import {
   Rocket,
 } from "lucide-react"
 import Link from "next/link"
+import { NavLink } from "@/components/nav-link"
 import Image from "next/image"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3500"
@@ -264,7 +265,7 @@ export default function ServicePage() {
                   className="text-black border-white/30 hover:bg-white/10 backdrop-blur-sm"
                   asChild
                 >
-                  <Link href="/projet">Soumettre un projet</Link>
+                  <NavLink href="/projet">Soumettre un projet</NavLink>
                 </Button>
               </div>
             </div>
@@ -585,13 +586,13 @@ export default function ServicePage() {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button size="lg" className="group bg-gradient-to-r from-primary to-accent" asChild>
-                    <Link href="/projet">
+                    <NavLink href="/projet">
                       Soumettre un projet
                       <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
-                    </Link>
+                    </NavLink>
                   </Button>
                   <Button size="lg" variant="outline" asChild>
-                    <Link href="/about">En savoir plus sur nous</Link>
+                    <NavLink href="/about">En savoir plus sur nous</NavLink>
                   </Button>
                 </div>
               </CardContent>

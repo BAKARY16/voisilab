@@ -109,8 +109,7 @@ export const getPublishedBlogPosts = asyncHandler(async (req: Request, res: Resp
   const offset = (pageNum - 1) * limitNum;
 
   let query = `
-    SELECT bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image,
-           bp.category, bp.tags, bp.published_at, u.full_name as author_name
+    SELECT bp.*, u.full_name as author_name, u.avatar_url as author_avatar
     FROM blog_posts bp
     LEFT JOIN users u ON bp.author_id = u.id
     WHERE bp.status = ?
@@ -186,7 +185,9 @@ export const createBlogPost = asyncHandler(async (req: Request, res: Response) =
     meta_title,
     meta_description,
     meta_keywords,
-    og_image
+    og_image,
+    cta_label = null,
+    cta_url = null
   } = req.body;
 
   const authorId = req.user?.userId;
@@ -204,9 +205,9 @@ export const createBlogPost = asyncHandler(async (req: Request, res: Response) =
     `INSERT INTO blog_posts (
       title, slug, excerpt, content, featured_image, author_id,
       category, tags, status, meta_title, meta_description,
-      meta_keywords, og_image, published_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [title, slug, excerpt, content, featured_image, authorId, category, JSON.stringify(tags || []), status, meta_title, meta_description, JSON.stringify(meta_keywords || []), og_image, publishedAt]
+      meta_keywords, og_image, published_at, cta_label, cta_url
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [title, slug, excerpt, content, featured_image, authorId, category, JSON.stringify(tags || []), status, meta_title, meta_description, JSON.stringify(meta_keywords || []), og_image, publishedAt, cta_label, cta_url]
   );
 
   // Get the inserted blog post
@@ -244,7 +245,9 @@ export const updateBlogPost = asyncHandler(async (req: Request, res: Response) =
     meta_title,
     meta_description,
     meta_keywords,
-    og_image
+    og_image,
+    cta_label,
+    cta_url
   } = req.body;
 
   // Get current post
@@ -285,9 +288,11 @@ export const updateBlogPost = asyncHandler(async (req: Request, res: Response) =
       meta_description = COALESCE(?, meta_description),
       meta_keywords = COALESCE(?, meta_keywords),
       og_image = COALESCE(?, og_image),
-      published_at = COALESCE(?, published_at)
+      published_at = COALESCE(?, published_at),
+      cta_label = ?,
+      cta_url = ?
     WHERE id = ?`,
-    [title, slug, excerpt, content, featured_image, category, tags ? JSON.stringify(tags) : null, status, meta_title, meta_description, meta_keywords ? JSON.stringify(meta_keywords) : null, og_image, publishedAt, id]
+    [title, slug, excerpt, content, featured_image, category, tags ? JSON.stringify(tags) : null, status, meta_title, meta_description, meta_keywords ? JSON.stringify(meta_keywords) : null, og_image, publishedAt, cta_label ?? null, cta_url ?? null, id]
   );
 
   // Get updated post

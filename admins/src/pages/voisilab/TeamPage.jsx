@@ -3,12 +3,12 @@ import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Button, IconButton, Chip, Paper, Grid, TextField, FormControl, InputLabel, Select,
   MenuItem, Switch, FormControlLabel, Typography, Avatar, Alert,
-  Dialog, DialogTitle, DialogContent, DialogActions, Menu, Tabs, Tab, Stack
+  Dialog, DialogTitle, DialogContent, DialogActions, Menu, Tabs, Tab, Stack, Snackbar
 } from '@mui/material';
 import { 
   EditOutlined, DeleteOutlined, PlusOutlined, TeamOutlined, UploadOutlined,
   LinkedinOutlined, TwitterOutlined, MailOutlined, MoreOutlined,
-  CloseOutlined, UserOutlined, LinkOutlined, PictureOutlined
+  CloseOutlined, UserOutlined, LinkOutlined, PictureOutlined, WarningOutlined
 } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
 
@@ -55,6 +55,16 @@ export default function TeamPage() {
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const fileInputRef = useRef(null);
+  const [alertSnack, setAlertSnack] = useState({ open: false, title: '', message: '', severity: 'info' });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, onCancel: null });
+
+  const showAlert = (title, message = '', ok = false) => setAlertSnack({ open: true, title, message, severity: ok ? 'success' : 'error' });
+  const askConfirm = (title, message) => new Promise(resolve => {
+    setConfirmDialog({ open: true, title, message,
+      onConfirm: () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(true); },
+      onCancel:  () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(false); }
+    });
+  });
 
   useEffect(() => { loadMembers(); }, []);
 
@@ -119,10 +129,10 @@ export default function TeamPage() {
   };
 
   const handleDelete = async () => {
-    if (!selectedMember || !window.confirm(`Supprimer "${selectedMember.name}" de l'équipe ?`)) {
-      handleCloseMenu();
-      return;
-    }
+    if (!selectedMember) { handleCloseMenu(); return; }
+    const ok = await askConfirm('Supprimer le membre', `Êtes-vous sûr de vouloir supprimer « ${selectedMember.name} » de l'équipe ? Cette action est irréversible.`);
+    handleCloseMenu();
+    if (!ok) return;
     try {
       const token = sessionStorage.getItem('token');
       await fetch(`${API_URL}/api/team/${selectedMember.id}`, {
@@ -130,11 +140,10 @@ export default function TeamPage() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       loadMembers();
+      showAlert('Membre supprimé', '', true);
     } catch (err) {
-      console.error('Erreur suppression:', err);
-      setError('Erreur lors de la suppression');
+      showAlert('Erreur', err.message || 'Erreur lors de la suppression');
     }
-    handleCloseMenu();
   };
 
   const handleFileUpload = async (event) => {
@@ -277,7 +286,27 @@ export default function TeamPage() {
   };
 
   return (
-    <MainCard title="Gestion de l'Équipe">
+    <>
+      <Snackbar open={alertSnack.open} autoHideDuration={4000} onClose={() => setAlertSnack(p => ({ ...p, open: false }))} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <Alert onClose={() => setAlertSnack(p => ({ ...p, open: false }))} severity={alertSnack.severity} variant="filled" sx={{ minWidth: 280 }}>
+          <strong>{alertSnack.title}</strong>{alertSnack.message ? ' — ' + alertSnack.message : ''}
+        </Alert>
+      </Snackbar>
+      <Dialog open={confirmDialog.open} onClose={() => confirmDialog.onCancel?.()} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}>
+        <Box sx={{ height: 6, bgcolor: 'error.main' }} />
+        <DialogContent sx={{ pt: 4, pb: 2, textAlign: 'center' }}>
+          <Box sx={{ width: 60, height: 60, borderRadius: '50%', mx: 'auto', mb: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#fef2f2' }}>
+            <WarningOutlined style={{ fontSize: 28, color: '#ef4444' }} />
+          </Box>
+          <Typography variant="h6" fontWeight={700} gutterBottom>{confirmDialog.title}</Typography>
+          <Typography variant="body2" color="text.secondary">{confirmDialog.message}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1, justifyContent: 'center' }}>
+          <Button variant="outlined" onClick={() => confirmDialog.onCancel?.()} sx={{ minWidth: 110, borderRadius: 2 }}>Annuler</Button>
+          <Button variant="contained" color="error" onClick={() => confirmDialog.onConfirm?.()} disableElevation sx={{ minWidth: 110, borderRadius: 2 }}>Supprimer</Button>
+        </DialogActions>
+      </Dialog>
+      <MainCard title="Gestion de l'Équipe">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Button 
           variant="contained" 
@@ -667,5 +696,6 @@ export default function TeamPage() {
         </DialogActions>
       </Dialog>
     </MainCard>
+    </>
   );
 }

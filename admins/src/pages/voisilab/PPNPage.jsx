@@ -26,7 +26,9 @@ import {
   Tabs,
   Tab,
   CircularProgress,
-  Backdrop
+  Backdrop,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { 
   EditOutlined, 
@@ -35,7 +37,8 @@ import {
   SearchOutlined, 
   EyeOutlined,
   SaveOutlined, 
-  CloseOutlined 
+  CloseOutlined,
+  WarningOutlined
 } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
 import { ppnService } from 'api/voisilab';
@@ -65,7 +68,8 @@ export default function PPNPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', type: '' });
+  const [alertSnack, setAlertSnack] = useState({ open: false, title: '', message: '', severity: 'info' });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, onCancel: null });
 
   const types = ['Urban', 'Rural', 'Mixed'];
   const statuses = [
@@ -94,21 +98,25 @@ export default function PPNPage() {
       setPpns(result.data || result || []);
     } catch (error) {
       console.error('Erreur:', error);
-      showConfirmDialog('Erreur', 'Erreur lors du chargement: ' + (error.message || 'Erreur inconnue'), 'error');
+        showAlert('Erreur', 'Erreur lors du chargement: ' + (error.message || 'Erreur inconnue'));
       setPpns([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const showConfirmDialog = (title, message, type) => {
-    setConfirmDialog({ open: true, title, message, type });
-  };
+  const showAlert = (title, message = '', ok = false) => setAlertSnack({ open: true, title, message, severity: ok ? 'success' : 'error' });
+  const askConfirm = (title, message) => new Promise(resolve => {
+    setConfirmDialog({ open: true, title, message,
+      onConfirm: () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(true); },
+      onCancel:  () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(false); }
+    });
+  });
 
   const handleSave = async () => {
     try {
       if (!formData.name || !formData.city || !formData.region) {
-        showConfirmDialog('Erreur', 'Le nom, la ville et la région sont requis', 'error');
+        showAlert('Erreur', 'Le nom, la ville et la région sont requis');
         return;
       }
 
@@ -124,10 +132,10 @@ export default function PPNPage() {
 
       if (editingId) {
         await ppnService.update(editingId, dataToSave);
-        showConfirmDialog('Succès', 'PPN modifié avec succès !', 'success');
+        showAlert('Succès', 'PPN modifié avec succès !', true);
       } else {
         await ppnService.create(dataToSave);
-        showConfirmDialog('Succès', 'PPN créé avec succès !', 'success');
+        showAlert('Succès', 'PPN créé avec succès !', true);
       }
       
       await loadPpns();
@@ -135,23 +143,23 @@ export default function PPNPage() {
       setActiveTab(0);
     } catch (error) {
       console.error('Erreur:', error);
-      showConfirmDialog('Erreur', 'Erreur lors de l\'enregistrement: ' + (error.message || 'Erreur inconnue'), 'error');
+      showAlert('Erreur', 'Erreur lors de l\'enregistrement: ' + (error.message || 'Erreur inconnue'));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce PPN ?')) return;
-
+    const ok = await askConfirm('Supprimer le PPN', 'Êtes-vous sûr de vouloir supprimer ce PPN ? Cette action est irréversible.');
+    if (!ok) return;
     try {
       setSaving(true);
       await ppnService.delete(id);
-      showConfirmDialog('Succès', 'PPN supprimé avec succès !', 'success');
+      showAlert('Succès', 'PPN supprimé avec succès !', true);
       await loadPpns();
     } catch (error) {
       console.error('Erreur:', error);
-      showConfirmDialog('Erreur', 'Erreur lors de la suppression: ' + (error.message || 'Erreur inconnue'), 'error');
+      showAlert('Erreur', 'Erreur lors de la suppression: ' + (error.message || 'Erreur inconnue'));
     } finally {
       setSaving(false);
     }
@@ -225,19 +233,22 @@ export default function PPNPage() {
         </Box>
       </Backdrop>
 
-      <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}>
-        <DialogTitle>
-          <Typography variant="h6" component="div">
-            {confirmDialog.type === 'success' ? '✅' : '❌'} {confirmDialog.title}
-          </Typography>
+      <Snackbar open={alertSnack.open} autoHideDuration={4000} onClose={() => setAlertSnack(a => ({ ...a, open: false }))} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <Alert onClose={() => setAlertSnack(a => ({ ...a, open: false }))} severity={alertSnack.severity} variant="filled" sx={{ minWidth: 280 }}>
+          <strong>{alertSnack.title}</strong>{alertSnack.message ? ` — ${alertSnack.message}` : ''}
+        </Alert>
+      </Snackbar>
+      <Dialog open={confirmDialog.open} onClose={() => confirmDialog.onCancel?.()} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ p: 0 }}>
+          <Box sx={{ bgcolor: 'error.main', px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <WarningOutlined style={{ color: '#fff', fontSize: 22 }} />
+            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>{confirmDialog.title}</Typography>
+          </Box>
         </DialogTitle>
-        <DialogContent>
-          <Typography>{confirmDialog.message}</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialog({ ...confirmDialog, open: false })} variant="contained">
-            OK
-          </Button>
+        <DialogContent sx={{ pt: 2.5 }}><Typography>{confirmDialog.message}</Typography></DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button variant="outlined" onClick={() => confirmDialog.onCancel?.()}>Annuler</Button>
+          <Button variant="contained" color="error" onClick={() => confirmDialog.onConfirm?.()}>Supprimer</Button>
         </DialogActions>
       </Dialog>
 

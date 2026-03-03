@@ -88,7 +88,7 @@ export const getAllPages = asyncHandler(async (req: Request, res: Response) => {
  */
 export const getPublishedPages = asyncHandler(async (req: Request, res: Response) => {
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, slug, title, template FROM dynamic_pages WHERE status = ? ORDER BY title ASC',
+    'SELECT * FROM dynamic_pages WHERE status = ? ORDER BY title ASC',
     ['published']
   );
 

@@ -3,9 +3,10 @@ import { useParams } from 'react-router-dom';
 import {
   Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   IconButton, Chip, Paper, Select, MenuItem, Button, Dialog, DialogTitle, DialogContent,
-  DialogActions, Typography, Grid, Divider, Stack, Tooltip, CircularProgress, Badge
+  DialogActions, Typography, Grid, Divider, Stack, Tooltip, CircularProgress, Badge,
+  Snackbar, Alert
 } from '@mui/material';
-import { DeleteOutlined, EyeOutlined, DownloadOutlined, PaperClipOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeOutlined, DownloadOutlined, PaperClipOutlined, WarningOutlined } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
 import { contactsService, projectSubmissionsService } from 'api/voisilab';
 
@@ -268,6 +269,15 @@ export default function ContactsPage() {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
+  const [alertSnack, setAlertSnack] = useState({ open: false, title: '', message: '', severity: 'info' });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, onCancel: null });
+  const showAlert = (title, message = '', ok = false) => setAlertSnack({ open: true, title, message, severity: ok ? 'success' : 'error' });
+  const askConfirm = (title, message) => new Promise(resolve => {
+    setConfirmDialog({ open: true, title, message,
+      onConfirm: () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(true); },
+      onCancel:  () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(false); }
+    });
+  });
 
   useEffect(() => { loadData(); }, []);
 
@@ -308,15 +318,20 @@ export default function ContactsPage() {
   };
 
   const handleDeleteContact = async (contactId) => {
-    if (!window.confirm('Supprimer ce message ?')) return;
-    try { await contactsService.delete(contactId); loadData(); }
-    catch (err) { console.error(err); }
+    const ok = await askConfirm(
+      'Supprimer le message',
+      'Êtes-vous sûr de vouloir supprimer ce message ? Cette action est irréversible.'
+    );
+    if (!ok) return;
+    try { await contactsService.delete(contactId); loadData(); showAlert('Supprimé', 'Message supprimé avec succès.', true); }
+    catch (err) { console.error(err); showAlert('Erreur', 'Erreur lors de la suppression.'); }
   };
 
   const handleDeleteSubmission = async (subId) => {
-    if (!window.confirm('Supprimer cette soumission et ses fichiers ?')) return;
-    try { await projectSubmissionsService.delete(subId); loadData(); }
-    catch (err) { console.error(err); }
+    const ok = await askConfirm('Supprimer la soumission', 'Êtes-vous sûr de vouloir supprimer cette soumission et ses fichiers ? Cette action est irréversible.');
+    if (!ok) return;
+    try { await projectSubmissionsService.delete(subId); loadData(); showAlert('Supprimé', 'Soumission supprimée avec succès.', true); }
+    catch (err) { console.error(err); showAlert('Erreur', 'Erreur lors de la suppression.'); }
   };
 
   const viewContactDetails = async (contactId) => {
@@ -339,7 +354,26 @@ export default function ContactsPage() {
   const pendingCount = submissions.filter((s) => s.status === 'pending').length;
 
   return (
-    <MainCard title="Messages & Soumissions">
+    <>
+      <Snackbar open={alertSnack.open} autoHideDuration={4000} onClose={() => setAlertSnack(a => ({ ...a, open: false }))} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <Alert onClose={() => setAlertSnack(a => ({ ...a, open: false }))} severity={alertSnack.severity} variant="filled" sx={{ minWidth: 280 }}>
+          <strong>{alertSnack.title}</strong>{alertSnack.message ? ` — ${alertSnack.message}` : ''}
+        </Alert>
+      </Snackbar>
+      <Dialog open={confirmDialog.open} onClose={() => confirmDialog.onCancel?.()} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ p: 0 }}>
+          <Box sx={{ bgcolor: 'error.main', px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <WarningOutlined style={{ color: '#fff', fontSize: 22 }} />
+            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>{confirmDialog.title}</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2.5 }}><Typography>{confirmDialog.message}</Typography></DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button variant="outlined" onClick={() => confirmDialog.onCancel?.()}>Annuler</Button>
+          <Button variant="contained" color="error" onClick={() => confirmDialog.onConfirm?.()}>Supprimer</Button>
+        </DialogActions>
+      </Dialog>
+      <MainCard title="Messages & Soumissions">
       {/* Onglets */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)}>
@@ -530,5 +564,6 @@ export default function ContactsPage() {
         onStatusChange={handleSubmissionStatusChange}
       />
     </MainCard>
+    </>
   );
 }

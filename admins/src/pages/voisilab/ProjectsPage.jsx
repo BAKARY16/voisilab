@@ -3,14 +3,15 @@ import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   IconButton, Chip, Paper, Select, MenuItem, FormControl, InputLabel,
-  Typography, Grid, Divider, Tabs, Tab, Menu, CircularProgress, Stack, Avatar
+  Typography, Grid, Divider, Tabs, Tab, Menu, CircularProgress, Stack, Avatar,
+  Snackbar, Alert
 } from '@mui/material';
 import {
   DeleteOutlined, EyeOutlined, DownloadOutlined, CloseOutlined,
   CheckOutlined, MoreOutlined, ReloadOutlined,
   UserOutlined, MailOutlined, PhoneOutlined,
   ProjectOutlined, DollarOutlined, ScheduleOutlined,
-  PaperClipOutlined, EditOutlined
+  PaperClipOutlined, EditOutlined, WarningOutlined
 } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
 import { projectSubmissionsService } from 'api/voisilab';
@@ -251,6 +252,15 @@ export default function ProjectsPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuSubmission, setMenuSubmission] = useState(null);
+  const [alertSnack, setAlertSnack] = useState({ open: false, title: '', message: '', severity: 'info' });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, onCancel: null });
+  const showAlert = (title, message = '', ok = false) => setAlertSnack({ open: true, title, message, severity: ok ? 'success' : 'error' });
+  const askConfirm = (title, message) => new Promise(resolve => {
+    setConfirmDialog({ open: true, title, message,
+      onConfirm: () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(true); },
+      onCancel:  () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(false); }
+    });
+  });
 
   useEffect(() => { loadSubmissions(); }, [filterStatus]);
 
@@ -304,12 +314,15 @@ export default function ProjectsPage() {
 
   const handleDelete = async (id) => {
     handleMenuClose();
-    if (!window.confirm('Supprimer cette soumission ?')) return;
+    const ok = await askConfirm('Supprimer la soumission', 'Êtes-vous sûr de vouloir supprimer cette soumission ? Cette action est irréversible.');
+    if (!ok) return;
     try {
       await projectSubmissionsService.delete(id);
       loadSubmissions();
+      showAlert('Supprimé', 'Soumission supprimée avec succès.', true);
     } catch (error) {
       console.error('Erreur:', error);
+      showAlert('Erreur', 'Erreur lors de la suppression.');
     }
   };
 
@@ -329,7 +342,26 @@ export default function ProjectsPage() {
   const pendingCount = submissions.filter(s => s.status === 'pending').length;
 
   return (
-    <MainCard
+    <>
+      <Snackbar open={alertSnack.open} autoHideDuration={4000} onClose={() => setAlertSnack(a => ({ ...a, open: false }))} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <Alert onClose={() => setAlertSnack(a => ({ ...a, open: false }))} severity={alertSnack.severity} variant="filled" sx={{ minWidth: 280 }}>
+          <strong>{alertSnack.title}</strong>{alertSnack.message ? ` — ${alertSnack.message}` : ''}
+        </Alert>
+      </Snackbar>
+      <Dialog open={confirmDialog.open} onClose={() => confirmDialog.onCancel?.()} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ p: 0 }}>
+          <Box sx={{ bgcolor: 'error.main', px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <WarningOutlined style={{ color: '#fff', fontSize: 22 }} />
+            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>{confirmDialog.title}</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2.5 }}><Typography>{confirmDialog.message}</Typography></DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button variant="outlined" onClick={() => confirmDialog.onCancel?.()}>Annuler</Button>
+          <Button variant="contained" color="error" onClick={() => confirmDialog.onConfirm?.()}>Supprimer</Button>
+        </DialogActions>
+      </Dialog>
+      <MainCard
       title="Projets soumis"
       secondary={
         <Button size="small" onClick={loadSubmissions} disabled={loading} startIcon={<ReloadOutlined />}>
@@ -429,5 +461,6 @@ export default function ProjectsPage() {
         onDownloadFile={handleDownloadFile}
       />
     </MainCard>
+    </>
   );
 }

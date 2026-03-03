@@ -30,7 +30,7 @@ export const getAllSettings = asyncHandler(async (req: Request, res: Response) =
  */
 export const getPublicSettings = asyncHandler(async (req: Request, res: Response) => {
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT \`key\`, value FROM site_settings
+    `SELECT * FROM site_settings
      WHERE category IN ('general', 'social', 'footer', 'seo')
      ORDER BY \`key\``
   );

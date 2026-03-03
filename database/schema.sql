@@ -184,6 +184,7 @@ CREATE TABLE IF NOT EXISTS workshops (
     instructor VARCHAR(255) DEFAULT NULL,
     level ENUM('debutant', 'intermediaire', 'avance') DEFAULT 'debutant',
     category VARCHAR(100) DEFAULT NULL,
+    type VARCHAR(50) DEFAULT 'atelier',
     status ENUM('upcoming', 'ongoing', 'completed', 'cancelled') DEFAULT 'upcoming',
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

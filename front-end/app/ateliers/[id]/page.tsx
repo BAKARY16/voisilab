@@ -12,7 +12,7 @@ import PageBreadcrumb from "@/components/PageBreadCrumb"
 import {
   Calendar, Clock, MapPin, Users, GraduationCap, Wrench, Zap,
   ArrowLeft, CheckCircle2, AlertCircle, User, Euro, BookOpen,
-  Share2, Heart, Sparkles
+  Share2, Heart, Sparkles, Trophy, ExternalLink
 } from 'lucide-react'
 
 interface Workshop {
@@ -20,12 +20,12 @@ interface Workshop {
   title: string
   description: string
   category: string
-  type: 'formation' | 'atelier' | 'evenement'
+  type: 'formation' | 'atelier' | 'evenement' | 'ceremonie' | 'autre'
   date: string
   end_date: string | null
   max_participants: number
   current_participants: number
-  level: string
+  level: string | null
   price: number
   image: string
   image_url: string
@@ -34,6 +34,9 @@ interface Workshop {
   prerequisites: string[] | string
   what_you_learn: string[] | string
   status: 'upcoming' | 'full' | 'cancelled' | 'completed'
+  cta_label?: string
+  cta_url?: string
+  content?: string
 }
 
 // Fonction pour parser les JSON strings en arrays
@@ -47,6 +50,10 @@ const parseJsonArray = (value: string[] | string | null | undefined): string[] =
     return value ? [value] : []
   }
 }
+
+// Rend le texte enrichi (balises HTML + sauts de ligne) de façon sécurisée
+const toSafeHtml = (text: string): string =>
+  (text || '').replace(/\n/g, '<br />')
 
 // Extraire l'heure depuis un datetime
 const formatTime = (dateStr: string) => {
@@ -108,6 +115,10 @@ const getTypeInfo = (type: string) => {
       return { icon: Wrench, color: 'bg-purple-500/10 text-purple-600 border-purple-500/20', label: 'Atelier' }
     case 'evenement':
       return { icon: Zap, color: 'bg-orange-500/10 text-orange-600 border-orange-500/20', label: 'Événement' }
+    case 'ceremonie':
+      return { icon: Trophy, color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20', label: 'Cérémonie' }
+    case 'autre':
+      return { icon: BookOpen, color: 'bg-gray-500/10 text-gray-600 border-gray-500/20', label: 'Autre' }
     default:
       return { icon: BookOpen, color: 'bg-gray-500/10 text-gray-600 border-gray-500/20', label: 'Activité' }
   }
@@ -199,6 +210,20 @@ export default function WorkshopDetailPage() {
   const workshopDuration = formatDuration(workshop.date, workshop.end_date)
   const workshopImageUrl = workshop.image || workshop.image_url
 
+  // Lire le CTA depuis les colonnes dédiées cta_label / cta_url
+  // Fallback : ancienne méthode via colonne content (JSON)
+  let ctaLabel = workshop.cta_label || ''
+  let ctaUrl   = workshop.cta_url   || ''
+  if (!ctaLabel && !ctaUrl) {
+    try {
+      if (workshop.content) {
+        const obj = JSON.parse(workshop.content)
+        ctaLabel = obj.cta_label || ''
+        ctaUrl   = obj.cta_url   || ''
+      }
+    } catch { /* content non-JSON — on ignore */ }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
       {/* Hero Section */}
@@ -236,15 +261,7 @@ export default function WorkshopDetailPage() {
           </div>
 
           <div className="max-w-4xl mx-auto text-center">
-            {/* Type Badge */}
-            {/* <Badge className={`mb-6 px-4 py-2 ${typeInfo.color} backdrop-blur-sm border-2`}>
-              <TypeIcon className="w-4 h-4 mr-2" />
-              {typeInfo.label}
-            </Badge> */}
-
-            <h1 className="text-3xl lg:text-5xl xl:text-6xl font-black text-white leading-tight mb-6">
-              {workshop.title}
-            </h1>
+            
 
             <p className="text-lg lg:text-xl text-gray-200 mb-8 leading-relaxed max-w-2xl mx-auto">
               {/* {workshop.description} */}
@@ -365,6 +382,39 @@ export default function WorkshopDetailPage() {
                 </Card>
               )}
 
+              <div className="border-t border-border" />
+              
+              {/* Description avec image en haut */}
+              <div className="space-y-6">
+                {workshopImageUrl && (
+                  <div className="relative w-full h-64 lg:h-96 rounded-lg overflow-hidden border-2 border-border shadow-lg">
+                    <Image
+                      src={workshopImageUrl}
+                      alt={workshop.title}
+                      fill
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
+                )}
+              </div>
+
+
+              {/* Catégorie et Type */}
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <Badge className={`${typeInfo.color} border-2`}>
+                  <TypeIcon className="w-4 h-4 mr-2" />
+                  {typeInfo.label}
+                </Badge>
+                {/* <Badge className={`${getLevelColor(workshop.level)} border-2`}>
+                  {workshop.level || 'Tous niveaux'}
+                </Badge> */}
+              </div>
+
+              <h2 className="text-2xl lg:text-3xl xl:text-4xl font-black text-foreground leading-tight mb-6">
+                {workshop.title}
+              </h2>
+
               {/* Description détaillée */}
               <Card className="border-2 border-border">
                 <CardContent className="p-6 lg:p-8">
@@ -374,9 +424,10 @@ export default function WorkshopDetailPage() {
                     </div>
                     Description
                   </h2>
-                  <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
-                    {workshop.description}
-                  </p>
+                  <div
+                    className="text-muted-foreground leading-relaxed prose prose-sm max-w-none [&_strong]:font-bold [&_strong]:text-foreground"
+                    dangerouslySetInnerHTML={{ __html: toSafeHtml(workshop.description) }}
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -507,6 +558,19 @@ export default function WorkshopDetailPage() {
                     <Share2 className="w-4 h-4 mr-2" />
                     Partager
                   </Button>
+
+                  {/* Bouton CTA personnalisé (optionnel) */}
+                  {ctaLabel && ctaUrl && (
+                    <a
+                      href={ctaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                    >
+                      <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                      <span>{ctaLabel}</span>
+                    </a>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -523,7 +587,7 @@ export default function WorkshopDetailPage() {
                 {related.map(w => {
                   const ti = getTypeInfo(w.type)
                   const TIcon = ti.icon
-                    const img = w.image_url
+                  const img = w.image_url
                   return (
                     <Link key={w.id} href={`/ateliers/${w.id}`}>
                       <Card className="overflow-hidden border border-border hover:border-primary/40 hover:shadow-md transition-all duration-300 group h-full">

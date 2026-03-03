@@ -95,19 +95,26 @@ export const getPublishedWorkshops = asyncHandler(async (req: Request, res: Resp
     : `status IN ('upcoming', 'ongoing', 'completed')`;
 
   const query = `
-    SELECT *,
-      capacity        AS max_participants,
-      registered      AS current_participants
-    FROM workshops 
-    WHERE active = TRUE 
+    SELECT w.*,
+      w.capacity AS max_participants,
+      CAST(COALESCE((
+        SELECT COUNT(*) FROM workshop_registrations wr
+        WHERE wr.workshop_id = w.id AND wr.status != 'cancelled'
+      ), 0) AS UNSIGNED) AS current_participants,
+      CAST(COALESCE((
+        SELECT COUNT(*) FROM workshop_registrations wr
+        WHERE wr.workshop_id = w.id AND wr.status != 'cancelled'
+      ), 0) AS UNSIGNED) AS registered
+    FROM workshops w
+    WHERE w.active = TRUE 
     AND ${statusFilter}
     ORDER BY 
-      CASE status
+      CASE w.status
         WHEN 'upcoming' THEN 0
         WHEN 'ongoing' THEN 1
         WHEN 'completed' THEN 2
       END ASC,
-      date DESC
+      w.date DESC
     LIMIT ?
   `;
 
@@ -204,6 +211,9 @@ export const createWorkshop = asyncHandler(async (req: Request, res: Response) =
     instructor,
     status     = 'upcoming',
     active     = false,
+    content    = null,
+    cta_label  = null,
+    cta_url    = null,
     // Aliases tolérés depuis l'ancien frontend
     is_published,
     max_participants,
@@ -219,12 +229,13 @@ export const createWorkshop = asyncHandler(async (req: Request, res: Response) =
 
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO workshops
-      (title, slug, description, date, location, capacity, price, image, instructor, level, category, type, status, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (title, slug, description, content, date, location, capacity, price, image, instructor, level, category, type, status, active, cta_label, cta_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      title, slug, description, mysqlDate, location,
+      title, slug, description, content ?? null, mysqlDate, location,
       Number(finalCap), Number(price), finalImage, instructor || null,
-      normalizeLevel(level), category || null, type || null, status, finalActive ? 1 : 0
+      normalizeLevel(level), category || null, type || null, status, finalActive ? 1 : 0,
+      cta_label || null, cta_url || null
     ]
   );
 
@@ -292,7 +303,12 @@ export const updateWorkshop = asyncHandler(async (req: Request, res: Response) =
   const pub = body.active ?? body.is_published;
   if (pub !== undefined) { updates.push('active = ?'); params.push(pub ? 1 : 0); }
   // level : normalisation vers ENUM DB
-  if (body.level !== undefined) { updates.push('level = ?'); params.push(normalizeLevel(body.level)); }
+  if (body.level     !== undefined) { updates.push('level = ?');     params.push(normalizeLevel(body.level)); }
+  // content : colonne LONGTEXT
+  if (body.content   !== undefined) { updates.push('content = ?');   params.push(body.content); }
+  // CTA bouton personnalisé
+  if (body.cta_label !== undefined) { updates.push('cta_label = ?'); params.push(body.cta_label || null); }
+  if (body.cta_url   !== undefined) { updates.push('cta_url = ?');   params.push(body.cta_url   || null); }
 
   if (updates.length === 0) {
     return res.status(400).json({ error: 'Aucune modification fournie' });
@@ -422,6 +438,72 @@ export const registerForWorkshop = asyncHandler(async (req: Request, res: Respon
     message: 'Inscription enregistrée avec succès',
     data: { id: result.insertId }
   });
+});
+
+/**
+ * Get all registrations across all workshops (admin overview)
+ */
+export const getAllRegistrationsAdmin = asyncHandler(async (req: Request, res: Response) => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT r.*, w.title AS workshop_title, w.date AS workshop_date, w.capacity, w.registered
+     FROM workshop_registrations r
+     JOIN workshops w ON w.id = r.workshop_id
+     ORDER BY r.created_at DESC`
+  );
+  res.json({ data: rows });
+});
+
+/**
+ * Update registration status (confirmed / cancelled / pending)
+ */
+export const updateRegistrationStatus = asyncHandler(async (req: Request, res: Response) => {
+  const { regId } = req.params;
+  const { status } = req.body;
+
+  const allowed = ['pending', 'confirmed', 'cancelled'];
+  if (!allowed.includes(status)) {
+    return res.status(400).json({ error: 'Statut invalide' });
+  }
+
+  const [result] = await pool.query<ResultSetHeader>(
+    'UPDATE workshop_registrations SET status = ? WHERE id = ?',
+    [status, regId]
+  );
+
+  if (result.affectedRows === 0) {
+    throw new NotFoundError('Inscription non trouvée');
+  }
+
+  res.json({ message: 'Statut mis à jour', status });
+});
+
+/**
+ * Delete a registration
+ */
+export const deleteRegistration = asyncHandler(async (req: Request, res: Response) => {
+  const { regId } = req.params;
+
+  // Récupérer l'inscription pour décrémenter le compteur
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM workshop_registrations WHERE id = ?',
+    [regId]
+  );
+
+  if (rows.length === 0) {
+    throw new NotFoundError('Inscription non trouvée');
+  }
+
+  const reg = rows[0];
+
+  await pool.query('DELETE FROM workshop_registrations WHERE id = ?', [regId]);
+
+  // Décrémenter le compteur d'inscrits si > 0
+  await pool.query(
+    'UPDATE workshops SET registered = GREATEST(registered - 1, 0) WHERE id = ?',
+    [reg.workshop_id]
+  );
+
+  res.json({ message: 'Inscription supprimée' });
 });
 
 /**

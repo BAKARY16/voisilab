@@ -33,7 +33,9 @@ import {
   Switch,
   FormControlLabel,
   Tooltip,
-  Avatar
+  Avatar,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { 
   EditOutlined, 
@@ -46,14 +48,13 @@ import {
   StarOutlined,
   StarFilled,
   CloudUploadOutlined,
-  HeartOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined
+  CloseCircleOutlined,
+  WarningOutlined
 } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
-import { innovationsService } from 'api/voisilab';
-
-const API_URL = 'http://localhost:3500';
+import RichTextField from 'components/RichTextField';
+import { innovationsService, API_URL } from 'api/voisilab';
 
 const CATEGORIES = [
   'Santé',
@@ -96,7 +97,8 @@ export default function InnovationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
-  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', type: '', action: null });
+  const [alertSnack, setAlertSnack] = useState({ open: false, title: '', message: '', severity: 'info' });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, onCancel: null });
   const [tagInput, setTagInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
@@ -120,32 +122,25 @@ export default function InnovationsPage() {
       setInnovations(result.data || result || []);
     } catch (error) {
       console.error('Erreur:', error);
-      showConfirmDialog('Erreur', 'Erreur lors du chargement: ' + (error.message || 'Erreur inconnue'), 'error');
+      showAlert('Erreur', 'Erreur lors du chargement: ' + (error.message || 'Erreur inconnue'));
       setInnovations([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const showConfirmDialog = (title, message, type, action = null) => {
-    setConfirmDialog({ open: true, title, message, type, action });
-  };
-
-  const handleConfirmDialogClose = () => {
-    setConfirmDialog({ ...confirmDialog, open: false });
-  };
-
-  const handleConfirmAction = async () => {
-    if (confirmDialog.action) {
-      await confirmDialog.action();
-    }
-    handleConfirmDialogClose();
-  };
+  const showAlert = (title, message = '', ok = false) => setAlertSnack({ open: true, title, message, severity: ok ? 'success' : 'error' });
+  const askConfirm = (title, message) => new Promise(resolve => {
+    setConfirmDialog({ open: true, title, message,
+      onConfirm: () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(true); },
+      onCancel:  () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(false); }
+    });
+  });
 
   const handleSave = async () => {
     try {
       if (!formData.title || !formData.description) {
-        showConfirmDialog('Erreur', 'Le titre et la description sont requis', 'error');
+        showAlert('Erreur', 'Le titre et la description sont requis');
         return;
       }
 
@@ -168,10 +163,10 @@ export default function InnovationsPage() {
 
       if (editingId) {
         await innovationsService.update(editingId, dataToSend);
-        showConfirmDialog('Succès', 'Innovation modifiée avec succès !', 'success');
+        showAlert('Succès', 'Innovation modifiée avec succès !', true);
       } else {
         await innovationsService.create(dataToSend);
-        showConfirmDialog('Succès', 'Innovation créée avec succès !', 'success');
+        showAlert('Succès', 'Innovation créée avec succès !', true);
       }
       
       await loadInnovations();
@@ -180,31 +175,29 @@ export default function InnovationsPage() {
     } catch (error) {
       console.error('Erreur complète:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Erreur inconnue';
-      showConfirmDialog('Erreur', `Erreur lors de l'enregistrement: ${errorMessage}`, 'error');
+      showAlert('Erreur', `Erreur lors de l'enregistrement: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
-    showConfirmDialog(
-      'Confirmer la suppression',
-      'Êtes-vous sûr de vouloir supprimer cette innovation ? Cette action est irréversible.',
-      'warning',
-      async () => {
-        try {
-          setSaving(true);
-          await innovationsService.delete(id);
-          showConfirmDialog('Succès', 'Innovation supprimée avec succès !', 'success');
-          await loadInnovations();
-        } catch (error) {
-          console.error('Erreur:', error);
-          showConfirmDialog('Erreur', 'Erreur lors de la suppression: ' + (error.message || 'Erreur inconnue'), 'error');
-        } finally {
-          setSaving(false);
-        }
-      }
-    );
+    const ok = await askConfirm(
+      'Supprimer l\'innovation',
+      'Êtes-vous sûr de vouloir supprimer cette innovation ?', 
+      'Cette action est irréversible.');
+    if (!ok) return;
+    try {
+      setSaving(true);
+      await innovationsService.delete(id);
+      showAlert('Succès', 'Innovation supprimée avec succès !', true);
+      await loadInnovations();
+    } catch (error) {
+      console.error('Erreur:', error);
+      showAlert('Erreur', 'Erreur lors de la suppression: ' + (error.message || 'Erreur inconnue'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleTogglePublish = async (id) => {
@@ -214,7 +207,7 @@ export default function InnovationsPage() {
       await loadInnovations();
     } catch (error) {
       console.error('Erreur:', error);
-      showConfirmDialog('Erreur', 'Erreur lors de la mise à jour: ' + (error.message || 'Erreur inconnue'), 'error');
+      showAlert('Erreur', 'Erreur lors de la mise à jour: ' + (error.message || 'Erreur inconnue'));
     } finally {
       setSaving(false);
     }
@@ -227,7 +220,7 @@ export default function InnovationsPage() {
       await loadInnovations();
     } catch (error) {
       console.error('Erreur:', error);
-      showConfirmDialog('Erreur', 'Erreur lors de la mise à jour: ' + (error.message || 'Erreur inconnue'), 'error');
+      showAlert('Erreur', 'Erreur lors de la mise à jour: ' + (error.message || 'Erreur inconnue'));
     } finally {
       setSaving(false);
     }
@@ -307,12 +300,12 @@ export default function InnovationsPage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      showConfirmDialog('Erreur', 'Veuillez sélectionner une image valide', 'error');
+      showAlert('Erreur', 'Veuillez sélectionner une image valide');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      showConfirmDialog('Erreur', 'L\'image ne doit pas dépasser 5MB', 'error');
+      showAlert('Erreur', 'L\'image ne doit pas dépasser 5MB');
       return;
     }
 
@@ -343,7 +336,7 @@ export default function InnovationsPage() {
       
     } catch (error) {
       console.error('Upload error:', error);
-      showConfirmDialog('Erreur', 'Erreur lors de l\'upload de l\'image: ' + error.message, 'error');
+      showAlert('Erreur', 'Erreur lors de l\'upload de l\'image: ' + error.message);
     } finally {
       setUploading(false);
     }
@@ -377,33 +370,30 @@ export default function InnovationsPage() {
   };
 
   return (
-    <MainCard title="Gestion des Innovations">
+    <>
+      <Snackbar open={alertSnack.open} autoHideDuration={4000} onClose={() => setAlertSnack(a => ({ ...a, open: false }))} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <Alert onClose={() => setAlertSnack(a => ({ ...a, open: false }))} severity={alertSnack.severity} variant="filled" sx={{ minWidth: 280 }}>
+          <strong>{alertSnack.title}</strong>{alertSnack.message ? ` — ${alertSnack.message}` : ''}
+        </Alert>
+      </Snackbar>
+      <Dialog open={confirmDialog.open} onClose={() => confirmDialog.onCancel?.()} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ p: 0 }}>
+          <Box sx={{ bgcolor: 'error.main', px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <WarningOutlined style={{ color: '#fff', fontSize: 22 }} />
+            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>{confirmDialog.title}</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2.5 }}><Typography>{confirmDialog.message}</Typography></DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button variant="outlined" onClick={() => confirmDialog.onCancel?.()}>Annuler</Button>
+          <Button variant="contained" color="error" onClick={() => confirmDialog.onConfirm?.()}>Supprimer</Button>
+        </DialogActions>
+      </Dialog>
+      <MainCard title="Gestion des Innovations">
       {/* Loading Backdrop */}
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={saving}>
         <CircularProgress color="inherit" />
       </Backdrop>
-
-      {/* Confirmation Dialog */}
-      <Dialog open={confirmDialog.open} onClose={handleConfirmDialogClose}>
-        <DialogTitle>{confirmDialog.title}</DialogTitle>
-        <DialogContent>
-          <Typography>{confirmDialog.message}</Typography>
-        </DialogContent>
-        <DialogActions>
-          {confirmDialog.type === 'warning' && confirmDialog.action ? (
-            <>
-              <Button onClick={handleConfirmDialogClose}>Annuler</Button>
-              <Button onClick={handleConfirmAction} color="error" variant="contained">
-                Confirmer
-              </Button>
-            </>
-          ) : (
-            <Button onClick={handleConfirmDialogClose} variant="contained">
-              OK
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
 
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -479,24 +469,20 @@ export default function InnovationsPage() {
             </Box>
           ) : (
             <TableContainer component={Paper}>
-              <Table>
+              <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Image</TableCell>
-                    <TableCell>Titre</TableCell>
-                    <TableCell>Catégorie</TableCell>
-                    <TableCell>Créateur</TableCell>
-                    <TableCell>Statut</TableCell>
-                    <TableCell align="center">Publié</TableCell>
-                    <TableCell align="center">En vedette</TableCell>
-                    <TableCell align="center">Stats</TableCell>
-                    <TableCell align="right">Actions</TableCell>
+                    <TableCell sx={{ minWidth: 220 }}>Titre</TableCell>
+                    <TableCell sx={{ minWidth: 130 }}>Catégorie / Statut</TableCell>
+                    <TableCell sx={{ minWidth: 140 }}>Créateur</TableCell>
+                    <TableCell align="center" sx={{ minWidth: 110 }}>Visibilité</TableCell>
+                    <TableCell align="right" sx={{ width: 90 }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredInnovations.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} align="center">
+                      <TableCell colSpan={5} align="center">
                         <Typography color="textSecondary" sx={{ py: 4 }}>
                           Aucune innovation trouvée
                         </Typography>
@@ -506,50 +492,38 @@ export default function InnovationsPage() {
                     filteredInnovations.map((innovation) => (
                       <TableRow key={innovation.id} hover>
                         <TableCell>
-                          <Avatar
-                            variant="rounded"
-                            src={innovation.image_url?.startsWith('http') 
-                              ? innovation.image_url 
-                              : `${API_URL}${innovation.image_url}`}
-                            sx={{ width: 60, height: 60 }}
-                          >
-                            {innovation.title?.charAt(0)}
-                          </Avatar>
-                        </TableCell>
-                        <TableCell>
-                          <Typography fontWeight="medium">{innovation.title}</Typography>
-                          <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-                            {innovation.description?.substring(0, 50)}...
+                          <Typography variant="body2" fontWeight="medium" noWrap sx={{ maxWidth: 220 }}>
+                            {innovation.title}
                           </Typography>
-                          <Box sx={{ mt: 0.5 }}>
-                            {parseTags(innovation.tags).slice(0, 3).map((tag, i) => (
-                              <Chip key={i} label={tag} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
-                            ))}
-                          </Box>
+                          <Typography variant="caption" color="textSecondary" noWrap sx={{ display: 'block', maxWidth: 220 }}>
+                            {innovation.description?.substring(0, 60)}…
+                          </Typography>
                         </TableCell>
                         <TableCell>
-                          <Chip label={innovation.category || 'Non catégorisé'} size="small" variant="outlined" />
+                          <Chip label={innovation.category || '—'} size="small" variant="outlined" sx={{ mb: 0.5 }} />
+                          <Box>{getStatusChip(innovation.status)}</Box>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2">{innovation.creator_name || '-'}</Typography>
-                          <Typography variant="caption" color="textSecondary">
+                          <Typography variant="body2" noWrap sx={{ maxWidth: 140 }}>
+                            {innovation.creator_name || '—'}
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary" noWrap sx={{ display: 'block', maxWidth: 140 }}>
                             {innovation.creator_email || ''}
                           </Typography>
                         </TableCell>
-                        <TableCell>{getStatusChip(innovation.status)}</TableCell>
                         <TableCell align="center">
-                          <Tooltip title={innovation.is_published ? 'Cliquer pour dépublier' : 'Cliquer pour publier'}>
+                          <Tooltip title={innovation.is_published ? 'Dépublier' : 'Publier'}>
                             <IconButton
+                              size="small"
                               color={innovation.is_published ? 'success' : 'default'}
                               onClick={() => handleTogglePublish(innovation.id)}
                             >
                               {innovation.is_published ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
                             </IconButton>
                           </Tooltip>
-                        </TableCell>
-                        <TableCell align="center">
                           <Tooltip title={innovation.is_featured ? 'Retirer de la une' : 'Mettre en vedette'}>
                             <IconButton
+                              size="small"
                               color={innovation.is_featured ? 'warning' : 'default'}
                               onClick={() => handleToggleFeatured(innovation.id)}
                             >
@@ -557,34 +531,14 @@ export default function InnovationsPage() {
                             </IconButton>
                           </Tooltip>
                         </TableCell>
-                        <TableCell align="center">
-                          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                            <Tooltip title="Likes">
-                              <Chip 
-                                icon={<HeartOutlined />} 
-                                label={innovation.likes || 0} 
-                                size="small" 
-                                variant="outlined"
-                              />
-                            </Tooltip>
-                            <Tooltip title="Vues">
-                              <Chip 
-                                icon={<EyeOutlined />} 
-                                label={innovation.views || 0} 
-                                size="small" 
-                                variant="outlined"
-                              />
-                            </Tooltip>
-                          </Box>
-                        </TableCell>
                         <TableCell align="right">
                           <Tooltip title="Modifier">
-                            <IconButton onClick={() => handleEdit(innovation)} color="primary">
+                            <IconButton size="small" onClick={() => handleEdit(innovation)} color="primary">
                               <EditOutlined />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Supprimer">
-                            <IconButton onClick={() => handleDelete(innovation.id)} color="error">
+                            <IconButton size="small" onClick={() => handleDelete(innovation.id)} color="error">
                               <DeleteOutlined />
                             </IconButton>
                           </Tooltip>
@@ -674,14 +628,14 @@ export default function InnovationsPage() {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Description *"
-                    multiline
-                    rows={4}
+                  <RichTextField
+                    label="Description"
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(val) => setFormData({ ...formData, description: val })}
+                    rows={4}
+                    required
                     placeholder="Décrivez l'innovation en détail..."
+                    helperText="Utilisez Gras et les icônes pour enrichir la description."
                   />
                 </Grid>
 
@@ -842,5 +796,6 @@ export default function InnovationsPage() {
         </Grid>
       )}
     </MainCard>
+    </>
   );
 }

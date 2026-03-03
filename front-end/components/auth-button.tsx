@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth"
 import { SignInDialog } from "../auth/signin"
-import Link from "next/link"
+import { NavLink } from "@/components/nav-link"
 
 export function AuthButton() {
   const { user, isAuthenticated, logout } = useAuth()
@@ -43,22 +43,22 @@ export function AuthButton() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link
+          <NavLink
             href="/profile"
             className="cursor-pointer flex items-center hover:text-white hover:fill-white"
           >
             <User className="mr-2 h-4 w-4" />
             <span>Mon profil</span>
-          </Link>
+          </NavLink>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link
+          <NavLink
             href="/profile/settings"
             className="cursor-pointer flex items-center hover:text-white hover:fill-white"
           >
             <Settings className="mr-2 h-4 w-4" />
             <span>Paramètres</span>
-          </Link>
+          </NavLink>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

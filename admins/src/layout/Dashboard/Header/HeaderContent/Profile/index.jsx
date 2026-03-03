@@ -61,6 +61,14 @@ export default function Profile() {
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
     setUser(currentUser);
+
+    // Écouter les mises à jour du profil (depuis ProfilePage)
+    const handleProfileUpdated = (event) => {
+      const updatedUser = authService.getCurrentUser();
+      setUser(updatedUser);
+    };
+    window.addEventListener('profileUpdated', handleProfileUpdated);
+    return () => window.removeEventListener('profileUpdated', handleProfileUpdated);
   }, []);
 
   const handleToggle = () => {
@@ -100,7 +108,7 @@ export default function Profile() {
           aria-haspopup="true"
           onClick={handleToggle}
         >
-          <Avatar alt="profile user" src={avatar1} size="sm" sx={{ '&:hover': { outline: '1px solid', outlineColor: 'primary.main' } }} />
+          <Avatar alt="profile user" src={user?.avatar_url || avatar1} size="sm" sx={{ '&:hover': { outline: '1px solid', outlineColor: 'primary.main' } }} />
         </ButtonBase>
       </Tooltip>
       <Popper
@@ -130,7 +138,7 @@ export default function Profile() {
                     <Grid container sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
                       <Grid>
                         <Stack direction="row" sx={{ gap: 1.25, alignItems: 'center' }}>
-                          <Avatar alt="profile user" src={avatar1} sx={{ width: 32, height: 32 }} />
+                          <Avatar alt="profile user" src={user?.avatar_url || avatar1} sx={{ width: 32, height: 32 }} />
                           <Stack>
                             <Typography variant="h6">{user?.full_name || 'Utilisateur'}</Typography>
                             <Typography variant="body2" color="text.secondary">

@@ -299,7 +299,7 @@ export const likeInnovation = asyncHandler(async (req: Request, res: Response) =
   const { id } = req.params;
 
   const [existing] = await pool.query<RowDataPacket[]>(
-    'SELECT id, likes FROM innovations WHERE id = ?',
+    'SELECT * FROM innovations WHERE id = ?',
     [id]
   );
 
@@ -326,7 +326,7 @@ export const togglePublish = asyncHandler(async (req: Request, res: Response) =>
   const { id } = req.params;
 
   const [existing] = await pool.query<RowDataPacket[]>(
-    'SELECT is_published, title FROM innovations WHERE id = ?',
+    'SELECT * FROM innovations WHERE id = ?',
     [id]
   );
 
@@ -357,7 +357,7 @@ export const toggleFeatured = asyncHandler(async (req: Request, res: Response) =
   const { id } = req.params;
 
   const [existing] = await pool.query<RowDataPacket[]>(
-    'SELECT is_featured, title FROM innovations WHERE id = ?',
+    'SELECT * FROM innovations WHERE id = ?',
     [id]
   );
 

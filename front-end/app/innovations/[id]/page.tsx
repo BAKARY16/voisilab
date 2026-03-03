@@ -27,6 +27,9 @@ import { useParams } from "next/navigation"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500'
 
+const toSafeHtml = (text: string): string =>
+  (text || '').replace(/\n/g, '<br />')
+
 interface Innovation {
   id: number
   title: string
@@ -230,9 +233,10 @@ export default function InnovationDetailPage() {
               <h2 className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3">
                 À propos du projet
               </h2>
-              <p className="text-base text-foreground leading-relaxed whitespace-pre-line">
-                {innovation.description}
-              </p>
+              <div
+                className="text-base text-foreground leading-relaxed prose prose-sm max-w-none [&_strong]:font-bold [&_strong]:text-foreground"
+                dangerouslySetInnerHTML={{ __html: toSafeHtml(innovation.description) }}
+              />
             </div>
 
             {/* Tags */}

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import Link from "next/link"
+import { NavLink } from "@/components/nav-link"
 import PageBreadcrumb from "@/components/PageBreadCrumb"
 import {
   Printer,
@@ -304,7 +305,7 @@ export function EquipmentSection() {
                   className="text-black border-white/30 hover:bg-white/10 backdrop-blur-sm"
                   asChild
                 >
-                  <Link href="/ateliers">Voir les ateliers</Link>
+                  <NavLink href="/ateliers">Voir les ateliers</NavLink>
                 </Button>
               </div>
             </div>
@@ -399,12 +400,12 @@ export function EquipmentSection() {
 
             <div className="text-center mt-10 fade-in-up">
               <Button size="lg" className="group" asChild>
-                <Link href="/ateliers">
+                <NavLink href="/ateliers">
                   <span className="flex items-center gap-2">
                     Voir les prochaines formations
                     <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
                   </span>
-                </Link>
+                </NavLink>
               </Button>
             </div>
           </div>
@@ -487,14 +488,14 @@ export function EquipmentSection() {
                         </div> */}
 
                         {/* Bouton */}
-                        <Link href={`/materiels/${item.id}`} className="mt-6 flex flex-1 items-center transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 delay-350">
+                        <NavLink href={`/materiels/${item.id}`} className="mt-6 flex flex-1 items-center transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 delay-350">
                           <Button size="lg" variant="outline" className="w-full cursor-pointer group">
                             <span className="relative z-10 flex items-center justify-center gap-2">
                               En savoir plus
                               <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
                             </span>
                           </Button>
-                        </Link>
+                        </NavLink>
                       </CardContent>
                     </div>
 

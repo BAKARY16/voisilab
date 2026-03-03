@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import Image from "next/image"
 import Link from "next/link"
+import { NavLink } from "@/components/nav-link"
 import {
     ArrowRight,
     Bot,
@@ -27,6 +28,8 @@ import {
     GraduationCap,
     Wrench,
     ExternalLink,
+    BookOpen,
+    Trophy,
     Mail,
     Linkedin,
     CheckCircle2,
@@ -471,8 +474,23 @@ export function HomePageContent() {
         }
     }
 
-    // Obtenir les 3 premiers ateliers pour l'accueil
-    const recentWorkshops = workshops.slice(0, 3)
+    // Obtenir les 3 ateliers les plus récents pour l'accueil
+    const recentWorkshops = [...workshops]
+        .sort((a, b) => (b.id ?? 0) - (a.id ?? 0))
+        .slice(0, 3)
+
+    const getWorkshopTypeInfo = (type: string | null) => {
+        switch (type) {
+            case 'formation': return { icon: GraduationCap, label: 'Formation',  color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' }
+            case 'atelier':   return { icon: Wrench,        label: 'Atelier',    color: 'bg-purple-500/10 text-purple-600 border-purple-500/20' }
+            case 'evenement': return { icon: Zap,           label: 'Événement',  color: 'bg-orange-500/10 text-orange-600 border-orange-500/20' }
+            case 'ceremonie': return { icon: Trophy,        label: 'Cérémonie',  color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' }
+            default:          return { icon: BookOpen,      label: 'Activité',   color: 'bg-gray-500/10 text-gray-600 border-gray-500/20' }
+        }
+    }
+
+    const stripHtmlHome = (html: string) =>
+        (html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
 
     // Obtenir les 3 premières innovations pour l'accueil
     const recentInnovations = innovations.slice(0, 3)
@@ -628,21 +646,11 @@ export function HomePageContent() {
                             </p>
                         </div>
                     </div>
-
-                    {/* <div className="mt-12 flex justify-center">
-                        <Card className="border-2 border-border hover:border-primary/50 transition-all duration-300 max-w-xl w-full text-center">
-                            <CardContent className="p-6">
-                                <p className="text-sm text-muted-foreground">
-                                    ?? Cocody Angré, Abidjan - Côte d'Ivoire  |  ?? +225 05 00 00 00 00
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div> */}
                 </div>
             </section>
 
             {/* About Section */}
-            <section className="py-20 lg:py-32 relative">
+            <section className="py-16 lg:py-20 relative">
                 <div className="container mx-auto px-4 lg:px-8">
                     <SectionHeader
                         title="Un fablab au cœur de l'innovation"
@@ -673,7 +681,7 @@ export function HomePageContent() {
             </section>
 
             {/* Services Section - REFONTE COMPLÈTE */}
-            <section id="services" className="py-20 lg:py-32 bg-muted/30 relative overflow-hidden">
+            <section id="services" className="py-16 lg:py-20 bg-muted/30 relative overflow-hidden">
                 {/* Background decoratif */}
                 <div className="absolute inset-0 bg-grid-pattern opacity-5" />
                 <div className="absolute top-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
@@ -755,18 +763,18 @@ export function HomePageContent() {
                     {/* Boutons voir plus */}
                     <div className="flex justify-center mt-12 fade-in-up" style={{ animationDelay: '350ms' }}>
                         <Button size="lg" className="group relative overflow-hidden bg-gradient-to-r from-primary to-accent hover:shadow-2xl transition-all duration-300 text-base shadow-2xl" asChild>
-                            <Link href="/service">
+                            <NavLink href="/service">
                                 <span className="relative z-10 flex items-center gap-2">
                                     Voir tous les services
                                     <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
                                 </span>
                                 <div className="absolute inset-0 bg-gradient-to-r from-accent to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                            </Link>
+                            </NavLink>
                         </Button>
                     </div>
 
                     {/* Section infos complémentaires */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto mt-16 fade-in-up" style={{ animationDelay: '400ms' }}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto mt-12 fade-in-up" style={{ animationDelay: '400ms' }}>
 
                         {/* Tarifs */}
                         <Card className="border-2 border-border hover:border-primary/50 transition-all duration-300">
@@ -778,12 +786,6 @@ export function HomePageContent() {
                                 <p className="text-sm text-muted-foreground mb-4">
                                     Des prix compétitifs pour tous types de projets, du particulier à l'entreprise
                                 </p>
-                                {/* <Button variant="outline" size="sm" asChild>
-                                    <Link href="/tarifs">
-                                        Voir les tarifs
-                                        <ArrowRight className="ml-2" size={16} />
-                                    </Link>
-                                </Button> */}
                             </CardContent>
                         </Card>
 
@@ -798,10 +800,10 @@ export function HomePageContent() {
                                     Obtenez un devis personnalisé pour votre projet
                                 </p>
                                 <Button variant="outline" size="sm" asChild>
-                                    <Link href="/projet">
+                                    <NavLink href="/projet">
                                         Demander un devis
                                         <Send className="ml-2" size={16} />
-                                    </Link>
+                                    </NavLink>
                                 </Button>
                             </CardContent>
                         </Card>
@@ -828,7 +830,7 @@ export function HomePageContent() {
                     </div>
 
                     {/* Bandeau CTA final */}
-                    <div className="max-w-4xl mx-auto mt-16 fade-in-up" style={{ animationDelay: '500ms' }}>
+                    <div className="max-w-4xl mx-auto mt-12 fade-in-up" style={{ animationDelay: '500ms' }}>
                         <Card className="overflow-hidden">
                             <CardContent className="p-8 lg:p-12">
                                 <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
@@ -842,16 +844,16 @@ export function HomePageContent() {
                                     </div>
                                     <div className="flex flex-col sm:flex-row gap-3">
                                         <Button size="lg" className="group" asChild>
-                                            <Link href="/projet">
+                                            <NavLink href="/projet">
                                                 Démarrer un projet
                                                 <Rocket className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
-                                            </Link>
+                                            </NavLink>
                                         </Button>
                                         <Button size="lg" variant="outline" asChild>
-                                            <Link href="/service">
+                                            <NavLink href="/service">
                                                 Tous les services
                                                 <ExternalLink className="ml-2" size={20} />
-                                            </Link>
+                                            </NavLink>
                                         </Button>
                                     </div>
                                 </div>
@@ -863,7 +865,7 @@ export function HomePageContent() {
             </section>
 
             {/* Equipment Section - NOUVEAU DESIGN AVEC IMAGES */}
-            <section id="equipements" className="py-20 lg:py-32 relative">
+            <section id="equipements" className="py-16 lg:py-20 relative">
                 <div className="container mx-auto px-4 lg:px-8">
                     <SectionHeader
                         title="Nos équipements"
@@ -919,17 +921,15 @@ export function HomePageContent() {
                                                 </p>
                                                 {/* Bouton */}
                                                 <div className="mt-6 flex items-center transform translate-y-4 opacity-0 group-hover:translate-y-0 
-                                                   group-hover:opacity-100 transition-all duration-500 delay-350">
-                                                    <Link href="/materiels">
-                                                        <Button size="lg" variant="outline" className="group" asChild>
-                                                            <Link href="/materiels">
-                                                                <span className="relative z-10 flex items-center gap-2">
-                                                                    En savoir plus
-                                                                    <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
-                                                                </span>
-                                                            </Link>
-                                                        </Button>
-                                                    </Link>
+                               group-hover:opacity-100 transition-all duration-500 delay-350">
+                                                    <Button size="lg" variant="outline" className="group" asChild>
+                                                        <NavLink href="/materiels">
+                                                            <span className="relative z-10 flex items-center gap-2">
+                                                                En savoir plus
+                                                                <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
+                                                            </span>
+                                                        </NavLink>
+                                                    </Button>
                                                 </div>
                                             </CardContent>
                                         </div>
@@ -956,21 +956,21 @@ export function HomePageContent() {
                     {/* CTA Button */}
                     <div className="text-center fade-in-up">
                         <Button size="lg" variant="outline" className="group" asChild>
-                            <Link href="/materiels">
+                            <NavLink href="/materiels">
                                 <span className="relative z-10 flex items-center gap-2">
                                     Voir tous les équipements
                                     <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
                                 </span>
-                            </Link>
+                            </NavLink>
                         </Button>
                     </div>
                 </div>
             </section>
 
             {/* Workshops Section */}
-            <section id="ateliers" className="py-20 lg:py-32 relative">
+            <section id="ateliers" className="py-16 lg:py-20 relative">
                 <div className="container mx-auto px-4 lg:px-8">
-                    <SectionHeader title="Ateliers & Formations" subtitle="Formations, ateliers créatifs et événements pour apprendre, créer et partager avec la communauté" />
+                    <SectionHeader title="Ateliers & évènements" subtitle="Les derniers ateliers, formations et événements ajoutés par le FabLab UVCI" />
 
                     {loadingWorkshops ? (
                         <div className="text-center py-12">
@@ -990,47 +990,66 @@ export function HomePageContent() {
                                 const maxParticipants = item.capacity ?? item.max_participants ?? 0
                                 const currentParticipants = item.registered ?? item.current_participants ?? 0
                                 const spotsRemaining = maxParticipants - currentParticipants
+                                const typeInfo = getWorkshopTypeInfo(item.type)
+                                const TypeIcon = typeInfo.icon
                                 return (
-                                    <div key={item.id || index} className="" style={{ animationDelay: `${index * 100}ms` }}>
+                                    <div key={item.id || index} style={{ animationDelay: `${index * 100}ms` }}>
                                         <Link href={`/ateliers/${item.id}`} className="block h-full">
-                                            <Card className={`relative overflow-hidden border-2 border-border hover:border-primary/50 hover:shadow-2xl transition-all duration-500 group h-full bg-gradient-to-br cursor-pointer`}>
-                                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-accent" />
-                                                <CardContent className="p-8">
-                                                    <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full"></div>
-                                                    <div className="flex items-start justify-between mb-4">
-                                                        <Badge className={`${getLevelColor(item.level)} backdrop-blur-sm border-2 font-semibold`}>{item.level || 'Tous niveaux'}</Badge>
-                                                        <span className="text-lg font-bold text-primary">{item.price === 0 ? 'Gratuit' : `${item.price?.toLocaleString()} FCFA`}</span>
-                                                    </div>
-                                                    {spotsRemaining > 0 && spotsRemaining <= 5 && (
-                                                        <Badge variant="outline" className="mb-3 bg-background/90 backdrop-blur-sm border-destructive text-destructive font-semibold animate-pulse">
-                                                            Plus que {spotsRemaining} place{spotsRemaining > 1 ? 's' : ''} !
+                                            <Card className="overflow-hidden border border-border hover:border-primary/40 hover:shadow-xl transition-all duration-300 group h-full cursor-pointer flex flex-col">
+                                                {/* Image */}
+                                                <div className="relative h-52 overflow-hidden flex-shrink-0">
+                                                    <Image
+                                                        src={item.image || item.image_url || '/logolab.png'}
+                                                        alt={item.title}
+                                                        fill
+                                                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                                                    {/* Type badge */}
+                                                    <div className="absolute top-3 left-3 flex gap-1.5">
+                                                        <Badge className="bg-background/85 text-foreground border border-border/60 text-xs backdrop-blur-sm font-medium">
+                                                            <TypeIcon size={12} className="mr-1" />{typeInfo.label}
                                                         </Badge>
-                                                    )}
-                                                    <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">{item.title}</h3>
-                                                    <p className="text-sm text-muted-foreground leading-relaxed mb-6 line-clamp-2">{item.description}</p>
-                                                    <div className="space-y-3 mb-6">
-                                                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                                                            <Calendar size={18} className="text-primary flex-shrink-0" />
-                                                            <span className="text-sm text-foreground font-medium">{new Date(item.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                                    </div>
+                                                    {/* Price badge */}
+                                                    <div className="absolute top-3 right-3">
+                                                        <Badge className="bg-primary text-primary-foreground text-xs font-bold px-2.5 py-1">
+                                                            {item.price === 0 ? 'Gratuit' : `${item.price?.toLocaleString()} FCFA`}
+                                                        </Badge>
+                                                    </div>
+                                                    {/* Date overlay */}
+                                                    <div className="absolute bottom-0 left-0 right-0 px-4 py-3 flex items-center justify-between">
+                                                        <div className="flex items-center gap-1.5 text-white/90 text-xs font-medium">
+                                                            <Calendar size={12} />
+                                                            {new Date(item.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                                                         </div>
-                                                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                                                            <Clock size={18} className="text-primary flex-shrink-0" />
-                                                            <span className="text-sm text-foreground font-medium">
-                                                                {new Date(item.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
+                                                        {spotsRemaining <= 0 ? (
+                                                            <Badge className="bg-destructive text-destructive-foreground text-xs font-semibold">Complet</Badge>
+                                                        ) : spotsRemaining <= 5 ? (
+                                                            <Badge variant="outline" className="bg-background/80 border-destructive text-destructive text-xs font-semibold backdrop-blur-sm animate-pulse">
+                                                                {spotsRemaining} place{spotsRemaining > 1 ? 's' : ''}
+                                                            </Badge>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                                {/* Card content */}
+                                                <CardContent className="p-5 flex flex-col flex-1">
+                                                    <h3 className="text-base font-semibold text-foreground mb-1.5 group-hover:text-primary transition-colors line-clamp-2 leading-snug">{item.title}</h3>
+                                                    <p className="text-xs text-muted-foreground leading-relaxed mb-4 line-clamp-2 flex-1">{stripHtmlHome(item.description)}</p>
+                                                    <div className="space-y-1.5 mb-4 text-xs text-muted-foreground">
+                                                        <div className="flex items-center gap-2">
+                                                            <Clock size={13} className="text-primary flex-shrink-0" />
+                                                            <span>{new Date(item.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
                                                         </div>
                                                         {item.location && (
-                                                            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                                                                <MapPin size={18} className="text-primary flex-shrink-0" />
-                                                                <span className="text-sm text-foreground font-medium">{item.location}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <MapPin size={13} className="text-primary flex-shrink-0" />
+                                                                <span className="line-clamp-1">{item.location}</span>
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <Button className="w-full cursor-pointer group relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                                                        <span className="relative z-10 flex items-center justify-center gap-2">
-                                                            Voir les détails
-                                                            <ArrowRight className="group-hover:translate-x-1 transition-transform" size={16} />
-                                                        </span>
+                                                    <Button size="sm" className="w-full cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                                        Voir les détails <ArrowRight className="ml-1.5" size={14} />
                                                     </Button>
                                                 </CardContent>
                                             </Card>
@@ -1043,17 +1062,17 @@ export function HomePageContent() {
 
                     <div className="text-center fade-in-up">
                         <Button size="lg" variant="outline" className="group" asChild>
-                            <Link href="/ateliers">
+                            <NavLink href="/ateliers">
                                 Voir tous les ateliers
                                 <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
-                            </Link>
+                            </NavLink>
                         </Button>
                     </div>
                 </div>
             </section>
 
             {/* Innovations Section */}
-            <section id="innovations" className="py-20 lg:py-32 bg-muted/30 relative overflow-hidden">
+            <section id="innovations" className="py-16 lg:py-20 bg-muted/30 relative overflow-hidden">
                 {/* Background Pattern Animé */}
                 <div className="absolute inset-0 bg-grid-pattern opacity-5" />
                 <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
@@ -1063,9 +1082,6 @@ export function HomePageContent() {
 
                     {/* En-tête moderne */}
                     <div className="max-w-4xl mx-auto text-center mb-16 fade-in-up">
-                        {/* <Badge className="mb-6 px-5 py-2 bg-primary/10 text-primary border-none font-medium">
-                            ?? Innovations
-                        </Badge> */}
                         <h2 className="text-4xl lg:text-6xl font-bold text-foreground mb-6">
                             Créations de la{" "}
                             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -1076,21 +1092,6 @@ export function HomePageContent() {
                             Découvrez les projets inspirants réalisés par nos makers et laissez-vous inspirer
                         </p>
                     </div>
-
-                    {/* Filtres de catégories */}
-                    {/* <div className="flex flex-wrap justify-center gap-3 mb-12 fade-in-up">
-                        {['Tous', 'Santé', 'Agriculture', 'Design', 'Robotique', 'Éco-design', 'Musique'].map((category, index) => (
-                            <Button
-                                key={index}
-                                onClick={() => setSelectedCategory(category)}
-                                variant={selectedCategory === category ? "default" : "outline"}
-                                size="sm"
-                                className={`${selectedCategory === category ? 'bg-primary' : 'hover:bg-primary/10'} transition-all duration-300`}
-                            >
-                                {category}
-                            </Button>
-                        ))}
-                    </div> */}
 
                     {/* Grid des projets - Nouveau design */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto mb-12">
@@ -1112,7 +1113,6 @@ export function HomePageContent() {
                                                     fill
                                                     className="object-cover group-hover:scale-110 transition-transform duration-700"
                                                 />
-                                                {/* <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60" /> */}
                                             </>
                                         ) : (
                                             // Placeholder avec gradient si pas d'image
@@ -1224,12 +1224,12 @@ export function HomePageContent() {
                     {/* CTA Button */}
                     <div className="text-center fade-in-up">
                         <Button size="lg" variant="outline" className="group" asChild>
-                            <Link href="/innovations">
+                            <NavLink href="/innovations">
                                 <span className="relative z-10 flex items-center gap-2">
                                     Voir toutes les innovations
                                     <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
                                 </span>
-                            </Link>
+                            </NavLink>
                         </Button>
                     </div>
 
@@ -1237,7 +1237,7 @@ export function HomePageContent() {
             </section>
 
             {/* News Section - Design Simplifié et Professionnel */}
-            <section className="py-20 lg:py-32 bg-muted/30">
+            <section className="py-16 lg:py-20 bg-muted/30">
                 <div className="container mx-auto px-4 lg:px-8">
                     <SectionHeader title="Actualités" subtitle="Restez informé des dernières nouveautés, événements et partenariats de l'UVCI" />
 
@@ -1253,33 +1253,38 @@ export function HomePageContent() {
                         ) : (
                             news.map((article: any, index: number) => (
                                 <div key={index} style={{ animationDelay: `${index * 100}ms` }}>
-                                    <Card className="overflow-hidden border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full bg-background">
-                                        <div className="relative h-56 overflow-hidden bg-muted">
-                                            <Image
-                                                src={article.featured_image || "/placeholder.svg"}
-                                                alt={article.title}
-                                                fill
-                                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
-                                        </div>
-                                        <CardContent className="p-6">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <Badge variant="outline" className="text-xs font-medium">
-                                                    {article.category}
-                                                </Badge>
-                                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                                    <Calendar size={14} />
-                                                    <span>{new Date(article.published_at || article.created_at).toLocaleDateString('fr-FR')}</span>
-                                                </div>
+                                    <NavLink href={`/actualites/${article.slug}`} className="block h-full group">
+                                        <Card className="overflow-hidden border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full bg-background">
+                                            <div className="relative h-56 overflow-hidden bg-muted">
+                                                <Image
+                                                    src={article.featured_image || "/placeholder.svg"}
+                                                    alt={article.title}
+                                                    fill
+                                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
                                             </div>
-                                            <h3 className="text-lg font-semibold text-foreground mb-2 line-clamp-2 leading-tight">
-                                                {article.title}
-                                            </h3>
-                                            <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
-                                                {article.excerpt}
-                                            </p>
-                                        </CardContent>
-                                    </Card>
+                                            <CardContent className="p-6">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <Badge variant="outline" className="text-xs font-medium">
+                                                        {article.category}
+                                                    </Badge>
+                                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                        <Calendar size={14} />
+                                                        <span>{new Date(article.published_at || article.created_at).toLocaleDateString('fr-FR')}</span>
+                                                    </div>
+                                                </div>
+                                                <h3 className="text-lg font-semibold text-foreground mb-2 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
+                                                    {article.title}
+                                                </h3>
+                                                <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                                                    {article.excerpt}
+                                                </p>
+                                                <div className="flex items-center gap-1 text-xs font-medium text-primary mt-4 hover:translate-x-1 transition-transform hover:text-green-500">
+                                                    Lire l&apos;article <ArrowRight size={12} className="ml-0.5" />
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </NavLink>
                                 </div>
                             ))
                         )}
@@ -1287,17 +1292,17 @@ export function HomePageContent() {
 
                     <div className="text-center fade-in-up">
                         <Button size="lg" variant="outline" className="group" asChild>
-                            <Link href="/actualites">
+                            <NavLink href="/actualites">
                                 Toutes les actualités
                                 <Newspaper className="ml-2 group-hover:translate-x-1 transition-transform" size={18} />
-                            </Link>
+                            </NavLink>
                         </Button>
                     </div>
                 </div>
             </section>
 
             {/* Team Section - Slider Infini */}
-            <section className="py-20 lg:py-32 relative overflow-hidden">
+            <section className="py-16 lg:py-20 relative overflow-hidden">
                 <div className="container mx-auto px-4 lg:px-8">
                     <SectionHeader
                         title="Notre équipe"
@@ -1343,7 +1348,7 @@ export function HomePageContent() {
                                         <div className="absolute bottom-4 left-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
                                             {member.linkedin && (
                                                 <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-primary transition-colors">
-                                                    <Linkedin size={16} className="text-white" />
+                                                    <Mail size={16} className="text-white" />
                                                 </a>
                                             )}
                                             <a href={`mailto:${member.email}`} className="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-primary transition-colors">
@@ -1364,35 +1369,35 @@ export function HomePageContent() {
                 <div className="container mx-auto px-4 lg:px-8 mt-10">
                     <div className="text-center fade-in-up">
                         <Button size="lg" variant="outline" className="group" asChild>
-                            <Link href="/equipe">
+                            <NavLink href="/equipe">
                                 Découvrir toute l&apos;équipe
                                 <Users className="ml-2 group-hover:translate-x-1 transition-transform" size={18} />
-                            </Link>
+                            </NavLink>
                         </Button>
                     </div>
                 </div>
 
                 {/* CSS pour l'animation */}
                 <style jsx>{`
-                    @keyframes scroll-left {
-                        0% {
-                            transform: translateX(0);
-                        }
-                        100% {
-                            transform: translateX(-50%);
-                        }
-                    }
-                    .animate-scroll-left {
-                        animation: scroll-left 30s linear infinite;
-                    }
-                    .group\\/slider:hover .animate-scroll-left {
-                        animation-play-state: paused;
-                    }
-                `}</style>
+                @keyframes scroll-left {
+                0% {
+                    transform: translateX(0);
+                }
+                100% {
+                    transform: translateX(-50%);
+                }
+                }
+                .animate-scroll-left {
+                animation: scroll-left 30s linear infinite;
+                }
+                .group\\/slider:hover .animate-scroll-left {
+                animation-play-state: paused;
+                }
+            `}</style>
             </section>
 
             {/* Témoignages Section */}
-            <section className="py-20 lg:py-32 bg-muted/30 relative">
+            <section className="py-16 lg:py-20 bg-muted/30 relative">
                 <div className="container mx-auto px-4 lg:px-8">
                     <SectionHeader
                         title="Ce que disent nos membres"
@@ -1458,43 +1463,42 @@ export function HomePageContent() {
                 </div>
             </section>
 
-            <section className="py-20 lg:py-32 bg-muted/30 relative">
-            <div className="max-w-5xl mx-auto">
-                <Card className="border-2 border-border overflow-hidden">
-                    <div className="relative aspect-video bg-muted">
-                        <iframe
-                            width="100%"
-                            height="100%"
-                            src="https://www.youtube.com/embed/oCZJ-RQFRi8"
-                            title="Visite Virtuelle Voisilab"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            className="w-full h-full"
-                        />
-                    </div>
-                    <CardContent className="p-6 bg-muted/30">
-                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                            <div>
-                                <h3 className="font-bold text-foreground mb-1">Venez nous rendre visite</h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Abidjan Cocody Deux-Plateaux, rue K4 - Du lundi au samedi
-                                </p>
-                            </div>
-                            <Button asChild>
-                                <Link href="https://maps.google.com/maps?q=Abidjan+Cocody+Deux-Plateaux+rue+K4" target="_blank">
-                                    <MapPin className="mr-2" size={18} />
-                                    Voir sur la carte
-                                </Link>
-                            </Button>
+            <section className="py-16 lg:py-20 bg-muted/30 relative">
+                <div className="max-w-5xl mx-auto px-4 lg:px-8">
+                    <Card className="border-2 border-border overflow-hidden">
+                        <div className="relative aspect-video bg-muted">
+                            <iframe
+                                width="100%"
+                                height="100%"
+                                src="https://www.youtube.com/embed/oCZJ-RQFRi8"
+                                title="Visite Virtuelle Voisilab"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="w-full h-full"
+                            />
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
+                        <CardContent className="p-6 bg-muted/30">
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                                <div>
+                                    <h3 className="font-bold text-foreground mb-1">Venez nous rendre visite</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Abidjan Cocody Deux-Plateaux, rue K4 - Du lundi au samedi
+                                    </p>
+                                </div>
+                                <Button asChild>
+                                    <Link href="https://maps.google.com/maps?q=Abidjan+Cocody+Deux-Plateaux+rue+K4" target="_blank">
+                                        <MapPin className="mr-2" size={18} />
+                                        Voir sur la carte
+                                    </Link>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </section>
 
             {/* Project Request Section */}
-            <section id="projet" className="py-20 lg:py-32 relative">
+            <section id="projet" className="py-16 lg:py-20 relative">
                 <div className="container mx-auto px-4 lg:px-8">
                     <SectionHeader title="Soumettre un projet" subtitle="Vous avez une idée ? Partagez-la avec nous ! Notre équipe d'experts étudiera votre demande et vous accompagnera dans sa réalisation." />
 

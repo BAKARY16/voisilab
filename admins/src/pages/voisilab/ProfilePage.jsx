@@ -19,8 +19,6 @@ import { UserOutlined, LockOutlined, SaveOutlined, CameraOutlined, CloseOutlined
 import MainCard from 'components/MainCard';
 import { authService } from 'api/voisilab';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3500';
-
 export default function ProfilePage() {
   const [profile, setProfile] = useState({
     full_name: '',
@@ -96,6 +94,17 @@ export default function ProfilePage() {
         organization: profile.organization
       });
 
+      // Mettre à jour sessionStorage pour que le header se rafraîchisse
+      const stored = sessionStorage.getItem('user');
+      if (stored) {
+        try {
+          const user = JSON.parse(stored);
+          const updated = { ...user, full_name: profile.full_name, avatar_url: profile.avatar_url };
+          sessionStorage.setItem('user', JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent('profileUpdated', { detail: updated }));
+        } catch (e) {}
+      }
+
       setSuccess('Profil mis à jour avec succès');
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
@@ -117,7 +126,7 @@ export default function ProfilePage() {
 
     // Vérifier la taille (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setError('L\'image ne doit pas dépasser 5MB');
+      setError("L'image ne doit pas dépasser 5MB");
       return;
     }
 
@@ -132,26 +141,27 @@ export default function ProfilePage() {
       const response = await fetch(`${API_URL}/api/upload/avatar`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
         body: formData
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors de l\'upload');
+        throw new Error("Erreur lors de l'upload");
       }
 
       const data = await response.json();
-      const avatarUrl = data.url?.startsWith('http') ? data.url : `${API_URL}${data.url}`;
+      const avatarUrl = `http://localhost:5000${data.url}`;
       
       setProfile({ ...profile, avatar_url: avatarUrl });
       setSuccess('Photo de profil téléchargée avec succès');
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       console.error('Erreur upload:', error);
-      setError('Erreur lors du téléchargement de l\'image');
+      setError("Erreur lors du téléchargement de l'image");
     } finally {
       setUploading(false);
+      event.target.value = '';
     }
   };
 

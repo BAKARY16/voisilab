@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Calendar, ArrowRight, Search, Filter, AlertCircle } from "lucide-react"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
+import { NavLink } from "@/components/nav-link"
 import { Bell, Mail } from "lucide-react"
 
 interface BlogPost {
@@ -249,7 +250,7 @@ export function ActualitesContent() {
                                         key={article.id} 
                                         style={{ animationDelay: `${index * 50}ms` }}
                                     >
-                                        <Link href={`/actualites/${article.slug}`}>
+                                        <NavLink href={`/actualites/${article.slug}`}>
                                             <Card className="overflow-hidden border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300 h-full bg-background group cursor-pointer">
                                                 <div className="relative h-56 overflow-hidden bg-muted">
                                                     <Image 
@@ -281,7 +282,7 @@ export function ActualitesContent() {
                                                     </div>
                                                 </CardContent>
                                             </Card>
-                                        </Link>
+                                        </NavLink>
                                     </div>
                                 ))}
                             </div>

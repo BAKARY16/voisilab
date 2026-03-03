@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import Link from "next/link"
+import { NavLink } from "@/components/nav-link"
 import PageBreadcrumb from "@/components/PageBreadCrumb"
 import {
   ExternalLink,
@@ -162,9 +163,9 @@ export function InnovationsSection() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button size="lg" className="gap-2" asChild>
-                <Link href="/projet">
+                <NavLink href="/projet">
                   Soumettre un projet <ArrowRight size={18} />
-                </Link>
+                </NavLink>
               </Button>
               <Button size="lg" variant="outline" className="border-white/20 text-black hover:bg-white/10 backdrop-blur-sm" asChild>
                 <Link href="#projets">Parcourir les projets</Link>
@@ -295,12 +296,12 @@ export function InnovationsSection() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button size="lg" asChild className="gap-2">
-              <Link href="/projet">
+              <NavLink href="/projet">
                 Soumettre mon projet <ArrowRight size={18} />
-              </Link>
+              </NavLink>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="/about">En savoir plus sur le Fablab</Link>
+              <NavLink href="/about">En savoir plus sur le Fablab</NavLink>
             </Button>
           </div>
         </div>
@@ -321,7 +322,7 @@ function FeaturedCard({
 }) {
   const tags = parseTags(innovation.tags)
   return (
-    <Link href={`/innovations/${innovation.id}`} className="block group">
+    <NavLink href={`/innovations/${innovation.id}`} className="block group">
       <article className="relative overflow-hidden rounded-xl border border-border hover:border-foreground/20 transition-all duration-300 hover:shadow-lg bg-card h-full flex flex-col">
         <div className="relative h-56 overflow-hidden bg-muted shrink-0">
           {innovation.image_url ? (
@@ -396,7 +397,7 @@ function FeaturedCard({
           </div>
         </div>
       </article>
-    </Link>
+    </NavLink>
   )
 }
 
@@ -412,7 +413,7 @@ function RegularCard({
 }) {
   const tags = parseTags(innovation.tags)
   return (
-    <Link href={`/innovations/${innovation.id}`} className="block group">
+    <NavLink href={`/innovations/${innovation.id}`} className="block group">
       <article className="overflow-hidden rounded-xl border border-border hover:border-foreground/20 transition-all duration-300 hover:shadow-md bg-card h-full flex flex-col">
         <div className="relative h-44 overflow-hidden bg-muted shrink-0">
           {innovation.image_url ? (
@@ -479,6 +480,6 @@ function RegularCard({
           </div>
         </div>
       </article>
-    </Link>
+    </NavLink>
   )
 }

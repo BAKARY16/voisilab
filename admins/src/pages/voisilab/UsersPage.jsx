@@ -5,14 +5,14 @@ import {
   Select, MenuItem, Switch, FormControlLabel, Typography, Avatar, Alert,
   Dialog, DialogTitle, DialogContent, DialogActions, Stack, Divider,
   Tabs, Tab, Tooltip, InputAdornment, List, ListItem,
-  ListItemIcon, ListItemText
+  ListItemIcon, ListItemText, Snackbar
 } from '@mui/material';
 import {
   EditOutlined, DeleteOutlined, PlusOutlined, UserOutlined,
   StarOutlined, SafetyCertificateOutlined, LockOutlined,
   EyeOutlined, EyeInvisibleOutlined, MailOutlined, PhoneOutlined,
   BankOutlined, CheckCircleOutlined, CloseCircleOutlined, InfoCircleOutlined,
-  TeamOutlined, KeyOutlined, FileTextOutlined, IdcardOutlined
+  TeamOutlined, KeyOutlined, FileTextOutlined, IdcardOutlined, WarningOutlined
 } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
 import { usersService, authService } from 'api/voisilab';
@@ -187,6 +187,16 @@ export default function UsersPage() {
   const [resetDialog, setResetDialog] = useState({ open: false, userId: null, userName: '' });
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [alertSnack, setAlertSnack] = useState({ open: false, title: '', message: '', severity: 'info' });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, onCancel: null });
+
+  const showAlert = (title, message = '', ok = false) => setAlertSnack({ open: true, title, message, severity: ok ? 'success' : 'error' });
+  const askConfirm = (title, message) => new Promise(resolve => {
+    setConfirmDialog({ open: true, title, message,
+      onConfirm: () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(true); },
+      onCancel:  () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(false); }
+    });
+  });
 
   useEffect(() => {
     loadCurrentUser();
@@ -299,13 +309,15 @@ export default function UsersPage() {
 
   const handleDelete = async (user) => {
     if (user.id === currentUser?.id) return;
-    if (!window.confirm(`Supprimer "${user.full_name || user.email}" ?`)) return;
+    const ok = await askConfirm('Supprimer l\'utilisateur', `Êtes-vous sûr de vouloir supprimer « ${user.full_name || user.email} » ? Cette action est irréversible.`);
+    if (!ok) return;
     try {
       await usersService.delete(user.id);
       loadUsers();
       loadStats();
+      showAlert('Utilisateur supprimé', '', true);
     } catch (e) {
-      alert(e.message || 'Erreur lors de la suppression');
+      showAlert('Erreur', e.message || 'Erreur lors de la suppression');
     }
   };
 
@@ -343,7 +355,27 @@ export default function UsersPage() {
   };
 
   return (
-    <MainCard title={
+    <>
+      <Snackbar open={alertSnack.open} autoHideDuration={4000} onClose={() => setAlertSnack(p => ({ ...p, open: false }))} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <Alert onClose={() => setAlertSnack(p => ({ ...p, open: false }))} severity={alertSnack.severity} variant="filled" sx={{ minWidth: 280 }}>
+          <strong>{alertSnack.title}</strong>{alertSnack.message ? ' — ' + alertSnack.message : ''}
+        </Alert>
+      </Snackbar>
+      <Dialog open={confirmDialog.open} onClose={() => confirmDialog.onCancel?.()} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}>
+        <Box sx={{ height: 6, bgcolor: 'error.main' }} />
+        <DialogContent sx={{ pt: 4, pb: 2, textAlign: 'center' }}>
+          <Box sx={{ width: 60, height: 60, borderRadius: '50%', mx: 'auto', mb: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#fef2f2' }}>
+            <WarningOutlined style={{ fontSize: 28, color: '#ef4444' }} />
+          </Box>
+          <Typography variant="h6" fontWeight={700} gutterBottom>{confirmDialog.title}</Typography>
+          <Typography variant="body2" color="text.secondary">{confirmDialog.message}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1, justifyContent: 'center' }}>
+          <Button variant="outlined" onClick={() => confirmDialog.onCancel?.()} sx={{ minWidth: 110, borderRadius: 2 }}>Annuler</Button>
+          <Button variant="contained" color="error" onClick={() => confirmDialog.onConfirm?.()} disableElevation sx={{ minWidth: 110, borderRadius: 2 }}>Supprimer</Button>
+        </DialogActions>
+      </Dialog>
+      <MainCard title={
       <Stack direction="row" alignItems="center" spacing={1}>
         <TeamOutlined style={{ fontSize: 22 }} />
         <Typography variant="h4">Gestion des utilisateurs</Typography>
@@ -766,6 +798,7 @@ export default function UsersPage() {
         </DialogActions>
       </Dialog>
     </MainCard>
+    </>
   );
 }
 

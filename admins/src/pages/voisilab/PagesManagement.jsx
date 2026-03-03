@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton, Paper, Tabs, Tab, Box } from '@mui/material';
-import { EditOutlined, DeleteOutlined, PlusOutlined, FileOutlined } from '@ant-design/icons';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton, Paper, Tabs, Tab, Box, Snackbar, Alert, Typography } from '@mui/material';
+import { EditOutlined, DeleteOutlined, PlusOutlined, FileOutlined, WarningOutlined } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
 import { pagesService } from 'api/voisilab';
 
@@ -18,6 +18,16 @@ const [loading, setLoading] = useState(true);
   });
   const [editingId, setEditingId] = useState(null);
   const [selectedPage, setSelectedPage] = useState('home');
+  const [alert, setAlert] = useState({ open: false, title: '', message: '', severity: 'info' });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null, onCancel: null });
+
+  const showAlert = (title, message = '', ok = false) => setAlert({ open: true, title, message, severity: ok ? 'success' : 'error' });
+  const askConfirm = (title, message) => new Promise(resolve => {
+    setConfirmDialog({ open: true, title, message,
+      onConfirm: () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(true); },
+      onCancel:  () => { setConfirmDialog(d => ({ ...d, open: false })); resolve(false); }
+    });
+  });
 
   const pageNames = ['home', 'about', 'services', 'workshops', 'projects', 'ppn', 'contact'];
 
@@ -57,19 +67,41 @@ const [loading, setLoading] = useState(true);
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer cette section?')) return;
+    const ok = await askConfirm('Supprimer la section', 'Cette action est irréversible.');
+    if (!ok) return;
     try {
       await pagesService.delete(id);
       loadPages();
+      showAlert('Section supprimée', '', true);
     } catch (error) {
-      console.error('Erreur:', error);
+      showAlert('Erreur', error.message || 'Erreur lors de la suppression');
     }
   };
 
   const filteredPages = pages.filter(p => p.page_name === selectedPage);
 
   return (
-    <MainCard title="Gestion des pages">
+    <>
+      <Snackbar open={alert.open} autoHideDuration={4000} onClose={() => setAlert(p => ({ ...p, open: false }))} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <Alert onClose={() => setAlert(p => ({ ...p, open: false }))} severity={alert.severity} variant="filled" sx={{ minWidth: 280 }}>
+          <strong>{alert.title}</strong>{alert.message ? ' — ' + alert.message : ''}
+        </Alert>
+      </Snackbar>
+      <Dialog open={confirmDialog.open} onClose={() => confirmDialog.onCancel?.()} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}>
+        <Box sx={{ height: 6, bgcolor: 'error.main' }} />
+        <DialogContent sx={{ pt: 4, pb: 2, textAlign: 'center' }}>
+          <Box sx={{ width: 60, height: 60, borderRadius: '50%', mx: 'auto', mb: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#fef2f2' }}>
+            <WarningOutlined style={{ fontSize: 28, color: '#ef4444' }} />
+          </Box>
+          <Typography variant="h6" fontWeight={700} gutterBottom>{confirmDialog.title}</Typography>
+          <Typography variant="body2" color="text.secondary">{confirmDialog.message}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1, justifyContent: 'center' }}>
+          <Button variant="outlined" onClick={() => confirmDialog.onCancel?.()} sx={{ minWidth: 110, borderRadius: 2 }}>Annuler</Button>
+          <Button variant="contained" color="error" onClick={() => confirmDialog.onConfirm?.()} disableElevation sx={{ minWidth: 110, borderRadius: 2 }}>Supprimer</Button>
+        </DialogActions>
+      </Dialog>
+      <MainCard title="Gestion des pages">
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Tabs value={selectedPage} onChange={(e, newValue) => setSelectedPage(newValue)}>
           {pageNames.map(name => (
@@ -136,5 +168,6 @@ const [loading, setLoading] = useState(true);
         </DialogActions>
       </Dialog>
     </MainCard>
+    </>
   );
 }

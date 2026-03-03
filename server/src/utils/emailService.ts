@@ -10,7 +10,7 @@ import logger from '../config/logger';
 const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID || '';
 const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || '';
 const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY || '';
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'bakary.sinon@uvci.edu.ci';
+const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'fablab@uvci.edu.ci';
 
 // Template IDs
 const TEMPLATE_CONTACT_NOTIFICATION = process.env.EMAILJS_TEMPLATE_CONTACT || '';

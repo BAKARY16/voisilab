@@ -304,6 +304,37 @@ class WorkshopsApiClient extends ApiClient {
     });
     return handleResponse(response);
   }
+
+  async getAllRegistrations() {
+    const response = await fetch(`${this.baseUrl}/registrations/all`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+
+  async getRegistrations(workshopId) {
+    const response = await fetch(`${this.baseUrl}/${workshopId}/registrations`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+
+  async updateRegistrationStatus(regId, status) {
+    const response = await fetch(`${this.baseUrl}/registrations/${regId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ status })
+    });
+    return handleResponse(response);
+  }
+
+  async deleteRegistration(regId) {
+    const response = await fetch(`${this.baseUrl}/registrations/${regId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
 }
 export const workshopsService = new WorkshopsApiClient();
 
