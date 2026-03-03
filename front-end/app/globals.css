@@ -3,6 +3,7 @@
 
 
 /*@custom-variant dark (&:is(.dark *));*/
+/* On va essayer de faire ça avec un thème inline pour éviter les problèmes de dark mode sur les cards et les popovers qui utilisent des variables CSS pour les couleurs. En utilisant un thème inline, on peut définir les variables CSS pour le thème sombre directement dans le composant qui utilise ces variables, ce qui devrait résoudre les problèmes d'affichage. */
 
 :root {
   --background: oklch(0.99 0 0);
