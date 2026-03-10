@@ -5,14 +5,14 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # ── Étape 2 : compilation TypeScript ────────────────────────────────────────
 FROM base AS builder
 WORKDIR /app
 # Besoin de toutes les dépendances (devDeps incluses) pour tsc
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 COPY . .
 RUN npm run build
 
