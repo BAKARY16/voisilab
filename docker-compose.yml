@@ -66,6 +66,7 @@ services:
       # Router HTTPS
       - "traefik.http.routers.voisilab-api.rule=Host(`api.fablab.voisilab.online`)"
       - "traefik.http.routers.voisilab-api.entrypoints=websecure"
+      - "traefik.http.routers.voisilab-api.tls=true"
       - "traefik.http.routers.voisilab-api.tls.certresolver=letsencrypt"
       # Service (port interne)
       - "traefik.http.services.voisilab-api.loadbalancer.server.port=3500"
@@ -113,6 +114,7 @@ services:
       # Router HTTPS
       - "traefik.http.routers.voisilab-front.rule=Host(`fablab.voisilab.online`)"
       - "traefik.http.routers.voisilab-front.entrypoints=websecure"
+      - "traefik.http.routers.voisilab-front.tls=true"
       - "traefik.http.routers.voisilab-front.tls.certresolver=letsencrypt"
       # Service (port interne)
       - "traefik.http.services.voisilab-front.loadbalancer.server.port=3501"
@@ -148,6 +150,7 @@ services:
       # Router HTTPS
       - "traefik.http.routers.voisilab-admin.rule=Host(`admin.fablab.voisilab.online`)"
       - "traefik.http.routers.voisilab-admin.entrypoints=websecure"
+      - "traefik.http.routers.voisilab-admin.tls=true"
       - "traefik.http.routers.voisilab-admin.tls.certresolver=letsencrypt"
       # Service (port interne Nginx)
       - "traefik.http.services.voisilab-admin.loadbalancer.server.port=3502"
