@@ -63,11 +63,17 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-network"
-      # Router HTTPS
+      # Router HTTP (redirection explicite vers HTTPS)
       - "traefik.http.routers.voisilab-api.rule=Host(`api.fablab.voisilab.online`)"
-      - "traefik.http.routers.voisilab-api.entrypoints=websecure"
-      - "traefik.http.routers.voisilab-api.tls=true"
-      - "traefik.http.routers.voisilab-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.voisilab-api.entrypoints=web"
+      - "traefik.http.routers.voisilab-api.middlewares=voisilab-api-redirect"
+      - "traefik.http.middlewares.voisilab-api-redirect.redirectscheme.scheme=https"
+      # Router HTTPS
+      - "traefik.http.routers.voisilab-api-secure.rule=Host(`api.fablab.voisilab.online`)"
+      - "traefik.http.routers.voisilab-api-secure.entrypoints=websecure"
+      - "traefik.http.routers.voisilab-api-secure.tls=true"
+      - "traefik.http.routers.voisilab-api-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.voisilab-api-secure.service=voisilab-api"
       # Service (port interne)
       - "traefik.http.services.voisilab-api.loadbalancer.server.port=3500"
 
@@ -111,11 +117,17 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-network"
-      # Router HTTPS
+      # Router HTTP (redirection explicite vers HTTPS)
       - "traefik.http.routers.voisilab-front.rule=Host(`fablab.voisilab.online`)"
-      - "traefik.http.routers.voisilab-front.entrypoints=websecure"
-      - "traefik.http.routers.voisilab-front.tls=true"
-      - "traefik.http.routers.voisilab-front.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.voisilab-front.entrypoints=web"
+      - "traefik.http.routers.voisilab-front.middlewares=voisilab-front-redirect"
+      - "traefik.http.middlewares.voisilab-front-redirect.redirectscheme.scheme=https"
+      # Router HTTPS
+      - "traefik.http.routers.voisilab-front-secure.rule=Host(`fablab.voisilab.online`)"
+      - "traefik.http.routers.voisilab-front-secure.entrypoints=websecure"
+      - "traefik.http.routers.voisilab-front-secure.tls=true"
+      - "traefik.http.routers.voisilab-front-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.voisilab-front-secure.service=voisilab-front"
       # Service (port interne)
       - "traefik.http.services.voisilab-front.loadbalancer.server.port=3501"
 
@@ -147,11 +159,17 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-network"
-      # Router HTTPS
+      # Router HTTP (redirection explicite vers HTTPS)
       - "traefik.http.routers.voisilab-admin.rule=Host(`admin.fablab.voisilab.online`)"
-      - "traefik.http.routers.voisilab-admin.entrypoints=websecure"
-      - "traefik.http.routers.voisilab-admin.tls=true"
-      - "traefik.http.routers.voisilab-admin.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.voisilab-admin.entrypoints=web"
+      - "traefik.http.routers.voisilab-admin.middlewares=voisilab-admin-redirect"
+      - "traefik.http.middlewares.voisilab-admin-redirect.redirectscheme.scheme=https"
+      # Router HTTPS
+      - "traefik.http.routers.voisilab-admin-secure.rule=Host(`admin.fablab.voisilab.online`)"
+      - "traefik.http.routers.voisilab-admin-secure.entrypoints=websecure"
+      - "traefik.http.routers.voisilab-admin-secure.tls=true"
+      - "traefik.http.routers.voisilab-admin-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.voisilab-admin-secure.service=voisilab-admin"
       # Service (port interne Nginx)
       - "traefik.http.services.voisilab-admin.loadbalancer.server.port=3502"
 
