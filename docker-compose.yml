@@ -73,16 +73,17 @@ services:
       - "traefik.http.routers.voisilab-api-secure.entrypoints=websecure"
       - "traefik.http.routers.voisilab-api-secure.tls=true"
       - "traefik.http.routers.voisilab-api-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.voisilab-api-secure.tls.domains[0].main=api.fablab.voisilab.online"
       - "traefik.http.routers.voisilab-api-secure.service=voisilab-api"
       # Service (port interne)
       - "traefik.http.services.voisilab-api.loadbalancer.server.port=3500"
 
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3500/health"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3500/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 30s
 
   # ────────────────────────────────────────────────────────────────────────────
   # Site public – Next.js  →  fablab.voisilab.online
@@ -127,16 +128,17 @@ services:
       - "traefik.http.routers.voisilab-front-secure.entrypoints=websecure"
       - "traefik.http.routers.voisilab-front-secure.tls=true"
       - "traefik.http.routers.voisilab-front-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.voisilab-front-secure.tls.domains[0].main=fablab.voisilab.online"
       - "traefik.http.routers.voisilab-front-secure.service=voisilab-front"
       # Service (port interne)
       - "traefik.http.services.voisilab-front.loadbalancer.server.port=3501"
 
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3501"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3501/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 40s
 
   # ────────────────────────────────────────────────────────────────────────────
   # Dashboard Admin – Vite/React (Nginx)  →  admin.fablab.voisilab.online
@@ -169,15 +171,17 @@ services:
       - "traefik.http.routers.voisilab-admin-secure.entrypoints=websecure"
       - "traefik.http.routers.voisilab-admin-secure.tls=true"
       - "traefik.http.routers.voisilab-admin-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.voisilab-admin-secure.tls.domains[0].main=admin.fablab.voisilab.online"
       - "traefik.http.routers.voisilab-admin-secure.service=voisilab-admin"
       # Service (port interne Nginx)
       - "traefik.http.services.voisilab-admin.loadbalancer.server.port=3502"
 
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3502/health"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3502/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 20s
 
 # =============================================================================
 # Volumes persistants (uploads + logs API)
