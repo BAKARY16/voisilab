@@ -5,14 +5,14 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 
 # ── Étape 2 : compilation TypeScript ────────────────────────────────────────
 FROM base AS builder
 WORKDIR /app
 # Besoin de toutes les dépendances (devDeps incluses) pour tsc
 COPY package*.json ./
-RUN npm install
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 RUN npm run build
 
