@@ -1,151 +1,176 @@
-version: '3.8'
+# =============================================================================
+# VoisiLab – docker-compose.yml (PRODUCTION)
+# Reverse proxy : Traefik (external, network: traefik-network)
+# Base de données : MySQL externe via cPanel/phpMyAdmin (host.docker.internal)
+# =============================================================================
 
 services:
-  # Base de données MySQL
-  mysql:
-    image: mysql:8.0
-    container_name: voisilab-mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD:-root_password}
-      MYSQL_DATABASE: ${DATABASE_NAME:-voisilab_db}
-      MYSQL_USER: ${DATABASE_USER:-voisilab_user}
-      MYSQL_PASSWORD: ${DATABASE_PASSWORD:-changez_moi_en_production}
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./database/mysql-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-    ports:
-      - "3306:3306"
-    networks:
-      - voisilab-network
-    restart: unless-stopped
-    command: --default-authentication-plugin=mysql_native_password
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DATABASE_ROOT_PASSWORD:-root_password}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
-  # phpMyAdmin
-  phpmyadmin:
-    image: phpmyadmin:latest
-    container_name: voisilab-phpmyadmin
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: ${DATABASE_ROOT_PASSWORD:-root_password}
-      UPLOAD_LIMIT: 100M
-    ports:
-      - "8080:80"
-    networks:
-      - voisilab-network
-    depends_on:
-      mysql:
-        condition: service_healthy
-    restart: unless-stopped
-
-  # Backend API (Express + TypeScript)
-  backend:
+  # ────────────────────────────────────────────────────────────────────────────
+  # API Backend – Express / TypeScript  →  api.fablab.voisilab.online
+  # ────────────────────────────────────────────────────────────────────────────
+  api:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: voisilab-backend
-    environment:
-      - NODE_ENV=${NODE_ENV:-production}
-      - PORT=3500
-      - DATABASE_HOST=mysql
-      - DATABASE_PORT=3306
-      - DATABASE_NAME=${DATABASE_NAME:-voisilab_db}
-      - DATABASE_USER=${DATABASE_USER:-voisilab_user}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-changez_moi_en_production}
-      - JWT_SECRET=${JWT_SECRET:-changez_moi_secret_jwt_super_securise_en_production}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3501}
-      - ADMIN_URL=${ADMIN_URL:-http://localhost:3502}
-    volumes:
-      - backend_uploads:/app/uploads
-      - backend_logs:/app/logs
-    ports:
-      - "3500:3500"
-    networks:
-      - voisilab-network
-    depends_on:
-      mysql:
-        condition: service_healthy
+    image: voisilab-api:latest
+    container_name: voisilab-api
     restart: unless-stopped
+
+    environment:
+      NODE_ENV: production
+      PORT: 3500
+
+      # ── Base de données MySQL (cPanel externe) ──────────────────────────────
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT:-3306}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+
+      # ── Authentification JWT ────────────────────────────────────────────────
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+
+      # ── CORS – origines autorisées ──────────────────────────────────────────
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://fablab.voisilab.online,https://admin.fablab.voisilab.online}
+
+      # ── URL des services (logs / infos) ────────────────────────────────────
+      FRONTEND_URL: https://fablab.voisilab.online
+      ADMIN_URL: https://admin.fablab.voisilab.online
+
+      # ── EmailJS (notifications email) ───────────────────────────────────────
+      EMAILJS_SERVICE_ID: ${EMAILJS_SERVICE_ID}
+      EMAILJS_PUBLIC_KEY: ${EMAILJS_PUBLIC_KEY}
+      EMAILJS_PRIVATE_KEY: ${EMAILJS_PRIVATE_KEY}
+      EMAILJS_TEMPLATE_CONTACT: ${EMAILJS_TEMPLATE_CONTACT}
+      EMAILJS_TEMPLATE_PROJECT: ${EMAILJS_TEMPLATE_PROJECT}
+      ADMIN_NOTIFICATION_EMAIL: ${ADMIN_NOTIFICATION_EMAIL}
+
+    volumes:
+      # Persistance des fichiers uploadés (images, documents)
+      - api_uploads:/app/uploads
+      # Persistance des logs applicatifs
+      - api_logs:/app/logs
+
+    # Accès à MySQL externe via ip host du VPS
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    networks:
+      - traefik-network
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-network"
+      # Router HTTPS
+      - "traefik.http.routers.voisilab-api.rule=Host(`api.fablab.voisilab.online`)"
+      - "traefik.http.routers.voisilab-api.entrypoints=websecure"
+      - "traefik.http.routers.voisilab-api.tls.certresolver=letsencrypt"
+      # Service (port interne)
+      - "traefik.http.services.voisilab-api.loadbalancer.server.port=3500"
+
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3500/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 20s
 
-  # Front-end utilisateur (Next.js)
-  frontend:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Site public – Next.js  →  fablab.voisilab.online
+  # ────────────────────────────────────────────────────────────────────────────
+  front:
     build:
       context: ./front-end
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3500/api}
-        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-http://localhost:3001}
+        # Variables NEXT_PUBLIC_* embarquées au moment du build image
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.fablab.voisilab.online}
         NEXT_PUBLIC_EMAILJS_SERVICE_ID: ${NEXT_PUBLIC_EMAILJS_SERVICE_ID}
-        NEXT_PUBLIC_EMAILJS_TEMPLATE_ID: ${NEXT_PUBLIC_EMAILJS_TEMPLATE_ID}
         NEXT_PUBLIC_EMAILJS_PUBLIC_KEY: ${NEXT_PUBLIC_EMAILJS_PUBLIC_KEY}
-    container_name: voisilab-frontend
-    ports:
-      - "${FRONTEND_PORT:-3501}:3000"
-    environment:
-      - NODE_ENV=${NODE_ENV:-production}
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3500/api}
-      - NEXT_PUBLIC_ADMIN_URL=${NEXT_PUBLIC_ADMIN_URL:-http://localhost:3001}
-    networks:
-      - voisilab-network
-    depends_on:
-      backend:
-        condition: service_healthy
+        NEXT_PUBLIC_EMAILJS_RECIPIENT_EMAIL: ${NEXT_PUBLIC_EMAILJS_RECIPIENT_EMAIL}
+        NEXT_PUBLIC_EMAILJS_TEMPLATE_TEAM: ${NEXT_PUBLIC_EMAILJS_TEMPLATE_TEAM}
+        NEXT_PUBLIC_EMAILJS_TEMPLATE_CLIENT: ${NEXT_PUBLIC_EMAILJS_TEMPLATE_CLIENT}
+    image: voisilab-front:latest
+    container_name: voisilab-front
     restart: unless-stopped
+
+    environment:
+      NODE_ENV: production
+      PORT: 3501
+      HOSTNAME: "0.0.0.0"
+      # Variables runtime (secrets côté serveur Next.js)
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.fablab.voisilab.online}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+
+    networks:
+      - traefik-network
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-network"
+      # Router HTTPS
+      - "traefik.http.routers.voisilab-front.rule=Host(`fablab.voisilab.online`)"
+      - "traefik.http.routers.voisilab-front.entrypoints=websecure"
+      - "traefik.http.routers.voisilab-front.tls.certresolver=letsencrypt"
+      # Service (port interne)
+      - "traefik.http.services.voisilab-front.loadbalancer.server.port=3501"
+
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3501"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 30s
 
-  # Admin platform (Vite + React)
+  # ────────────────────────────────────────────────────────────────────────────
+  # Dashboard Admin – Vite/React (Nginx)  →  admin.fablab.voisilab.online
+  # ────────────────────────────────────────────────────────────────────────────
   admin:
     build:
-      context: ./admin
+      context: ./admins
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
-        VITE_USER_APP_URL: ${VITE_USER_APP_URL:-http://localhost:3000}
-        VITE_APP_VERSION: ${VITE_APP_VERSION:-v2.0.0}
-        VITE_APP_BASE_NAME: ${VITE_APP_BASE_NAME:-/}
-        VITE_APP_NAME: ${VITE_APP_NAME:-VoisiLab Admin}
+        # Variables VITE_* embarquées au build (inline dans le bundle JS)
+        VITE_API_URL: ${VITE_API_URL:-https://api.fablab.voisilab.online}
+        VITE_APP_BASE_NAME: /
+    image: voisilab-admin:latest
     container_name: voisilab-admin
-    ports:
-      - "${ADMIN_PORT:-3001}:80"
-    networks:
-      - voisilab-network
-    depends_on:
-      backend:
-        condition: service_healthy
     restart: unless-stopped
+
+    networks:
+      - traefik-network
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-network"
+      # Router HTTPS
+      - "traefik.http.routers.voisilab-admin.rule=Host(`admin.fablab.voisilab.online`)"
+      - "traefik.http.routers.voisilab-admin.entrypoints=websecure"
+      - "traefik.http.routers.voisilab-admin.tls.certresolver=letsencrypt"
+      # Service (port interne Nginx)
+      - "traefik.http.services.voisilab-admin.loadbalancer.server.port=3502"
+
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3502/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
-      start_period: 20s
 
-networks:
-  voisilab-network:
-    driver: bridge
-
+# =============================================================================
+# Volumes persistants (uploads + logs API)
+# =============================================================================
 volumes:
-  mysql_data:
-    driver: local
-  backend_uploads:
-    driver: local
-  backend_logs:
-    driver: local
+  api_uploads:
+    name: voisilab_api_uploads
+  api_logs:
+    name: voisilab_api_logs
+
+# =============================================================================
+# Réseau Traefik – doit exister avant le déploiement :
+#   docker network create traefik-network
+# =============================================================================
+networks:
+  traefik-network:
+    external: true
